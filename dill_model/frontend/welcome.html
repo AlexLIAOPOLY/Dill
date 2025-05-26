@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>欢迎使用 - Dill模型计算工具</title>
+    <!-- 引入Google字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- 引入Font Awesome图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 引入样式文件 -->
+    <link rel="stylesheet" href="css/style.css?v=1.1">
+    <link rel="stylesheet" href="css/animations.css?v=1.1">
+    <link rel="stylesheet" href="css/welcome.css?v=1.1">
+    <link rel="stylesheet" href="css/popup-enhanced.css?v=1.0">
+</head>
+<body>
+    <!-- 加载动画 -->
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+    </div>
+    
+    <!-- 页头 -->
+    <header>
+        <div class="header-content">
+            <div class="logo">Dill<span>模型</span>计算工具</div>
+            <nav class="main-nav">
+                <ul>
+                    <li class="active"><a href="welcome.html">使用指南</a></li>
+                    <li><a href="index.html">单一计算</a></li>
+                    <li><a href="compare.html">参数比较</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    
+    <!-- 主要内容 -->
+    <main class="main-content">
+        <div class="container">
+            <!-- 欢迎区域 -->
+            <section class="welcome-hero">
+                <div class="hero-content">
+                    <h1 class="hero-title">
+                        <i class="fas fa-microscope"></i>
+                        欢迎使用 Dill 模型计算工具
+                    </h1>
+                    <p class="hero-subtitle">
+                        专业的光刻胶曝光过程建模与分析平台
+                    </p>
+                    <div class="hero-description">
+                        <!-- 删除的两句话 -->
+                    </div>
+                </div>
+                <div class="hero-visual">
+                    <div class="formula-showcase">
+                        <div class="formula-title">核心公式</div>
+                        <div class="formula-content">
+                            <code>M(x,z) = exp(-C · D(x,z))</code>
+                        </div>
+                        <div class="formula-note">归一化光敏剂浓度计算</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 功能介绍 -->
+            <section class="features-section">
+                <h2 class="section-title">
+                    <i class="fas fa-star"></i>
+                    主要功能
+                </h2>
+                
+                <div class="features-grid">
+                    <!-- 功能1：单一计算 -->
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-calculator"></i>
+                        </div>
+                        <h3 class="feature-title">单一计算</h3>
+                        <p class="feature-description">
+                            输入单组参数，快速计算光刻胶的曝光剂量分布和厚度分布，
+                            适合初学者和单次分析需求。
+                        </p>
+                        <div class="feature-highlights">
+                            <span class="highlight-tag">实时计算</span>
+                            <span class="highlight-tag">交互式图表</span>
+                            <span class="highlight-tag">参数调节</span>
+                        </div>
+                        <a href="index.html" class="feature-btn">
+                            <i class="fas fa-arrow-right"></i>
+                            开始计算
+                        </a>
+                    </div>
+
+                    <!-- 功能2：参数比较 -->
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <h3 class="feature-title">参数比较</h3>
+                        <p class="feature-description">
+                            同时分析多组参数的影响，直观比较不同条件下的计算结果，
+                            适合深入研究和优化分析。
+                        </p>
+                        <div class="feature-highlights">
+                            <span class="highlight-tag">多组对比</span>
+                            <span class="highlight-tag">预设配置</span>
+                            <span class="highlight-tag">阈值分析</span>
+                        </div>
+                        <a href="compare.html" class="feature-btn">
+                            <i class="fas fa-arrow-right"></i>
+                            开始比较
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 使用指南 -->
+            <section class="guide-section">
+                <h2 class="section-title">
+                    <i class="fas fa-book-open"></i>
+                    使用指南
+                </h2>
+                
+                <div class="guide-tabs">
+                    <button class="guide-tab active" data-tab="single">单一计算使用方法</button>
+                    <button class="guide-tab" data-tab="compare">参数比较使用方法</button>
+                </div>
+
+                <!-- 单一计算指南 -->
+                <div class="guide-content active" id="guide-single">
+                    <div class="guide-steps">
+                        <div class="step-item">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h4>选择模型</h4>
+                                <p>在模型选择区域选择Dill模型，查看模型说明和核心公式。点击"显示详细说明"了解更多理论背景。</p>
+                                <div class="step-visual">
+                                    <i class="fas fa-cog"></i>
+                                    <span>模型选择 → Dill模型</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="step-item">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h4>设置参数</h4>
+                                <p>在参数设置区域调整五个关键参数：</p>
+                                <ul class="parameter-list">
+                                    <li><strong>I_avg</strong>: 平均入射光强度 (1-100 mW/cm²)</li>
+                                    <li><strong>V</strong>: 干涉条纹可见度 (0-1)</li>
+                                    <li><strong>K</strong>: 空间频率 (0.1-10 rad/μm)</li>
+                                    <li><strong>t_exp</strong>: 曝光时间 (0.1-20 秒)</li>
+                                    <li><strong>C</strong>: 光敏速率常数 (0.001-0.1 cm²/mJ)</li>
+                                </ul>
+                                <div class="step-visual">
+                                    <i class="fas fa-sliders-h"></i>
+                                    <span>拖动滑块或输入数值</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="step-item">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <h4>执行计算</h4>
+                                <p>点击"计算"按钮开始计算。系统将自动生成曝光剂量分布图和光刻胶厚度分布图。</p>
+                                <div class="step-visual">
+                                    <i class="fas fa-play-circle"></i>
+                                    <span>点击计算按钮</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="step-item">
+                            <div class="step-number">4</div>
+                            <div class="step-content">
+                                <h4>分析结果</h4>
+                                <p>查看生成的交互式图表，可以缩放、平移和查看具体数值。图表显示光刻胶在不同位置的响应特性。</p>
+                                <div class="step-visual">
+                                    <i class="fas fa-chart-area"></i>
+                                    <span>交互式图表分析</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 参数比较指南 -->
+                <div class="guide-content" id="guide-compare">
+                    <div class="guide-steps">
+                        <div class="step-item">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h4>快速开始</h4>
+                                <p>使用预设配置快速开始：</p>
+                                <ul class="preset-list">
+                                    <li><strong>基础对比</strong>: 两组基础参数对比</li>
+                                    <li><strong>对比度研究</strong>: 高对比度 vs 低对比度</li>
+                                    <li><strong>曝光时间研究</strong>: 短时间 vs 长时间曝光</li>
+                                </ul>
+                                <div class="step-visual">
+                                    <i class="fas fa-rocket"></i>
+                                    <span>选择预设配置</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="step-item">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h4>添加参数组</h4>
+                                <p>点击"添加参数组"按钮创建新的参数组。每个参数组可以独立设置参数值，并可以自定义名称。</p>
+                                <div class="step-visual">
+                                    <i class="fas fa-plus-circle"></i>
+                                    <span>最多支持多组参数同时比较</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="step-item">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <h4>参数组管理</h4>
+                                <p>每个参数组都有独立的控制选项：</p>
+                                <ul class="control-list">
+                                    <li><i class="fas fa-copy"></i> 复制参数组</li>
+                                    <li><i class="fas fa-edit"></i> 自定义名称</li>
+                                    <li><i class="fas fa-trash"></i> 删除参数组</li>
+                                </ul>
+                                <div class="step-visual">
+                                    <i class="fas fa-cogs"></i>
+                                    <span>灵活的参数组管理</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="step-item">
+                            <div class="step-number">4</div>
+                            <div class="step-content">
+                                <h4>执行比较计算</h4>
+                                <p>点击"开始比较"后，系统将生成对比图表，不同参数组用不同颜色区分。支持阈值分析和详细的数据比较。</p>
+                                <div class="step-visual">
+                                    <i class="fas fa-analytics"></i>
+                                    <span>多维度对比分析</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="step-item">
+                            <div class="step-number">5</div>
+                            <div class="step-content">
+                                <h4>🔍 距离测量功能</h4>
+                                <p>在比较结果图表中进行精确的物理测量：</p>
+                                <ul class="feature-list">
+                                    <li><strong>启用测量</strong>: 点击图表上方的"物理测量"按钮</li>
+                                    <li><strong>测量操作</strong>: 在图表上依次点击两个点</li>
+                                    <li><strong>查看结果</strong>: 系统自动显示两点间的距离和坐标差</li>
+                                    <li><strong>多次测量</strong>: 可以进行多次测量，每次测量都会显示结果</li>
+                                </ul>
+                                <div class="step-visual">
+                                    <i class="fas fa-ruler"></i>
+                                    <span>精确的物理距离测量</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="step-item">
+                            <div class="step-number">6</div>
+                            <div class="step-content">
+                                <h4>⚖️ 阈值设置与分析</h4>
+                                <p>为每个参数组设置阈值线，进行深入分析：</p>
+                                <ul class="feature-list">
+                                    <li><strong>设置阈值</strong>: 在图表下方找到对应参数组的阈值控制器</li>
+                                    <li><strong>调整数值</strong>: 拖动滑块或直接输入数值设置阈值</li>
+                                    <li><strong>显示/隐藏</strong>: 点击"显示"/"隐藏"按钮控制阈值线的可见性</li>
+                                    <li><strong>交点分析</strong>: 系统自动计算并标记曲线与阈值线的交点</li>
+                                    <li><strong>阈值范围</strong>: 
+                                        <ul>
+                                            <li>曝光剂量: 10-200 mJ/cm²</li>
+                                            <li>光刻胶厚度: 0-1 (归一化值)</li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                                <div class="step-visual">
+                                    <i class="fas fa-crosshairs"></i>
+                                    <span>智能阈值分析</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="step-item">
+                            <div class="step-number">7</div>
+                            <div class="step-content">
+                                <h4>📊 点击曲线查看详情</h4>
+                                <p>点击图表中的任意曲线点，获取详细的数据信息：</p>
+                                <ul class="feature-list">
+                                    <li><strong>点击操作</strong>: 直接点击图表中感兴趣的曲线点</li>
+                                    <li><strong>弹出详情</strong>: 系统显示包含以下信息的详情窗口：
+                                        <ul>
+                                            <li>精确的坐标值 (x, y)</li>
+                                            <li>对应的物理参数值</li>
+                                            <li>参数组信息和名称</li>
+                                            <li>相关的计算公式</li>
+                                            <li>物理意义解释</li>
+                                        </ul>
+                                    </li>
+                                    <li><strong>多点比较</strong>: 可以连续点击多个点进行比较</li>
+                                    <li><strong>关闭详情</strong>: 点击详情窗口的关闭按钮或点击图表空白区域</li>
+                                </ul>
+                                <div class="step-visual">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span>详细数据分析</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="step-item">
+                            <div class="step-number">8</div>
+                            <div class="step-content">
+                                <h4>🎯 高级分析技巧</h4>
+                                <p>充分利用比较功能进行深入分析：</p>
+                                <ul class="feature-list">
+                                    <li><strong>组合分析</strong>: 同时使用距离测量和阈值设置</li>
+                                    <li><strong>趋势观察</strong>: 通过点击多个点观察参数变化趋势</li>
+                                    <li><strong>临界点识别</strong>: 利用阈值线找到关键的工艺参数点</li>
+                                    <li><strong>优化建议</strong>: 基于测量和分析结果优化工艺参数</li>
+                                </ul>
+                                <div class="step-visual">
+                                    <i class="fas fa-brain"></i>
+                                    <span>智能分析与优化</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 技术说明 -->
+            <section class="tech-section">
+                <h2 class="section-title">
+                    <i class="fas fa-flask"></i>
+                    技术说明
+                </h2>
+                
+                <div class="tech-grid">
+                    <div class="tech-card">
+                        <div class="tech-icon">
+                            <i class="fas fa-atom"></i>
+                        </div>
+                        <h4>Dill模型原理</h4>
+                        <p>Dill模型描述光刻胶中光敏剂浓度随曝光的变化，是光刻工艺建模的经典方法。</p>
+                    </div>
+
+                    <div class="tech-card">
+                        <div class="tech-icon">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <h4>实时计算</h4>
+                        <p>采用高效算法实现实时计算，参数调整后立即显示结果，提升分析效率。</p>
+                    </div>
+
+                    <div class="tech-card">
+                        <div class="tech-icon">
+                            <i class="fas fa-mobile-alt"></i>
+                        </div>
+                        <h4>响应式设计</h4>
+                        <p>支持桌面和移动设备，自适应界面设计确保在各种设备上都有良好体验。</p>
+                    </div>
+
+                    <div class="tech-card">
+                        <div class="tech-icon">
+                            <i class="fas fa-download"></i>
+                        </div>
+                        <h4>数据导出</h4>
+                        <p>支持计算结果和图表的导出功能，便于后续分析和报告制作。</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 快速开始 -->
+            <section class="quick-start-section">
+                <div class="quick-start-content">
+                    <h2 class="quick-start-title">
+                        <i class="fas fa-rocket"></i>
+                        准备好开始了吗？
+                    </h2>
+                    <p class="quick-start-description">
+                        选择适合您需求的功能模块，开始您的Dill模型计算之旅
+                    </p>
+                    <div class="quick-start-buttons">
+                        <a href="index.html" class="quick-start-btn primary">
+                            <i class="fas fa-calculator"></i>
+                            <span>单一计算</span>
+                            <small>快速计算单组参数</small>
+                        </a>
+                        <a href="compare.html" class="quick-start-btn secondary">
+                            <i class="fas fa-chart-line"></i>
+                            <span>参数比较</span>
+                            <small>多组参数对比分析</small>
+                        </a>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+    
+    <!-- 页脚 -->
+    <footer>
+        <div class="footer-content">
+            <p>&copy; 2025 香港大学 版权所有.</p>
+        </div>
+    </footer>
+    
+    <!-- JavaScript -->
+    <script src="js/common.js?v=1.0"></script>
+    <script src="js/welcome.js?v=1.0"></script>
+</body>
+</html> 
