@@ -26,19 +26,78 @@ function initApp() {
     bindSliderEvents();
     
     // 为计算按钮绑定事件
-    calculateBtn.addEventListener('click', () => {
+    calculateBtn.addEventListener('click', function() {
+        let modelType = modelSelect.value;
+        let postData = { model_type: modelType };
+        if (modelType === 'dill') {
+            // 正弦波类型分支
+            const sineType = document.getElementById('dill-sine-type').value;
+            postData['sine_type'] = sineType;
+            postData['I_avg'] = parseFloat(document.getElementById('I_avg').value);
+            postData['V'] = parseFloat(document.getElementById('V').value);
+            postData['t_exp'] = parseFloat(document.getElementById('t_exp').value);
+            postData['C'] = parseFloat(document.getElementById('C').value);
+            if (sineType === 'multi') {
+                postData['Kx'] = parseFloat(document.getElementById('Kx').value);
+                postData['Ky'] = parseFloat(document.getElementById('Ky').value);
+                postData['phi_expr'] = document.getElementById('phi_expr').value;
+                // 不传K
+            } else {
+                postData['K'] = parseFloat(document.getElementById('K').value);
+            }
+            // y范围参数（仅多维时有效）
+            if (sineType === 'multi') {
+                postData['y_min'] = parseFloat(document.getElementById('y_min').value);
+                postData['y_max'] = parseFloat(document.getElementById('y_max').value);
+                postData['y_points'] = parseInt(document.getElementById('y_points').value);
+            }
+        } else if (modelType === 'enhanced_dill') {
+            const sineType = document.getElementById('enhanced-dill-sine-type').value;
+            postData['sine_type'] = sineType;
+            postData['z_h'] = parseFloat(document.getElementById('z_h').value);
+            postData['T'] = parseFloat(document.getElementById('T').value);
+            postData['t_B'] = parseFloat(document.getElementById('t_B').value);
+            postData['I0'] = parseFloat(document.getElementById('I0').value);
+            postData['M0'] = parseFloat(document.getElementById('M0').value);
+            postData['t_exp'] = parseFloat(document.getElementById('t_exp_enhanced').value);
+            if (sineType === 'multi') {
+                postData['Kx'] = parseFloat(document.getElementById('enhanced_Kx').value);
+                postData['Ky'] = parseFloat(document.getElementById('enhanced_Ky').value);
+                postData['phi_expr'] = document.getElementById('enhanced_phi_expr').value;
+            } else {
+                postData['K'] = parseFloat(document.getElementById('K').value); // 若增强Dill有K参数
+            }
+        } else if (modelType === 'car') {
+            const sineType = document.getElementById('car-sine-type').value;
+            postData['sine_type'] = sineType;
+            postData['I_avg'] = parseFloat(document.getElementById('car_I_avg').value);
+            postData['V'] = parseFloat(document.getElementById('car_V').value);
+            postData['t_exp'] = parseFloat(document.getElementById('car_t_exp').value);
+            postData['acid_gen_efficiency'] = parseFloat(document.getElementById('car_acid_gen_efficiency').value);
+            postData['diffusion_length'] = parseFloat(document.getElementById('car_diffusion_length').value);
+            postData['reaction_rate'] = parseFloat(document.getElementById('car_reaction_rate').value);
+            postData['amplification'] = parseFloat(document.getElementById('car_amplification').value);
+            postData['contrast'] = parseFloat(document.getElementById('car_contrast').value);
+            if (sineType === 'multi') {
+                postData['Kx'] = parseFloat(document.getElementById('car_Kx').value);
+                postData['Ky'] = parseFloat(document.getElementById('car_Ky').value);
+                postData['phi_expr'] = document.getElementById('car_phi_expr').value;
+            } else {
+                postData['K'] = parseFloat(document.getElementById('car_K').value);
+            }
+        }
+        
         // 显示加载动画
         loading.classList.add('active');
+        loading.setAttribute('data-i18n', 'loading');
+        loading.textContent = LANGS[currentLang].loading;
         // 隐藏错误消息
         errorMessage.classList.remove('visible');
         // 隐藏结果区域
         resultsSection.classList.remove('visible');
         
-        // 获取参数值
-        const params = getParameterValues();
-        
         // 调用API获取数据(使用交互式图表)
-        calculateDillModelData(params)
+        calculateDillModelData(postData)
             .then(data => {
                 // 隐藏加载动画
                 loading.classList.remove('active');
@@ -51,7 +110,7 @@ function initApp() {
             })
             .catch(error => {
                 // 如果获取数据失败，尝试获取图像
-                calculateDillModel(params)
+                calculateDillModel(postData)
                     .then(data => {
                         // 隐藏加载动画
                         loading.classList.remove('active');
@@ -66,8 +125,13 @@ function initApp() {
                         // 隐藏加载动画
                         loading.classList.remove('active');
                         
-                        // 显示错误消息
-                        errorMessage.textContent = error.message || '计算过程中发生错误';
+                        // 判断后端返回的message_zh/message_en
+                        let msg = error.message;
+                        if (error && error.message_zh && error.message_en) {
+                            msg = (window.currentLang === 'zh') ? error.message_zh : error.message_en;
+                        }
+                        errorMessage.textContent = msg || LANGS[currentLang].error_message;
+                        errorMessage.setAttribute('data-i18n', 'error_message');
                         errorMessage.classList.add('visible');
                         
                         // 添加摇晃动画
@@ -110,6 +174,43 @@ function initApp() {
         });
     }
 
+    // 切换Dill模型详细说明的显示状态
+    const dillToggleBtn = document.getElementById('dill-toggle-details');
+    const dillFullDetails = document.getElementById('dill-full-details');
+    if (dillToggleBtn && dillFullDetails) {
+        // 默认收起
+        dillFullDetails.classList.remove('details-visible');
+        dillToggleBtn.innerHTML = '展开更多 <i class="fas fa-chevron-down"></i>';
+        dillToggleBtn.addEventListener('click', function() {
+            const isHidden = !dillFullDetails.classList.contains('details-visible');
+            if (isHidden) {
+                dillFullDetails.classList.add('details-visible');
+                dillToggleBtn.innerHTML = '收起 <i class="fas fa-chevron-up"></i>';
+            } else {
+                dillFullDetails.classList.remove('details-visible');
+                dillToggleBtn.innerHTML = '展开更多 <i class="fas fa-chevron-down"></i>';
+            }
+        });
+    }
+    // 切换增强Dill模型详细说明的显示状态
+    const enhancedDillToggleBtn = document.getElementById('enhanced-dill-toggle-details');
+    const enhancedDillFullDetails = document.getElementById('enhanced-dill-full-details');
+    if (enhancedDillToggleBtn && enhancedDillFullDetails) {
+        // 默认收起
+        enhancedDillFullDetails.classList.remove('details-visible');
+        enhancedDillToggleBtn.innerHTML = '展开更多 <i class="fas fa-chevron-down"></i>';
+        enhancedDillToggleBtn.addEventListener('click', function() {
+            const isHidden = !enhancedDillFullDetails.classList.contains('details-visible');
+            if (isHidden) {
+                enhancedDillFullDetails.classList.add('details-visible');
+                enhancedDillToggleBtn.innerHTML = '收起 <i class="fas fa-chevron-up"></i>';
+            } else {
+                enhancedDillFullDetails.classList.remove('details-visible');
+                enhancedDillToggleBtn.innerHTML = '展开更多 <i class="fas fa-chevron-down"></i>';
+            }
+        });
+    }
+
     // 应用进入动画
     applyEntryAnimations();
 
@@ -117,6 +218,77 @@ function initApp() {
     setTimeout(() => {
         if(modelSelectionSection) modelSelectionSection.classList.add('loaded');
     }, 100); // 延迟一点点确保页面元素已就绪
+
+    // 参数说明tooltip逻辑
+    bindParamTooltips();
+
+    // 导出图片和数据功能
+    document.getElementById('export-exposure-img').onclick = function() {
+        Plotly.downloadImage(document.getElementById('exposure-plot-container'), {format: 'png', filename: 'exposure_plot'});
+    };
+    document.getElementById('export-thickness-img').onclick = function() {
+        Plotly.downloadImage(document.getElementById('thickness-plot-container'), {format: 'png', filename: 'thickness_plot'});
+    };
+    document.getElementById('export-exposure-data').onclick = function() {
+        exportPlotData('exposure');
+    };
+    document.getElementById('export-thickness-data').onclick = function() {
+        exportPlotData('thickness');
+    };
+
+    // 正弦波类型切换逻辑（Dill）
+    const dillSineType = document.getElementById('dill-sine-type');
+    const dillMultisineParams = document.getElementById('dill-multisine-params');
+    const dillK = document.getElementById('K').closest('.parameter-item');
+    const dillYRange = document.getElementById('y-range-container');
+    function updateDillYRangeDisplay() {
+        if (dillSineType.value === 'multi') {
+            dillYRange.style.display = '';
+        } else {
+            dillYRange.style.display = 'none';
+        }
+    }
+    dillSineType.addEventListener('change', function() {
+        if (this.value === 'multi') {
+            dillMultisineParams.style.display = 'block';
+            if (dillK) dillK.style.display = 'none';
+        } else {
+            dillMultisineParams.style.display = 'none';
+            if (dillK) dillK.style.display = '';
+        }
+        updateDillYRangeDisplay();
+    });
+    updateDillYRangeDisplay();
+    // 正弦波类型切换逻辑（增强Dill）
+    const enhancedDillSineType = document.getElementById('enhanced-dill-sine-type');
+    const enhancedDillMultisineParams = document.getElementById('enhanced-dill-multisine-params');
+    const enhancedK = document.getElementById('enhanced_K');
+    const enhancedKItem = document.getElementById('enhanced-dill-params')?.querySelector('#K')?.closest('.parameter-item');
+    enhancedDillSineType.addEventListener('change', function() {
+        if (this.value === 'multi') {
+            enhancedDillMultisineParams.style.display = 'block';
+            if (enhancedKItem) enhancedKItem.style.display = 'none';
+        } else {
+            enhancedDillMultisineParams.style.display = 'none';
+            if (enhancedKItem) enhancedKItem.style.display = '';
+        }
+    });
+    // 正弦波类型切换逻辑（CAR）
+    const carSineType = document.getElementById('car-sine-type');
+    const carMultisineParams = document.getElementById('car-multisine-params');
+    const carK = document.getElementById('car_K').closest('.parameter-item');
+    carSineType.addEventListener('change', function() {
+        if (this.value === 'multi') {
+            carMultisineParams.style.display = 'block';
+            if (carK) carK.style.display = 'none';
+        } else {
+            carMultisineParams.style.display = 'none';
+            if (carK) carK.style.display = '';
+        }
+    });
+
+    // 添加phi_expr输入框下方表达式示例和格式提示
+    addPhiExprHint();
 }
 
 /**
@@ -129,6 +301,7 @@ function bindSliderEvents() {
     parameterItems.forEach(item => {
         const slider = item.querySelector('.slider');
         const input = item.querySelector('.number-input');
+        if (!slider || !input) return; // 没有滑块或输入框直接跳过
         const valueDisplay = item.querySelector('.parameter-value');
         
         // 初始化滑块填充效果
@@ -155,17 +328,15 @@ function bindSliderEvents() {
         
         // 输入框值变化时更新滑块
         input.addEventListener('input', () => {
-            // 验证输入值是否在范围内
             let value = parseFloat(input.value);
             const min = parseFloat(slider.min);
             const max = parseFloat(slider.max);
-            
-            if (isNaN(value)) {
-                value = min;
-            } else if (value < min) {
-                value = min;
-            } else if (value > max) {
-                value = max;
+            if (isNaN(value) || value < min || value > max) {
+                input.classList.add('input-error');
+                input.setCustomValidity(LANGS[currentLang].error_message);
+            } else {
+                input.classList.remove('input-error');
+                input.setCustomValidity('');
             }
             
             slider.value = value;
@@ -211,13 +382,63 @@ function updateSliderFill(slider, item) {
  * @returns {Object} 参数对象
  */
 function getParameterValues() {
-    return {
-        I_avg: parseFloat(document.getElementById('I_avg').value),
-        V: parseFloat(document.getElementById('V').value),
-        K: parseFloat(document.getElementById('K').value),
-        t_exp: parseFloat(document.getElementById('t_exp').value),
-        C: parseFloat(document.getElementById('C').value)
-    };
+    // 判断当前模型
+    const modelType = document.getElementById('model-select').value;
+    let params = { model_type: modelType };
+    if (modelType === 'dill') {
+        const sineType = document.getElementById('dill-sine-type').value;
+        params.sine_type = sineType;
+        params.I_avg = parseFloat(document.getElementById('I_avg').value);
+        params.V = parseFloat(document.getElementById('V').value);
+        params.t_exp = parseFloat(document.getElementById('t_exp').value);
+        params.C = parseFloat(document.getElementById('C').value);
+        if (sineType === 'multi') {
+            params.Kx = parseFloat(document.getElementById('Kx').value);
+            params.Ky = parseFloat(document.getElementById('Ky').value);
+            params.phi_expr = document.getElementById('phi_expr').value;
+            // y范围参数
+            params.y_min = parseFloat(document.getElementById('y_min').value);
+            params.y_max = parseFloat(document.getElementById('y_max').value);
+            params.y_points = parseInt(document.getElementById('y_points').value);
+        } else {
+            params.K = parseFloat(document.getElementById('K').value);
+        }
+    } else if (modelType === 'enhanced_dill') {
+        const sineType = document.getElementById('enhanced-dill-sine-type').value;
+        params.sine_type = sineType;
+        params.z_h = parseFloat(document.getElementById('z_h').value);
+        params.T = parseFloat(document.getElementById('T').value);
+        params.t_B = parseFloat(document.getElementById('t_B').value);
+        params.I0 = parseFloat(document.getElementById('I0').value);
+        params.M0 = parseFloat(document.getElementById('M0').value);
+        params.t_exp = parseFloat(document.getElementById('t_exp_enhanced').value);
+        if (sineType === 'multi') {
+            params.Kx = parseFloat(document.getElementById('enhanced_Kx').value);
+            params.Ky = parseFloat(document.getElementById('enhanced_Ky').value);
+            params.phi_expr = document.getElementById('enhanced_phi_expr').value;
+        } else {
+            params.K = parseFloat(document.getElementById('K').value);
+        }
+    } else if (modelType === 'car') {
+        const sineType = document.getElementById('car-sine-type').value;
+        params.sine_type = sineType;
+        params.I_avg = parseFloat(document.getElementById('car_I_avg').value);
+        params.V = parseFloat(document.getElementById('car_V').value);
+        params.t_exp = parseFloat(document.getElementById('car_t_exp').value);
+        params.acid_gen_efficiency = parseFloat(document.getElementById('car_acid_gen_efficiency').value);
+        params.diffusion_length = parseFloat(document.getElementById('car_diffusion_length').value);
+        params.reaction_rate = parseFloat(document.getElementById('car_reaction_rate').value);
+        params.amplification = parseFloat(document.getElementById('car_amplification').value);
+        params.contrast = parseFloat(document.getElementById('car_contrast').value);
+        if (sineType === 'multi') {
+            params.Kx = parseFloat(document.getElementById('car_Kx').value);
+            params.Ky = parseFloat(document.getElementById('car_Ky').value);
+            params.phi_expr = document.getElementById('car_phi_expr').value;
+        } else {
+            params.K = parseFloat(document.getElementById('car_K').value);
+        }
+    }
+    return params;
 }
 
 /**
@@ -328,6 +549,35 @@ function displayInteractiveResults(data) {
     
     // 应用动画效果
     animateResults();
+
+    // 导出按钮国际化
+    document.getElementById('export-img-btn').textContent = LANGS[currentLang].export_img;
+    document.getElementById('export-data-btn').textContent = LANGS[currentLang].export_data;
+
+    // 在displayInteractiveResults中保存数据
+    window.lastPlotData = data;
+
+    // 结果展示区二维热力图
+    if (data.y && data.exposure_dose && Array.isArray(data.y) && Array.isArray(data.exposure_dose[0])) {
+        document.getElementById('heatmap-plot-item').style.display = '';
+        const x = data.x;
+        const y = data.y;
+        const z = data.exposure_dose;
+        Plotly.newPlot('heatmap-plot-container', [{
+            z: z,
+            x: x,
+            y: y,
+            type: 'heatmap',
+            colorscale: 'Viridis',
+            colorbar: { title: '曝光剂量' }
+        }], {
+            title: '二维曝光剂量分布',
+            xaxis: { title: 'x (μm)' },
+            yaxis: { title: 'y (μm)' }
+        });
+    } else {
+        document.getElementById('heatmap-plot-item').style.display = 'none';
+    }
 }
 
 /**
@@ -350,15 +600,15 @@ function createExposurePlot(container, data) {
     };
     
     const layout = {
-        title: 'Exposure Dose Distribution',
+        title: LANGS[currentLang].exposure_dist,
         xaxis: {
-            title: 'Position (μm)',
+            title: LANGS[currentLang].x_position,
             gridcolor: 'rgb(238, 238, 238)',
             showgrid: true,
             zeroline: false
         },
         yaxis: {
-            title: 'Exposure Dose (mJ/cm²)',
+            title: LANGS[currentLang].y_exposure,
             gridcolor: 'rgb(238, 238, 238)',
             showgrid: true,
             zeroline: false
@@ -405,15 +655,15 @@ function createThicknessPlot(container, data) {
     };
     
     const layout = {
-        title: 'Photoresist Thickness Distribution',
+        title: LANGS[currentLang].thickness_dist,
         xaxis: {
-            title: 'Position (μm)',
+            title: LANGS[currentLang].x_position,
             gridcolor: 'rgb(238, 238, 238)',
             showgrid: true,
             zeroline: false
         },
         yaxis: {
-            title: 'Relative Thickness',
+            title: LANGS[currentLang].y_thickness,
             gridcolor: 'rgb(238, 238, 238)',
             showgrid: true,
             zeroline: false
@@ -835,4 +1085,114 @@ function removeSinglePointDetailsPopup() {
 
 // 将函数设为全局可访问
 window.clearAllCharts = clearAllCharts;
-window.removeSinglePointDetailsPopup = removeSinglePointDetailsPopup; 
+window.removeSinglePointDetailsPopup = removeSinglePointDetailsPopup;
+
+// 参数说明tooltip逻辑
+function bindParamTooltips() {
+    // 已无问号，不再需要tooltip逻辑，直接return
+    return;
+
+    document.querySelectorAll('.param-tooltip').forEach(function(tip) {
+        tip.addEventListener('mouseenter', function() {
+            let key = tip.getAttribute('data-tooltip-key');
+            let lang = window.currentLang || 'zh';
+            let text = (window.LANGS && window.LANGS[lang] && window.LANGS[lang][key]) ? window.LANGS[lang][key] : '';
+            let tooltip = document.createElement('div');
+            tooltip.className = 'param-tooltip-popup';
+            tooltip.textContent = text;
+            document.body.appendChild(tooltip);
+            let rect = tip.getBoundingClientRect();
+            tooltip.style.left = (rect.left + window.scrollX + 20) + 'px';
+            tooltip.style.top = (rect.top + window.scrollY - 10) + 'px';
+            tip._tooltip = tooltip;
+        });
+        tip.addEventListener('mouseleave', function() {
+            if (tip._tooltip) {
+                tip._tooltip.remove();
+                tip._tooltip = null;
+            }
+        });
+    });
+}
+
+// applyLang时也刷新tooltip
+const oldApplyLang = window.applyLang;
+window.applyLang = function() {
+    if (oldApplyLang) oldApplyLang();
+    // bindParamTooltips(); // 已无问号，无需再绑定
+};
+
+function exportPlotData(type) {
+    let data, x, y, filename;
+    if (type === 'exposure') {
+        data = window.lastPlotData;
+        x = data.x;
+        y = data.exposure_dose;
+        filename = 'exposure_data.csv';
+    } else {
+        data = window.lastPlotData;
+        x = data.x;
+        y = data.thickness;
+        filename = 'thickness_data.csv';
+    }
+    let csv = 'x,y\n';
+    for (let i = 0; i < x.length; i++) {
+        csv += `${x[i]},${y[i]}\n`;
+    }
+    let blob = new Blob([csv], {type: 'text/csv'});
+    let link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// 添加phi_expr输入框下方表达式示例和格式提示
+function addPhiExprHint() {
+    const phiInputs = [
+        document.getElementById('phi_expr'),
+        document.getElementById('enhanced_phi_expr'),
+        document.getElementById('car_phi_expr')
+    ];
+    phiInputs.forEach(input => {
+        if (input && !input.nextElementSibling?.classList?.contains('phi-hint')) {
+            const hint = document.createElement('div');
+            hint.className = 'phi-hint';
+            hint.style.color = '#888';
+            hint.style.fontSize = '0.95em';
+            hint.innerHTML = '示例：0, pi/2, sin(2*t)，支持sin/cos/pi/t等';
+            input.parentNode.appendChild(hint);
+        }
+    });
+}
+document.addEventListener('DOMContentLoaded', addPhiExprHint);
+
+// phi_expr参数校验
+function validatePhiExpr(expr) {
+    try {
+        // eslint-disable-next-line no-new-func
+        new Function('t', 'return ' + expr.replace(/\b(sin|cos|pi|e)\b/g, 'Math.$1'))(0);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+// 在计算前校验phi_expr
+const oldGetParameterValues = getParameterValues;
+getParameterValues = function() {
+    const params = oldGetParameterValues();
+    const phiFields = [
+        params.phi_expr,
+        params.enhanced_phi_expr,
+        params.car_phi_expr
+    ];
+    for (const expr of phiFields) {
+        if (expr && !validatePhiExpr(expr)) {
+            alert('phi(t)表达式格式有误，请参考示例！');
+            throw new Error('phi_expr invalid');
+        }
+    }
+    return params;
+}; 

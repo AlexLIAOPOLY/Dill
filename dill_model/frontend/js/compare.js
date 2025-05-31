@@ -7,11 +7,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // 初始化应用
     initCompareApp();
     console.log('比较应用已初始化');
+    initMobileFabBar();
+    enableParameterSetDragSort();
+    enableModalSwipeClose();
+    enableStickyAnimations();
 });
 
 // 全局图表控制状态
 let globalMeasurementActive = false;
 let globalThresholdVisible = false;
+// 当前模型类型
+let currentModelType = 'dill';
 
 /**
  * 初始化比较应用
@@ -25,6 +31,9 @@ function initCompareApp() {
     const errorMessage = document.getElementById('error-message');
     const loading = document.getElementById('loading');
     const globalDistanceMeasureBtn = document.getElementById('global-distance-measure-btn');
+    
+    // 初始化模型选择
+    initModelSelection();
     
     // 初始化参数组集合
     initParameterSets();
@@ -42,16 +51,26 @@ function initCompareApp() {
     const presetContrastStudyBtn = document.getElementById('preset-contrast-study');
     const presetExposureStudyBtn = document.getElementById('preset-exposure-study');
     
+    // 只保留参数应用，不再切换卡片显示
     presetPaperConfigBtn.addEventListener('click', () => {
         applyPaperPresetConfiguration();
+        presetPaperConfigBtn.classList.add('active');
+        presetContrastStudyBtn.classList.remove('active');
+        presetExposureStudyBtn.classList.remove('active');
     });
     
     presetContrastStudyBtn.addEventListener('click', () => {
         applyContrastStudyConfiguration();
+        presetContrastStudyBtn.classList.add('active');
+        presetPaperConfigBtn.classList.remove('active');
+        presetExposureStudyBtn.classList.remove('active');
     });
     
     presetExposureStudyBtn.addEventListener('click', () => {
         applyExposureStudyConfiguration();
+        presetExposureStudyBtn.classList.add('active');
+        presetPaperConfigBtn.classList.remove('active');
+        presetContrastStudyBtn.classList.remove('active');
     });
     
     // 添加新参数组事件
@@ -132,17 +151,65 @@ function initCompareApp() {
     
     // 应用进入动画
     applyEntryAnimations();
+    // === 新增：初始化时绑定展开更多按钮事件 ===
+    bindToggleDetailsEvents();
+}
+
+/**
+ * 初始化模型选择
+ */
+function initModelSelection() {
+    const modelSelect = document.getElementById('model-select');
+    const dillDesc = document.getElementById('dill-desc');
+    const enhancedDillDesc = document.getElementById('enhanced-dill-desc');
+    const carDesc = document.getElementById('car-desc');
+    // const dillToggleBtn = document.getElementById('dill-toggle-details');
+    // const enhancedDillToggleBtn = document.getElementById('enhanced-dill-toggle-details');
+    // const dillFullDetails = document.getElementById('dill-full-details');
+    // const enhancedDillFullDetails = document.getElementById('enhanced-dill-full-details');
+    // 移除展开更多详情按钮事件绑定，全部交由bindToggleDetailsEvents统一管理
+    
+    // 为模型选择添加事件监听
+    modelSelect.addEventListener('change', function() {
+        currentModelType = this.value;
+        if (this.value === 'dill') {
+            dillDesc.style.display = 'block';
+            enhancedDillDesc.style.display = 'none';
+            if (carDesc) carDesc.style.display = 'none';
+            clearAllParameterSets();
+            addParameterSetWithConfig('参数组 1', { I_avg: 10, V: 0.8, K: 2, t_exp: 5, C: 0.02 });
+            addParameterSetWithConfig('参数组 2', { I_avg: 20, V: 0.6, K: 3, t_exp: 5, C: 0.02 });
+        } else if (this.value === 'enhanced_dill') {
+            dillDesc.style.display = 'none';
+            enhancedDillDesc.style.display = 'block';
+            if (carDesc) carDesc.style.display = 'none';
+            clearAllParameterSets();
+            addParameterSetWithConfig('参数组 1', { z_h: 10, T: 100, t_B: 10, I0: 1.0, M0: 1.0, t_exp: 5 });
+            addParameterSetWithConfig('参数组 2', { z_h: 20, T: 110, t_B: 15, I0: 1.0, M0: 1.0, t_exp: 5 });
+        } else if (this.value === 'car') {
+            if (dillDesc) dillDesc.style.display = 'none';
+            if (enhancedDillDesc) enhancedDillDesc.style.display = 'none';
+            if (carDesc) carDesc.style.display = 'block';
+            clearAllParameterSets();
+            addParameterSetWithConfig('参数组 1', {
+                I_avg: 10, V: 0.8, K: 2, t_exp: 5, acid_gen_efficiency: 0.5, diffusion_length: 3, reaction_rate: 0.3, amplification: 10, contrast: 3
+            });
+            addParameterSetWithConfig('参数组 2', {
+                I_avg: 20, V: 0.6, K: 3, t_exp: 5, acid_gen_efficiency: 0.6, diffusion_length: 5, reaction_rate: 0.4, amplification: 15, contrast: 2
+            });
+        }
+        clearAllCharts();
+    });
 }
 
 /**
  * 初始化参数组集合
  */
 function initParameterSets() {
-    // 为所有已有的参数组绑定事件
     const parameterSets = document.querySelectorAll('.parameter-set');
-    
-    parameterSets.forEach(set => {
+    parameterSets.forEach((set, idx) => {
         initParameterSet(set);
+        initParameterSetCollapse(set, idx === 0);
     });
 }
 
@@ -242,50 +309,36 @@ function bindSliderEvents(parameterSet) {
  * 添加新参数组
  */
 function addParameterSet() {
-    // 获取参数组容器
     const parameterSetsContainer = document.getElementById('parameter-sets-container');
-    
-    // 获取参数组模板
-    const template = document.getElementById('parameter-set-template');
+    let templateId = 'dill-parameter-set-template';
+    if (currentModelType === 'enhanced_dill') templateId = 'enhanced-dill-parameter-set-template';
+    else if (currentModelType === 'car') templateId = 'car-parameter-set-template';
+    const template = document.getElementById(templateId);
     const newSet = template.content.cloneNode(true).querySelector('.parameter-set');
-    
-    // 设置唯一ID
-    const setId = getNextSetId();
-    newSet.dataset.setId = setId;
-    newSet.querySelector('.parameter-set-title').textContent = `参数组 ${setId}`;
-    
-    // 初始化新参数组
+    const nextId = getNextSetId();
+    newSet.dataset.setId = nextId;
+    const title = newSet.querySelector('.parameter-set-title');
+    title.innerHTML = LANGS[currentLang]['compare_set_title'].replace('{n}', nextId);
     initParameterSet(newSet);
-    
-    // 添加到容器
+    initParameterSetCollapse(newSet, false);
     parameterSetsContainer.appendChild(newSet);
-    
-    // 更新阈值控制器的可见性
-    updateThresholdControlsVisibility(document.querySelectorAll('.parameter-set').length);
-
-    // 添加动画效果
-    newSet.classList.add('fade-in-up');
-    setTimeout(() => {
-        newSet.classList.remove('fade-in-up');
-    }, 800);
-    
-    // 滚动到新添加的参数组
-    newSet.scrollIntoView({ behavior: 'smooth' });
-    
-    // 清空图表显示
+    newSet.classList.add('fade-in');
+    setTimeout(() => { newSet.classList.remove('fade-in'); }, 500);
+    if (typeof applyLang === 'function') applyLang(currentLang);
     clearAllCharts();
+    return newSet;
 }
 
 /**
  * 获取下一个参数组ID
  * 
- * @returns {number} 下一个可用ID
+ * @returns {number} 下一个可用的参数组ID
  */
 function getNextSetId() {
-    const parameterSets = document.querySelectorAll('.parameter-set');
+    const sets = document.querySelectorAll('.parameter-set');
     let maxId = 0;
     
-    parameterSets.forEach(set => {
+    sets.forEach(set => {
         const id = parseInt(set.dataset.setId);
         if (id > maxId) {
             maxId = id;
@@ -301,47 +354,53 @@ function getNextSetId() {
  * @param {HTMLElement} parameterSet 要复制的参数组元素
  */
 function duplicateParameterSet(parameterSet) {
-    // 获取参数组容器
     const parameterSetsContainer = document.getElementById('parameter-sets-container');
-    
-    // 复制参数组
-    const newSet = parameterSet.cloneNode(true);
-    
-    // 设置唯一ID
-    const setId = getNextSetId();
-    newSet.dataset.setId = setId;
-    newSet.querySelector('.parameter-set-title').textContent = `参数组 ${setId}`;
-    
-    // 确保有删除按钮
-    if (!newSet.querySelector('.remove-set-btn')) {
-        const controlsDiv = newSet.querySelector('.parameter-set-controls');
-        const removeBtn = document.createElement('button');
-        removeBtn.className = 'parameter-set-control-btn remove-set-btn';
-        removeBtn.title = '删除参数组';
-        removeBtn.innerHTML = '<i class="fas fa-trash"></i>';
-        controlsDiv.appendChild(removeBtn);
-    }
-    
-    // 重新初始化新参数组
+    let templateId = 'dill-parameter-set-template';
+    if (currentModelType === 'enhanced_dill') templateId = 'enhanced-dill-parameter-set-template';
+    else if (currentModelType === 'car') templateId = 'car-parameter-set-template';
+    const template = document.getElementById(templateId);
+    const newSet = template.content.cloneNode(true).querySelector('.parameter-set');
+    const nextId = getNextSetId();
+    newSet.dataset.setId = nextId;
+    const title = newSet.querySelector('.parameter-set-title');
+    title.innerHTML = LANGS[currentLang]['compare_set_title'].replace('{n}', nextId);
     initParameterSet(newSet);
-    
-    // 添加到容器
+    if (currentModelType === 'dill') {
+        newSet.querySelector('.slider.I_avg').value = parameterSet.querySelector('.slider.I_avg').value;
+        newSet.querySelector('.slider.V').value = parameterSet.querySelector('.slider.V').value;
+        newSet.querySelector('.slider.K').value = parameterSet.querySelector('.slider.K').value;
+        newSet.querySelector('.slider.t_exp').value = parameterSet.querySelector('.slider.t_exp').value;
+        newSet.querySelector('.slider.C').value = parameterSet.querySelector('.slider.C').value;
+    } else if (currentModelType === 'enhanced_dill') {
+        newSet.querySelector('.slider.z_h').value = parameterSet.querySelector('.slider.z_h').value;
+        newSet.querySelector('.slider.T').value = parameterSet.querySelector('.slider.T').value;
+        newSet.querySelector('.slider.t_B').value = parameterSet.querySelector('.slider.t_B').value;
+        newSet.querySelector('.slider.I0').value = parameterSet.querySelector('.slider.I0').value;
+        newSet.querySelector('.slider.M0').value = parameterSet.querySelector('.slider.M0').value;
+        newSet.querySelector('.slider.t_exp_enhanced').value = parameterSet.querySelector('.slider.t_exp_enhanced').value;
+    } else if (currentModelType === 'car') {
+        newSet.querySelector('.slider.car_I_avg').value = parameterSet.querySelector('.slider.car_I_avg').value;
+        newSet.querySelector('.slider.car_V').value = parameterSet.querySelector('.slider.car_V').value;
+        newSet.querySelector('.slider.car_K').value = parameterSet.querySelector('.slider.car_K').value;
+        newSet.querySelector('.slider.car_t_exp').value = parameterSet.querySelector('.slider.car_t_exp').value;
+        newSet.querySelector('.slider.car_acid_gen_efficiency').value = parameterSet.querySelector('.slider.car_acid_gen_efficiency').value;
+        newSet.querySelector('.slider.car_diffusion_length').value = parameterSet.querySelector('.slider.car_diffusion_length').value;
+        newSet.querySelector('.slider.car_reaction_rate').value = parameterSet.querySelector('.slider.car_reaction_rate').value;
+        newSet.querySelector('.slider.car_amplification').value = parameterSet.querySelector('.slider.car_amplification').value;
+        newSet.querySelector('.slider.car_contrast').value = parameterSet.querySelector('.slider.car_contrast').value;
+    }
+    newSet.querySelectorAll('.parameter-item').forEach(item => {
+        const slider = item.querySelector('.slider');
+        const input = item.querySelector('.number-input');
+        const valueDisplay = item.querySelector('.parameter-value');
+        input.value = slider.value;
+        valueDisplay.textContent = slider.value;
+    });
     parameterSetsContainer.appendChild(newSet);
-    
-    // 更新阈值控制器的可见性
-    updateThresholdControlsVisibility(document.querySelectorAll('.parameter-set').length);
-
-    // 添加动画效果
-    newSet.classList.add('fade-in-up');
-    setTimeout(() => {
-        newSet.classList.remove('fade-in-up');
-    }, 800);
-    
-    // 滚动到新添加的参数组
-    newSet.scrollIntoView({ behavior: 'smooth' });
-    
-    // 清空图表显示
+    newSet.classList.add('fade-in');
+    setTimeout(() => { newSet.classList.remove('fade-in'); }, 500);
     clearAllCharts();
+    return newSet;
 }
 
 /**
@@ -371,27 +430,41 @@ function removeParameterSet(parameterSet) {
  * @returns {Array} 参数组数组
  */
 function getAllParameterSets() {
-    const parameterSets = document.querySelectorAll('.parameter-set');
-    const result = [];
-    
-    console.log('DOM中找到的参数组数量:', parameterSets.length);
-    
-    parameterSets.forEach((set, index) => {
-        const params = {
-            I_avg: parseFloat(set.querySelector('.I_avg').value),
-            V: parseFloat(set.querySelector('.V').value),
-            K: parseFloat(set.querySelector('.K').value),
-            t_exp: parseFloat(set.querySelector('.t_exp').value),
-            C: parseFloat(set.querySelector('.C').value),
-            setId: parseInt(set.dataset.setId),
-            customName: set.querySelector('.parameter-set-name-input').value.trim()
-        };
-        
-        console.log(`参数组 ${index+1} 数据:`, params);
-        result.push(params);
+    const parameterSets = [];
+    const sets = document.querySelectorAll('.parameter-set');
+    sets.forEach(set => {
+        const setId = set.dataset.setId;
+        const nameInput = set.querySelector('.parameter-set-name-input');
+        const customName = nameInput.value.trim();
+        const params = { 'model_type': currentModelType, 'setId': setId };
+        if (currentModelType === 'dill') {
+            params['I_avg'] = parseFloat(set.querySelector('.slider.I_avg').value);
+            params['V'] = parseFloat(set.querySelector('.slider.V').value);
+            params['K'] = parseFloat(set.querySelector('.slider.K').value);
+            params['t_exp'] = parseFloat(set.querySelector('.slider.t_exp').value);
+            params['C'] = parseFloat(set.querySelector('.slider.C').value);
+        } else if (currentModelType === 'enhanced_dill') {
+            params['z_h'] = parseFloat(set.querySelector('.slider.z_h').value);
+            params['T'] = parseFloat(set.querySelector('.slider.T').value);
+            params['t_B'] = parseFloat(set.querySelector('.slider.t_B').value);
+            params['I0'] = parseFloat(set.querySelector('.slider.I0').value);
+            params['M0'] = parseFloat(set.querySelector('.slider.M0').value);
+            params['t_exp'] = parseFloat(set.querySelector('.slider.t_exp_enhanced').value);
+        } else if (currentModelType === 'car') {
+            params['I_avg'] = parseFloat(set.querySelector('.slider.car_I_avg').value);
+            params['V'] = parseFloat(set.querySelector('.slider.car_V').value);
+            params['K'] = parseFloat(set.querySelector('.slider.car_K').value);
+            params['t_exp'] = parseFloat(set.querySelector('.slider.car_t_exp').value);
+            params['acid_gen_efficiency'] = parseFloat(set.querySelector('.slider.car_acid_gen_efficiency').value);
+            params['diffusion_length'] = parseFloat(set.querySelector('.slider.car_diffusion_length').value);
+            params['reaction_rate'] = parseFloat(set.querySelector('.slider.car_reaction_rate').value);
+            params['amplification'] = parseFloat(set.querySelector('.slider.car_amplification').value);
+            params['contrast'] = parseFloat(set.querySelector('.slider.car_contrast').value);
+        }
+        if (customName) params['customName'] = customName;
+        parameterSets.push(params);
     });
-    
-    return result;
+    return parameterSets;
 }
 
 /**
@@ -462,28 +535,42 @@ async function compareParameterSetsData(parameterSets) {
  * @param {Object} data 比较结果数据
  */
 function displayComparisonResults(data) {
-    // 获取图像元素
-    const exposureComparisonPlot = document.getElementById('exposure-comparison-plot');
-    const thicknessComparisonPlot = document.getElementById('thickness-comparison-plot');
-    
-    // 设置图像源（Base64数据）
-    exposureComparisonPlot.src = `data:image/png;base64,${data.exposure_comparison_plot}`;
-    thicknessComparisonPlot.src = `data:image/png;base64,${data.thickness_comparison_plot}`;
-    
-    // 显示静态图像
-    exposureComparisonPlot.style.display = 'block';
-    thicknessComparisonPlot.style.display = 'block';
-    
-    // 隐藏交互式图表容器
-    document.getElementById('exposure-comparison-plot-container').style.display = 'none';
-    document.getElementById('thickness-comparison-plot-container').style.display = 'none';
-    
-    // 创建图例
-    createLegend('exposure-legend', data.colors);
-    createLegend('thickness-legend', data.colors);
-    
-    // 应用动画效果
-    animateResults();
+    if (currentModelType === 'car') {
+        document.getElementById('car-comparison-results').style.display = 'block';
+        const carPlotContainer = document.getElementById('car-comparison-plot-container');
+        carPlotContainer.innerHTML = '';
+        if (data.car_plot_data) {
+            Plotly.newPlot(carPlotContainer, data.car_plot_data.traces, data.car_plot_data.layout, data.car_plot_data.config);
+        }
+        document.getElementById('exposure-comparison-plot-container').style.display = 'none';
+        document.getElementById('thickness-comparison-plot-container').style.display = 'none';
+        document.getElementById('exposure-comparison-plot').style.display = 'none';
+        document.getElementById('thickness-comparison-plot').style.display = 'none';
+    } else {
+        document.getElementById('car-comparison-results').style.display = 'none';
+        // 获取图像元素
+        const exposureComparisonPlot = document.getElementById('exposure-comparison-plot');
+        const thicknessComparisonPlot = document.getElementById('thickness-comparison-plot');
+        
+        // 设置图像源（Base64数据）
+        exposureComparisonPlot.src = `data:image/png;base64,${data.exposure_comparison_plot}`;
+        thicknessComparisonPlot.src = `data:image/png;base64,${data.thickness_comparison_plot}`;
+        
+        // 显示静态图像
+        exposureComparisonPlot.style.display = 'block';
+        thicknessComparisonPlot.style.display = 'block';
+        
+        // 隐藏交互式图表容器
+        document.getElementById('exposure-comparison-plot-container').style.display = 'none';
+        document.getElementById('thickness-comparison-plot-container').style.display = 'none';
+        
+        // 创建图例
+        createLegend('exposure-legend', data.colors);
+        createLegend('thickness-legend', data.colors);
+        
+        // 应用动画效果
+        animateResults();
+    }
 }
 
 /**
@@ -492,40 +579,56 @@ function displayComparisonResults(data) {
  * @param {Object} data 比较结果数据
  */
 function displayInteractiveComparisonResults(data) {
-    console.log('准备显示交互式图表，数据:', data);
-    
-    // 隐藏静态图像
-    document.getElementById('exposure-comparison-plot').style.display = 'none';
-    document.getElementById('thickness-comparison-plot').style.display = 'none';
-    
-    // 显示交互式图表容器
-    const exposurePlotContainer = document.getElementById('exposure-comparison-plot-container');
-    const thicknessPlotContainer = document.getElementById('thickness-comparison-plot-container');
-    exposurePlotContainer.style.display = 'block';
-    thicknessPlotContainer.style.display = 'block';
-    
-    // 创建交互式图表
-    createExposureComparisonPlot(exposurePlotContainer, data);
-    createThicknessComparisonPlot(thicknessPlotContainer, data);
-    
-    // 初始化阈值控制器（在图表创建完成后）
-    setTimeout(() => {
-        initAllThresholdControls();
-        console.log('阈值控制器已初始化');
+    if (currentModelType === 'car') {
+        document.getElementById('car-comparison-results').style.display = 'block';
+        const carPlotContainer = document.getElementById('car-comparison-plot-container');
+        carPlotContainer.innerHTML = '';
+        // 假设后端返回data.car_plot_data: {x, y, traces, layout, config}
+        if (data.car_plot_data) {
+            Plotly.newPlot(carPlotContainer, data.car_plot_data.traces, data.car_plot_data.layout, data.car_plot_data.config);
+        }
+        // 隐藏其他模型的结果区
+        document.getElementById('exposure-comparison-plot-container').style.display = 'none';
+        document.getElementById('thickness-comparison-plot-container').style.display = 'none';
+        document.getElementById('exposure-comparison-plot').style.display = 'none';
+        document.getElementById('thickness-comparison-plot').style.display = 'none';
+    } else {
+        document.getElementById('car-comparison-results').style.display = 'none';
+        console.log('准备显示交互式图表，数据:', data);
         
-        // 再次重新初始化以确保使用最新的数据范围
+        // 隐藏静态图像
+        document.getElementById('exposure-comparison-plot').style.display = 'none';
+        document.getElementById('thickness-comparison-plot').style.display = 'none';
+        
+        // 显示交互式图表容器
+        const exposurePlotContainer = document.getElementById('exposure-comparison-plot-container');
+        const thicknessPlotContainer = document.getElementById('thickness-comparison-plot-container');
+        exposurePlotContainer.style.display = 'block';
+        thicknessPlotContainer.style.display = 'block';
+        
+        // 创建交互式图表
+        createExposureComparisonPlot(exposurePlotContainer, data);
+        createThicknessComparisonPlot(thicknessPlotContainer, data);
+        
+        // 初始化阈值控制器（在图表创建完成后）
         setTimeout(() => {
-            reinitializeThresholdControls();
-            console.log('阈值控制器已根据数据范围重新初始化');
-        }, 200);
-    }, 100);
-    
-    // 创建图例(这里我们不需要额外的图例，因为Plotly有内置图例)
-    document.getElementById('exposure-legend').innerHTML = '';
-    document.getElementById('thickness-legend').innerHTML = '';
-    
-    // 应用动画效果
-    animateResults();
+            initAllThresholdControls();
+            console.log('阈值控制器已初始化');
+            
+            // 再次重新初始化以确保使用最新的数据范围
+            setTimeout(() => {
+                reinitializeThresholdControls();
+                console.log('阈值控制器已根据数据范围重新初始化');
+            }, 200);
+        }, 100);
+        
+        // 创建图例(这里我们不需要额外的图例，因为Plotly有内置图例)
+        document.getElementById('exposure-legend').innerHTML = '';
+        document.getElementById('thickness-legend').innerHTML = '';
+        
+        // 应用动画效果
+        animateResults();
+    }
 }
 
 /**
@@ -1909,11 +2012,8 @@ function applyExposureStudyConfiguration() {
  * 清除所有参数组（保留第一个）
  */
 function clearAllParameterSets() {
-    const parameterSets = document.querySelectorAll('.parameter-set');
-    // 删除除第一个之外的所有参数组
-    for (let i = 1; i < parameterSets.length; i++) {
-        parameterSets[i].remove();
-    }
+    const parameterSetsContainer = document.getElementById('parameter-sets-container');
+    parameterSetsContainer.innerHTML = '';
 }
 
 /**
@@ -1949,33 +2049,116 @@ function updateParameterSet(setId, customName, params) {
 }
 
 /**
- * 添加带有指定配置的新参数组
+ * 根据配置添加参数组
+ * 
+ * @param {string} customName 自定义名称
+ * @param {object} params 参数对象
+ * @param {boolean} skipClearCharts 是否跳过清除图表
  */
 function addParameterSetWithConfig(customName, params, skipClearCharts = false) {
-    // 先添加参数组
-    if (skipClearCharts) {
-        // 临时保存clearAllCharts函数
-        const originalClearAllCharts = window.clearAllCharts;
-        // 临时替换为空函数
-        window.clearAllCharts = () => {};
-        
-        addParameterSet();
-        
-        // 恢复原函数
-        window.clearAllCharts = originalClearAllCharts;
-    } else {
-        addParameterSet();
+    const newSet = addParameterSet();
+    
+    // 设置自定义名称
+    if (customName) {
+        const nameInput = newSet.querySelector('.parameter-set-name-input');
+        nameInput.value = customName;
     }
     
-    // 获取最新添加的参数组
-    const parameterSets = document.querySelectorAll('.parameter-set');
-    const newSet = parameterSets[parameterSets.length - 1];
-    const setId = parseInt(newSet.dataset.setId);
+    // 设置参数值
+    if (currentModelType === 'dill') {
+        // Dill模型参数
+        if (params.I_avg !== undefined) {
+            updateSliderValue(newSet, '.slider.I_avg', params.I_avg);
+        }
+        if (params.V !== undefined) {
+            updateSliderValue(newSet, '.slider.V', params.V);
+        }
+        if (params.K !== undefined) {
+            updateSliderValue(newSet, '.slider.K', params.K);
+        }
+        if (params.t_exp !== undefined) {
+            updateSliderValue(newSet, '.slider.t_exp', params.t_exp);
+        }
+        if (params.C !== undefined) {
+            updateSliderValue(newSet, '.slider.C', params.C);
+        }
+    } else if (currentModelType === 'enhanced_dill') {
+        // 增强Dill模型参数
+        if (params.z_h !== undefined) {
+            updateSliderValue(newSet, '.slider.z_h', params.z_h);
+        }
+        if (params.T !== undefined) {
+            updateSliderValue(newSet, '.slider.T', params.T);
+        }
+        if (params.t_B !== undefined) {
+            updateSliderValue(newSet, '.slider.t_B', params.t_B);
+        }
+        if (params.I0 !== undefined) {
+            updateSliderValue(newSet, '.slider.I0', params.I0);
+        }
+        if (params.M0 !== undefined) {
+            updateSliderValue(newSet, '.slider.M0', params.M0);
+        }
+        if (params.t_exp !== undefined) {
+            updateSliderValue(newSet, '.slider.t_exp_enhanced', params.t_exp);
+        }
+    } else if (currentModelType === 'car') {
+        // CAR模型参数
+        if (params.I_avg !== undefined) {
+            updateSliderValue(newSet, '.slider.car_I_avg', params.I_avg);
+        }
+        if (params.V !== undefined) {
+            updateSliderValue(newSet, '.slider.car_V', params.V);
+        }
+        if (params.K !== undefined) {
+            updateSliderValue(newSet, '.slider.car_K', params.K);
+        }
+        if (params.t_exp !== undefined) {
+            updateSliderValue(newSet, '.slider.car_t_exp', params.t_exp);
+        }
+        if (params.acid_gen_efficiency !== undefined) {
+            updateSliderValue(newSet, '.slider.car_acid_gen_efficiency', params.acid_gen_efficiency);
+        }
+        if (params.diffusion_length !== undefined) {
+            updateSliderValue(newSet, '.slider.car_diffusion_length', params.diffusion_length);
+        }
+        if (params.reaction_rate !== undefined) {
+            updateSliderValue(newSet, '.slider.car_reaction_rate', params.reaction_rate);
+        }
+        if (params.amplification !== undefined) {
+            updateSliderValue(newSet, '.slider.car_amplification', params.amplification);
+        }
+        if (params.contrast !== undefined) {
+            updateSliderValue(newSet, '.slider.car_contrast', params.contrast);
+        }
+    }
     
-    // 更新配置
-    setTimeout(() => {
-        updateParameterSet(setId, customName, params);
-    }, 100);
+    // 是否清除图表
+    if (!skipClearCharts) {
+        clearAllCharts();
+    }
+    
+    return newSet;
+}
+
+/**
+ * 更新滑块值并同步相关显示
+ * 
+ * @param {HTMLElement} container 容器元素
+ * @param {string} sliderSelector 滑块选择器
+ * @param {number} value 新值
+ */
+function updateSliderValue(container, sliderSelector, value) {
+    const slider = container.querySelector(sliderSelector);
+    if (slider) {
+        slider.value = value;
+        const paramItem = slider.closest('.parameter-item');
+        const input = paramItem.querySelector('.number-input');
+        const valueDisplay = paramItem.querySelector('.parameter-value');
+        
+        input.value = value;
+        valueDisplay.textContent = value;
+    }
 }
 
 /**
@@ -2635,3 +2818,247 @@ function clearStaleThresholdLines(currentNumberOfSets) {
         }
     });
 }
+
+// === 新增：绑定展开更多按钮事件 ===
+function bindToggleDetailsEvents() {
+    // Dill
+    const dillToggleBtn = document.getElementById('dill-toggle-details');
+    const dillFullDetails = document.getElementById('dill-full-details');
+    if (dillToggleBtn && dillFullDetails) {
+        dillToggleBtn.onclick = function() {
+            if (dillFullDetails.style.display === 'block') {
+                dillFullDetails.style.display = 'none';
+                this.innerHTML = '展开更多 <i class="fas fa-chevron-down"></i>';
+            } else {
+                dillFullDetails.style.display = 'block';
+                this.innerHTML = '收起 <i class="fas fa-chevron-up"></i>';
+            }
+        };
+    }
+    // Enhanced Dill
+    const enhancedDillToggleBtn = document.getElementById('enhanced-dill-toggle-details');
+    const enhancedDillFullDetails = document.getElementById('enhanced-dill-full-details');
+    if (enhancedDillToggleBtn && enhancedDillFullDetails) {
+        enhancedDillToggleBtn.onclick = function() {
+            if (enhancedDillFullDetails.style.display === 'block') {
+                enhancedDillFullDetails.style.display = 'none';
+                this.innerHTML = '展开更多 <i class="fas fa-chevron-down"></i>';
+            } else {
+                enhancedDillFullDetails.style.display = 'block';
+                this.innerHTML = '收起 <i class="fas fa-chevron-up"></i>';
+            }
+        };
+    }
+    // CAR
+    const carToggleBtn = document.getElementById('car-toggle-details');
+    const carFullDetails = document.getElementById('car-full-details');
+    if (carToggleBtn && carFullDetails) {
+        carToggleBtn.onclick = function() {
+            if (carFullDetails.style.display === 'block') {
+                carFullDetails.style.display = 'none';
+                this.innerHTML = '展开更多 <i class="fas fa-chevron-down"></i>';
+            } else {
+                carFullDetails.style.display = 'block';
+                this.innerHTML = '收起 <i class="fas fa-chevron-up"></i>';
+            }
+        };
+    }
+}
+
+// === 新增：多语言切换后也绑定展开更多按钮事件 ===
+if (typeof window.applyLang === 'function') {
+    const oldApplyLang = window.applyLang;
+    window.applyLang = function() {
+        oldApplyLang.apply(this, arguments);
+        bindToggleDetailsEvents();
+    };
+}
+
+// === 移动端参数组折叠/展开与底部浮动按钮交互 ===
+function initParameterSetCollapse(parameterSet, isFirst) {
+  const collapseBtn = parameterSet.querySelector('.collapse-set-btn');
+  if (!collapseBtn) return;
+  // 默认移动端只展开第一个
+  if (window.innerWidth <= 600 && !isFirst) {
+    parameterSet.classList.add('collapsed');
+    collapseBtn.setAttribute('aria-expanded', 'false');
+    collapseBtn.querySelector('i').classList.remove('fa-chevron-up');
+    collapseBtn.querySelector('i').classList.add('fa-chevron-down');
+  } else {
+    parameterSet.classList.remove('collapsed');
+    collapseBtn.setAttribute('aria-expanded', 'true');
+    collapseBtn.querySelector('i').classList.remove('fa-chevron-down');
+    collapseBtn.querySelector('i').classList.add('fa-chevron-up');
+  }
+  collapseBtn.addEventListener('click', function() {
+    const collapsed = parameterSet.classList.toggle('collapsed');
+    if (collapsed) {
+      collapseBtn.setAttribute('aria-expanded', 'false');
+      collapseBtn.querySelector('i').classList.remove('fa-chevron-up');
+      collapseBtn.querySelector('i').classList.add('fa-chevron-down');
+    } else {
+      collapseBtn.setAttribute('aria-expanded', 'true');
+      collapseBtn.querySelector('i').classList.remove('fa-chevron-down');
+      collapseBtn.querySelector('i').classList.add('fa-chevron-up');
+    }
+  });
+}
+function initMobileFabBar() {
+  const addFab = document.querySelector('.add-set-fab');
+  const calcFab = document.querySelector('.calc-fab');
+  if (addFab) addFab.addEventListener('click', addParameterSet);
+  if (calcFab) {
+    const compareBtn = document.getElementById('compare-btn');
+    if (compareBtn) calcFab.addEventListener('click', () => compareBtn.click());
+  }
+}
+
+// === 参数组拖拽排序 ===
+function enableParameterSetDragSort() {
+  const container = document.querySelector('.parameter-sets-container');
+  if (!container) return;
+  let draggingElem = null;
+  let dragOverElem = null;
+  let startY = 0, offsetY = 0;
+  let isTouch = false;
+
+  function onDragStart(e, elem) {
+    draggingElem = elem;
+    elem.classList.add('dragging');
+    startY = e.touches ? e.touches[0].clientY : e.clientY;
+    offsetY = 0;
+    isTouch = !!e.touches;
+    document.body.style.userSelect = 'none';
+  }
+  function onDragMove(e) {
+    if (!draggingElem) return;
+    const y = e.touches ? e.touches[0].clientY : e.clientY;
+    offsetY = y - startY;
+    draggingElem.style.transform = `translateY(${offsetY}px)`;
+    // 检查与其他参数组的碰撞
+    const sets = Array.from(container.querySelectorAll('.parameter-set'));
+    sets.forEach(set => {
+      if (set === draggingElem) return;
+      const rect = set.getBoundingClientRect();
+      if (y > rect.top && y < rect.bottom) {
+        set.classList.add('drag-over');
+        dragOverElem = set;
+      } else {
+        set.classList.remove('drag-over');
+        if (dragOverElem === set) dragOverElem = null;
+      }
+    });
+  }
+  function onDragEnd() {
+    if (!draggingElem) return;
+    draggingElem.classList.remove('dragging');
+    draggingElem.style.transform = '';
+    document.body.style.userSelect = '';
+    // 交换顺序
+    if (dragOverElem && dragOverElem !== draggingElem) {
+      if (dragOverElem.nextSibling === draggingElem) {
+        container.insertBefore(draggingElem, dragOverElem);
+      } else {
+        container.insertBefore(draggingElem, dragOverElem.nextSibling);
+      }
+    }
+    // 清理
+    container.querySelectorAll('.parameter-set').forEach(set => set.classList.remove('drag-over'));
+    draggingElem = null;
+    dragOverElem = null;
+    offsetY = 0;
+  }
+  // 事件绑定
+  container.addEventListener('mousedown', function(e) {
+    const btn = e.target.closest('.drag-handle-btn');
+    const set = e.target.closest('.parameter-set');
+    if (btn && set) {
+      e.preventDefault();
+      onDragStart(e, set);
+      function mouseMove(ev) { onDragMove(ev); }
+      function mouseUp() { onDragEnd(); window.removeEventListener('mousemove', mouseMove); window.removeEventListener('mouseup', mouseUp); }
+      window.addEventListener('mousemove', mouseMove);
+      window.addEventListener('mouseup', mouseUp);
+    }
+  });
+  container.addEventListener('touchstart', function(e) {
+    const btn = e.target.closest('.drag-handle-btn');
+    const set = e.target.closest('.parameter-set');
+    if (btn && set) {
+      onDragStart(e, set);
+      function touchMove(ev) { onDragMove(ev); }
+      function touchEnd() { onDragEnd(); window.removeEventListener('touchmove', touchMove); window.removeEventListener('touchend', touchEnd); }
+      window.addEventListener('touchmove', touchMove, {passive:false});
+      window.addEventListener('touchend', touchEnd);
+    }
+  }, {passive:false});
+}
+// === 弹窗滑动手势关闭 ===
+function enableModalSwipeClose() {
+  const modal = document.getElementById('compare-modal');
+  if (!modal) return;
+  let startY = 0, startX = 0, swiping = false;
+  modal.addEventListener('touchstart', function(e) {
+    if (e.touches.length !== 1) return;
+    startY = e.touches[0].clientY;
+    startX = e.touches[0].clientX;
+    swiping = true;
+    modal.classList.remove('closed');
+  });
+  modal.addEventListener('touchmove', function(e) {
+    if (!swiping) return;
+    const dy = e.touches[0].clientY - startY;
+    const dx = e.touches[0].clientX - startX;
+    if (Math.abs(dy) > 30 || Math.abs(dx) > 30) {
+      modal.classList.add('swiping');
+    }
+  });
+  modal.addEventListener('touchend', function(e) {
+    if (!swiping) return;
+    modal.classList.remove('swiping');
+    const dy = e.changedTouches[0].clientY - startY;
+    const dx = e.changedTouches[0].clientX - startX;
+    if (Math.abs(dy) > 60 || Math.abs(dx) > 60) {
+      modal.classList.add('closed');
+      setTimeout(()=>{modal.style.display='none';},350);
+    }
+    swiping = false;
+  });
+  // 桌面端点击关闭
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) {
+      modal.classList.add('closed');
+      setTimeout(()=>{modal.style.display='none';},350);
+    }
+  });
+}
+// === 参数组头部/底部操作栏吸顶/吸底动画 ===
+function enableStickyAnimations() {
+  // 头部吸顶阴影
+  window.addEventListener('scroll', function() {
+    document.querySelectorAll('.parameter-set-header.sticky').forEach(header => {
+      if (window.scrollY > header.offsetTop) {
+        header.classList.add('scrolled');
+      } else {
+        header.classList.remove('scrolled');
+      }
+    });
+    // 底部操作栏吸底自动隐藏/显示
+    const fabBar = document.getElementById('mobile-fab-bar');
+    if (!fabBar) return;
+    let lastScroll = window.lastFabBarScroll || 0;
+    let now = window.scrollY;
+    if (now > lastScroll + 10) {
+      fabBar.classList.add('hide');
+    } else if (now < lastScroll - 10) {
+      fabBar.classList.remove('hide');
+    }
+    window.lastFabBarScroll = now;
+  });
+}
+// === 初始化 ===
+document.addEventListener('DOMContentLoaded', function() {
+  enableParameterSetDragSort();
+  enableModalSwipeClose();
+  enableStickyAnimations();
+});

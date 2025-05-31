@@ -1,0 +1,219 @@
+/* CAR模型样式 */
+.car-params {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.car-model-section {
+    margin-bottom: 30px;
+}
+
+.car-model-title {
+    color: #2c3e50;
+    font-size: 1.5rem;
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.car-model-description {
+    color: #34495e;
+    margin-bottom: 20px;
+    line-height: 1.6;
+}
+
+/* CAR模型参数说明样式 */
+.car-parameter-explanation {
+    background-color: #f1f8ff;
+    border-left: 4px solid #0078d7;
+    padding: 15px;
+    margin-bottom: 25px;
+    border-radius: 0 6px 6px 0;
+}
+
+.car-parameter-explanation h4 {
+    color: #0078d7;
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.car-parameter-explanation p {
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.car-parameter-explanation ul {
+    margin-top: 10px;
+    padding-left: 20px;
+}
+
+/* CAR结果图表容器 */
+.car-results-container {
+    margin-top: 30px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+}
+
+@media (min-width: 992px) {
+    .car-results-container {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.car-result-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 15px;
+    transition: transform 0.3s ease;
+}
+
+.car-result-card:hover {
+    transform: translateY(-5px);
+}
+
+.car-result-title {
+    font-size: 18px;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.car-result-image {
+    width: 100%;
+    border-radius: 4px;
+    margin: 10px 0;
+}
+
+/* CAR模型颜色方案 */
+.car-primary {
+    color: #2185d0;
+}
+
+.car-secondary {
+    color: #21ba45;
+}
+
+.car-accent {
+    color: #db2828;
+}
+
+/* 过程示意图 */
+.car-process-diagram {
+    display: flex;
+    justify-content: space-between;
+    padding: 15px;
+    margin: 20px 0;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+    overflow-x: auto;
+}
+
+.car-process-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 100px;
+    text-align: center;
+}
+
+.car-step-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: #2185d0;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 24px;
+}
+
+.car-step-description {
+    font-size: 14px;
+    max-width: 120px;
+}
+
+.car-process-arrow {
+    display: flex;
+    align-items: center;
+    margin: 0 10px;
+    color: #777;
+    font-size: 20px;
+}
+
+/* Plotly图表容器 */
+.car-plot-container {
+    width: 100%;
+    height: 400px;
+    margin: 20px 0;
+}
+
+/* 移动端适配：max-width 768px */
+@media (max-width: 768px) {
+    .car-params {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        padding: 8px;
+    }
+    .car-results-container {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        margin-top: 16px;
+    }
+    .car-result-card {
+        padding: 10px;
+        font-size: 0.98rem;
+    }
+    .car-plot-container {
+        height: 260px;
+        min-width: 220px;
+        margin: 10px 0;
+    }
+    .car-process-diagram {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 8px;
+        gap: 8px;
+    }
+    .car-process-step {
+        min-width: 80px;
+        font-size: 13px;
+    }
+    .car-step-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+    }
+}
+/* 超小屏适配：max-width 480px */
+@media (max-width: 480px) {
+    .car-params {
+        padding: 2px;
+        gap: 6px;
+    }
+    .car-result-card {
+        padding: 5px;
+        font-size: 0.92rem;
+    }
+    .car-plot-container {
+        height: 180px;
+        min-width: 120px;
+    }
+    .car-process-step {
+        min-width: 60px;
+        font-size: 12px;
+    }
+    .car-step-description {
+        max-width: 80px;
+    }
+} 

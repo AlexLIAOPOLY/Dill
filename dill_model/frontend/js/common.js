@@ -8,8 +8,8 @@ function initBackToTop() {
     const backToTopBtn = document.createElement('button');
     backToTopBtn.className = 'back-to-top';
     backToTopBtn.innerHTML = '<i class="fas fa-chevron-up"></i>';
-    backToTopBtn.title = '回到顶部';
-    backToTopBtn.setAttribute('aria-label', '回到顶部');
+    backToTopBtn.title = LANGS[currentLang].back_to_top;
+    backToTopBtn.setAttribute('aria-label', LANGS[currentLang].back_to_top);
     
     // 添加到页面
     document.body.appendChild(backToTopBtn);
@@ -67,6 +67,30 @@ function initBackToTop() {
  */
 document.addEventListener('DOMContentLoaded', function() {
     initBackToTop();
+    // 用事件委托修复所有详情按钮
+    document.body.addEventListener('click', function(e) {
+        const btn = e.target.closest('.toggle-details-btn');
+        if (btn) {
+            // 找到同级下一个.model-full-details
+            let details = btn.parentElement.querySelector('.model-full-details');
+            if (details) {
+                const isVisible = details.classList.contains('details-visible');
+                // 获取当前语言和语言包
+                const lang = window.currentLang || 'zh';
+                const LANGS = window.LANGS || {
+                    zh: { btn_expand: '展开更多 <i class="fas fa-chevron-down"></i>', btn_collapse: '收起详情 <i class="fas fa-chevron-up"></i>' },
+                    en: { btn_expand: 'Expand <i class="fas fa-chevron-down"></i>', btn_collapse: 'Collapse <i class="fas fa-chevron-up"></i>' }
+                };
+                if (isVisible) {
+                    details.classList.remove('details-visible');
+                    btn.innerHTML = LANGS[lang].btn_expand;
+                } else {
+                    details.classList.add('details-visible');
+                    btn.innerHTML = LANGS[lang].btn_collapse;
+                }
+            }
+        }
+    });
 });
 
 /**

@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
-from ..models import DillModel
-from ..utils import validate_input, format_response, NumpyEncoder
+from ..models import DillModel, get_model_by_name
+from ..utils import validate_input, validate_enhanced_input, validate_car_input, format_response, NumpyEncoder
 import json
 import numpy as np
 import matplotlib
@@ -18,80 +18,151 @@ dill_model = DillModel()
 @api_bp.route('/calculate', methods=['POST'])
 def calculate():
     """
-    计算Dill模型并返回图像
-    
-    接收参数:
-        I_avg: 平均入射光强度
-        V: 干涉条纹的可见度
-        K: 干涉条纹的空间频率
-        t_exp: 总曝光时间
-        C: 光刻胶光敏速率常数
-        
-    返回:
-        JSON格式的响应，包含两个Base64编码的图像
+    计算模型并返回图像
+    新增参数: model_type
     """
     try:
-        # 获取JSON数据
         data = request.get_json()
+        print('收到前端参数:', data)  # 调试用
+        model_type = data.get('model_type', 'dill')
+        model = get_model_by_name(model_type)
         
-        # 验证输入
-        is_valid, message = validate_input(data)
-        if not is_valid:
-            return jsonify(format_response(False, message=message)), 400
-        
-        # 提取参数
-        I_avg = float(data['I_avg'])
-        V = float(data['V'])
-        K = float(data['K'])
-        t_exp = float(data['t_exp'])
-        C = float(data['C'])
-        
-        # 计算结果并生成图像
-        plots = dill_model.generate_plots(I_avg, V, K, t_exp, C)
-        
-        # 返回结果
+        # 根据模型类型验证参数
+        if model_type == 'dill':
+            is_valid, message = validate_input(data)
+            if not is_valid:
+                return jsonify(format_response(False, message=message)), 400
+            # 提取参数
+            I_avg = float(data['I_avg'])
+            V = float(data['V'])
+            t_exp = float(data['t_exp'])
+            C = float(data['C'])
+            sine_type = data.get('sine_type', '1d')
+            if sine_type == 'multi':
+                Kx = float(data.get('Kx', 0))
+                Ky = float(data.get('Ky', 0))
+                phi_expr = data.get('phi_expr', '0')
+                plots = model.generate_plots(I_avg, V, None, t_exp, C, sine_type=sine_type, Kx=Kx, Ky=Ky, phi_expr=phi_expr)
+            else:
+                K = float(data['K'])
+                plots = model.generate_plots(I_avg, V, K, t_exp, C, sine_type=sine_type)
+        elif model_type == 'enhanced_dill':
+            is_valid, message = validate_enhanced_input(data)
+            if not is_valid:
+                return jsonify(format_response(False, message=message)), 400
+            z_h = float(data['z_h'])
+            T = float(data['T'])
+            t_B = float(data['t_B'])
+            I0 = float(data.get('I0', 1.0))
+            M0 = float(data.get('M0', 1.0))
+            t_exp = float(data['t_exp'])
+            sine_type = data.get('sine_type', '1d')
+            if sine_type == 'multi':
+                Kx = float(data.get('Kx', 0))
+                Ky = float(data.get('Ky', 0))
+                phi_expr = data.get('phi_expr', '0')
+                plots = model.generate_data(z_h, T, t_B, I0, M0, t_exp, sine_type=sine_type, Kx=Kx, Ky=Ky, phi_expr=phi_expr)
+            else:
+                plots = model.generate_data(z_h, T, t_B, I0, M0, t_exp, sine_type=sine_type)
+        elif model_type == 'car':
+            is_valid, message = validate_car_input(data)
+            if not is_valid:
+                return jsonify(format_response(False, message=message)), 400
+            I_avg = float(data['I_avg'])
+            V = float(data['V'])
+            t_exp = float(data['t_exp'])
+            acid_gen_efficiency = float(data['acid_gen_efficiency'])
+            diffusion_length = float(data['diffusion_length'])
+            reaction_rate = float(data['reaction_rate'])
+            amplification = float(data['amplification'])
+            contrast = float(data['contrast'])
+            sine_type = data.get('sine_type', '1d')
+            if sine_type == 'multi':
+                Kx = float(data.get('Kx', 0))
+                Ky = float(data.get('Ky', 0))
+                phi_expr = data.get('phi_expr', '0')
+                plots = model.generate_plots(I_avg, V, None, t_exp, acid_gen_efficiency, diffusion_length, reaction_rate, amplification, contrast, sine_type=sine_type, Kx=Kx, Ky=Ky, phi_expr=phi_expr)
+            else:
+                K = float(data['K'])
+                plots = model.generate_plots(I_avg, V, K, t_exp, acid_gen_efficiency, diffusion_length, reaction_rate, amplification, contrast, sine_type=sine_type)
+        else:
+            return jsonify(format_response(False, message="未知模型类型")), 400
         return jsonify(format_response(True, data=plots)), 200
-    
     except Exception as e:
-        return jsonify(format_response(False, message=f"计算错误: {str(e)}")), 500
+        return jsonify({'success': False, 'message_zh': f"计算错误: {str(e)}", 'message_en': f"Calculation error: {str(e)}", 'data': None}), 500
 
 @api_bp.route('/calculate_data', methods=['POST'])
 def calculate_data():
     """
-    计算Dill模型并返回原始数据（用于交互式图表）
-    
-    接收参数:
-        I_avg: 平均入射光强度
-        V: 干涉条纹的可见度
-        K: 干涉条纹的空间频率
-        t_exp: 总曝光时间
-        C: 光刻胶光敏速率常数
-        
-    返回:
-        JSON格式的响应，包含原始计算数据
+    计算模型并返回原始数据（用于交互式图表）
+    新增参数: model_type
     """
     try:
-        # 获取JSON数据
         data = request.get_json()
+        print('收到前端参数:', data)  # 调试用
+        model_type = data.get('model_type', 'dill')
+        model = get_model_by_name(model_type)
         
-        # 验证输入
-        is_valid, message = validate_input(data)
-        if not is_valid:
-            return jsonify(format_response(False, message=message)), 400
-        
-        # 提取参数
-        I_avg = float(data['I_avg'])
-        V = float(data['V'])
-        K = float(data['K'])
-        t_exp = float(data['t_exp'])
-        C = float(data['C'])
-        
-        # 计算结果并返回数据
-        plot_data = dill_model.generate_data(I_avg, V, K, t_exp, C)
-        
-        # 返回结果
+        # 根据模型类型验证参数
+        if model_type == 'dill':
+            is_valid, message = validate_input(data)
+            if not is_valid:
+                return jsonify(format_response(False, message=message)), 400
+            I_avg = float(data['I_avg'])
+            V = float(data['V'])
+            t_exp = float(data['t_exp'])
+            C = float(data['C'])
+            sine_type = data.get('sine_type', '1d')
+            if sine_type == 'multi':
+                Kx = float(data.get('Kx', 0))
+                Ky = float(data.get('Ky', 0))
+                phi_expr = data.get('phi_expr', '0')
+                plot_data = model.generate_data(I_avg, V, None, t_exp, C, sine_type=sine_type, Kx=Kx, Ky=Ky, phi_expr=phi_expr)
+            else:
+                K = float(data['K'])
+                plot_data = model.generate_data(I_avg, V, K, t_exp, C, sine_type=sine_type)
+        elif model_type == 'enhanced_dill':
+            is_valid, message = validate_enhanced_input(data)
+            if not is_valid:
+                return jsonify(format_response(False, message=message)), 400
+            z_h = float(data['z_h'])
+            T = float(data['T'])
+            t_B = float(data['t_B'])
+            I0 = float(data.get('I0', 1.0))
+            M0 = float(data.get('M0', 1.0))
+            t_exp = float(data['t_exp'])
+            sine_type = data.get('sine_type', '1d')
+            if sine_type == 'multi':
+                Kx = float(data.get('Kx', 0))
+                Ky = float(data.get('Ky', 0))
+                phi_expr = data.get('phi_expr', '0')
+                plot_data = model.generate_data(z_h, T, t_B, I0, M0, t_exp, sine_type=sine_type, Kx=Kx, Ky=Ky, phi_expr=phi_expr)
+            else:
+                plot_data = model.generate_data(z_h, T, t_B, I0, M0, t_exp, sine_type=sine_type)
+        elif model_type == 'car':
+            is_valid, message = validate_car_input(data)
+            if not is_valid:
+                return jsonify(format_response(False, message=message)), 400
+            I_avg = float(data['I_avg'])
+            V = float(data['V'])
+            t_exp = float(data['t_exp'])
+            acid_gen_efficiency = float(data['acid_gen_efficiency'])
+            diffusion_length = float(data['diffusion_length'])
+            reaction_rate = float(data['reaction_rate'])
+            amplification = float(data['amplification'])
+            contrast = float(data['contrast'])
+            sine_type = data.get('sine_type', '1d')
+            if sine_type == 'multi':
+                Kx = float(data.get('Kx', 0))
+                Ky = float(data.get('Ky', 0))
+                phi_expr = data.get('phi_expr', '0')
+                plot_data = model.generate_data(I_avg, V, None, t_exp, acid_gen_efficiency, diffusion_length, reaction_rate, amplification, contrast, sine_type=sine_type, Kx=Kx, Ky=Ky, phi_expr=phi_expr)
+            else:
+                K = float(data['K'])
+                plot_data = model.generate_data(I_avg, V, K, t_exp, acid_gen_efficiency, diffusion_length, reaction_rate, amplification, contrast, sine_type=sine_type)
+        else:
+            return jsonify(format_response(False, message="未知模型类型")), 400
         return jsonify(format_response(True, data=plot_data)), 200
-    
     except Exception as e:
         return jsonify(format_response(False, message=f"数据计算错误: {str(e)}")), 500
 

@@ -40,12 +40,7 @@ def create_app():
     # 首页路由
     @app.route('/')
     def index():
-        return send_from_directory(static_dir, 'welcome.html')
-    
-    # 欢迎页面路由
-    @app.route('/welcome.html')
-    def welcome():
-        return send_from_directory(static_dir, 'welcome.html')
+        return send_from_directory(static_dir, 'index.html')
     
     # 单一计算页面路由
     @app.route('/index.html')
@@ -57,10 +52,10 @@ def create_app():
     def parameter_comparison():
         return send_from_directory(static_dir, 'compare.html')
     
-    # 404错误处理 - 重定向到欢迎页面
+    # 404错误处理 - 返回index.html
     @app.errorhandler(404)
     def not_found(e):
-        return send_from_directory(static_dir, 'welcome.html')
+        return send_from_directory(static_dir, 'index.html')
     
     return app
 
