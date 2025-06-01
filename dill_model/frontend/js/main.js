@@ -60,12 +60,12 @@ function initApp() {
             postData['I0'] = parseFloat(document.getElementById('I0').value);
             postData['M0'] = parseFloat(document.getElementById('M0').value);
             postData['t_exp'] = parseFloat(document.getElementById('t_exp_enhanced').value);
+            // 优化：无论 single 还是 multi 都传递 K
+            postData['K'] = parseFloat(document.getElementById('K').value);
             if (sineType === 'multi') {
                 postData['Kx'] = parseFloat(document.getElementById('enhanced_Kx').value);
                 postData['Ky'] = parseFloat(document.getElementById('enhanced_Ky').value);
                 postData['phi_expr'] = document.getElementById('enhanced_phi_expr').value;
-            } else {
-                postData['K'] = parseFloat(document.getElementById('K').value); // 若增强Dill有K参数
             }
         } else if (modelType === 'car') {
             const sineType = document.getElementById('car-sine-type').value;
@@ -145,6 +145,7 @@ function initApp() {
     
     // 模型选择事件 (如果将来有多个模型，可以在这里处理)
     modelSelect.addEventListener('change', (event) => {
+        clearAllCharts();
         const selectedModel = event.target.value;
         console.log('Selected model:', selectedModel);
         // TODO: 根据 selectedModel 更新模型说明和可能需要的参数界面
@@ -154,6 +155,13 @@ function initApp() {
             // 确保DILL模型相关的说明是可见的 (如果曾被隐藏)
             // 如果有多个模型的说明块，这里需要做显隐切换
         }
+    });
+
+    // 新增：所有参数输入框变动时清空结果
+    const allInputs = document.querySelectorAll('input, select');
+    allInputs.forEach(input => {
+        input.addEventListener('input', clearAllCharts);
+        input.addEventListener('change', clearAllCharts);
     });
 
     // 切换模型详细说明的显示状态
@@ -412,12 +420,12 @@ function getParameterValues() {
         params.I0 = parseFloat(document.getElementById('I0').value);
         params.M0 = parseFloat(document.getElementById('M0').value);
         params.t_exp = parseFloat(document.getElementById('t_exp_enhanced').value);
+        // 优化：无论 single 还是 multi 都传递 K
+        params.K = parseFloat(document.getElementById('K').value);
         if (sineType === 'multi') {
             params.Kx = parseFloat(document.getElementById('enhanced_Kx').value);
             params.Ky = parseFloat(document.getElementById('enhanced_Ky').value);
             params.phi_expr = document.getElementById('enhanced_phi_expr').value;
-        } else {
-            params.K = parseFloat(document.getElementById('K').value);
         }
     } else if (modelType === 'car') {
         const sineType = document.getElementById('car-sine-type').value;
@@ -587,6 +595,11 @@ function displayInteractiveResults(data) {
  * @param {Object} data 数据
  */
 function createExposurePlot(container, data) {
+    // 新增：数据有效性检查
+    if (!data.x || !data.exposure_dose || data.x.length === 0 || data.exposure_dose.length === 0 || data.exposure_dose.every(v => !v || isNaN(v))) {
+        container.innerHTML = '<div style="color:red;padding:20px;">无有效曝光剂量数据，无法绘图。</div>';
+        return;
+    }
     const trace = {
         x: data.x,
         y: data.exposure_dose,
@@ -642,6 +655,11 @@ function createExposurePlot(container, data) {
  * @param {Object} data 数据
  */
 function createThicknessPlot(container, data) {
+    // 新增：数据有效性检查
+    if (!data.x || !data.thickness || data.x.length === 0 || data.thickness.length === 0 || data.thickness.every(v => !v || isNaN(v))) {
+        container.innerHTML = '<div style="color:red;padding:20px;">无有效厚度数据，无法绘图。</div>';
+        return;
+    }
     const trace = {
         x: data.x,
         y: data.thickness,
@@ -1010,7 +1028,7 @@ function getSinglePointDetailedInfo(point, plotType, params) {
                     </div>
                     <div class="info-item">
                         <span class="info-label">V:</span>
-                        <span class="info-value">${params.V}</span>
+                        <span class="info-label">${params.V}</span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">K:</span>

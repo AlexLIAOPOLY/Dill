@@ -10,43 +10,41 @@ def validate_input(data):
     required_fields = ['I_avg', 'V', 't_exp', 'C']
     missing_fields = [field for field in required_fields if field not in data]
     if sine_type == 'multi':
-        # 多维正弦波，必须有Kx、Ky、phi_expr
         for field in ['Kx', 'Ky', 'phi_expr']:
             if field not in data or data[field] in [None, '']:
                 missing_fields.append(field)
     else:
-        # 一维正弦波，必须有K
         if 'K' not in data or data['K'] in [None, '']:
             missing_fields.append('K')
     if missing_fields:
         return False, f"缺少必要参数: {', '.join(missing_fields)}"
-    # 检查参数类型
     try:
         for field in required_fields:
             data[field] = float(data[field])
         if sine_type == 'multi':
             data['Kx'] = float(data['Kx'])
             data['Ky'] = float(data['Ky'])
-            # phi_expr 不强制转float
         else:
             data['K'] = float(data['K'])
     except ValueError:
         return False, "所有参数必须是数值类型（phi_expr除外）"
-    # 参数范围验证
-    if data['I_avg'] <= 0:
-        return False, "平均入射光强度必须为正数"
-    if data['V'] < 0 or data['V'] > 1:
+    # 智能范围校验
+    if not (0 < data['I_avg'] <= 10000):
+        return False, "平均入射光强度必须为正且不超过10000 mW/cm²"
+    if not (0 <= data['V'] <= 1):
         return False, "可见度必须在0到1之间"
     if sine_type == 'multi':
-        if data['Kx'] <= 0 or data['Ky'] <= 0:
-            return False, "Kx、Ky必须为正数"
+        if not (0 < data['Kx'] <= 100):
+            return False, "Kx必须为正且不超过100"
+        if not (0 < data['Ky'] <= 100):
+            return False, "Ky必须为正且不超过100"
     else:
-        if data['K'] <= 0:
-            return False, "空间频率K必须为正数"
-    if data['t_exp'] <= 0:
-        return False, "曝光时间必须为正数"
-    if data['C'] <= 0:
-        return False, "常数C必须为正数"
+        if not (0 < data['K'] <= 100):
+            return False, "空间频率K必须为正且不超过100"
+    if not (0 < data['t_exp'] <= 10000):
+        return False, "曝光时间必须为正且不超过10000秒"
+    if not (0 < data['C'] <= 100):
+        return False, "常数C必须为正且不超过100"
     return True, ""
 
 def validate_enhanced_input(data):
@@ -75,24 +73,27 @@ def validate_enhanced_input(data):
             data['K'] = float(data['K'])
     except ValueError:
         return False, "所有参数必须是数值类型（phi_expr除外）"
-    if data['z_h'] <= 0:
-        return False, "胶厚必须为正数"
-    if data['T'] < 0 or data['T'] > 200:
-        return False, "前烘温度应在0-200℃之间"
-    if data['t_B'] <= 0:
-        return False, "前烘时间必须为正数"
-    if data['I0'] <= 0:
-        return False, "初始光强必须为正数"
-    if data['M0'] <= 0 or data['M0'] > 1.0:
+    # 智能范围校验
+    if not (0 < data['z_h'] <= 1000):
+        return False, "胶厚必须为正且不超过1000微米"
+    if not (0 <= data['T'] <= 300):
+        return False, "前烘温度应在0-300℃之间"
+    if not (0 < data['t_B'] <= 10000):
+        return False, "前烘时间必须为正且不超过10000秒"
+    if not (0 < data['I0'] <= 10000):
+        return False, "初始光强必须为正且不超过10000 mW/cm²"
+    if not (0 < data['M0'] <= 1.0):
         return False, "初始PAC浓度应在0-1之间"
-    if data['t_exp'] <= 0:
-        return False, "曝光时间必须为正数"
+    if not (0 < data['t_exp'] <= 10000):
+        return False, "曝光时间必须为正且不超过10000秒"
     if sine_type == 'multi':
-        if data['Kx'] <= 0 or data['Ky'] <= 0:
-            return False, "Kx、Ky必须为正数"
+        if not (0 < data['Kx'] <= 100):
+            return False, "Kx必须为正且不超过100"
+        if not (0 < data['Ky'] <= 100):
+            return False, "Ky必须为正且不超过100"
     else:
-        if data['K'] <= 0:
-            return False, "空间频率K必须为正数"
+        if not (0 < data['K'] <= 100):
+            return False, "空间频率K必须为正且不超过100"
     return True, ""
 
 def validate_car_input(data):
@@ -121,28 +122,31 @@ def validate_car_input(data):
             data['K'] = float(data['K'])
     except ValueError:
         return False, "所有参数必须是数值类型（phi_expr除外）"
-    if data['I_avg'] <= 0:
-        return False, "平均入射光强度必须为正数"
-    if data['V'] < 0 or data['V'] > 1:
+    # 智能范围校验
+    if not (0 < data['I_avg'] <= 10000):
+        return False, "平均入射光强度必须为正且不超过10000 mW/cm²"
+    if not (0 <= data['V'] <= 1):
         return False, "可见度必须在0到1之间"
     if sine_type == 'multi':
-        if data['Kx'] <= 0 or data['Ky'] <= 0:
-            return False, "Kx、Ky必须为正数"
+        if not (0 < data['Kx'] <= 100):
+            return False, "Kx必须为正且不超过100"
+        if not (0 < data['Ky'] <= 100):
+            return False, "Ky必须为正且不超过100"
     else:
-        if data['K'] <= 0:
-            return False, "空间频率K必须为正数"
-    if data['t_exp'] <= 0:
-        return False, "曝光时间必须为正数"
-    if data['acid_gen_efficiency'] <= 0:
-        return False, "光酸产生效率必须为正数"
-    if data['diffusion_length'] < 0:
-        return False, "扩散长度不能为负数"
-    if data['reaction_rate'] <= 0:
-        return False, "反应速率常数必须为正数"
-    if data['amplification'] <= 1:
-        return False, "放大因子必须大于1"
-    if data['contrast'] <= 0:
-        return False, "对比度必须为正数"
+        if not (0 < data['K'] <= 100):
+            return False, "空间频率K必须为正且不超过100"
+    if not (0 < data['t_exp'] <= 10000):
+        return False, "曝光时间必须为正且不超过10000秒"
+    if not (0 < data['acid_gen_efficiency'] <= 100):
+        return False, "光酸产生效率必须为正且不超过100"
+    if not (0 <= data['diffusion_length'] <= 100):
+        return False, "扩散长度必须在0-100之间"
+    if not (0 < data['reaction_rate'] <= 100):
+        return False, "反应速率常数必须为正且不超过100"
+    if not (1 < data['amplification'] <= 1000):
+        return False, "放大因子必须大于1且不超过1000"
+    if not (0 < data['contrast'] <= 100):
+        return False, "对比度必须为正且不超过100"
     return True, ""
 
 def format_response(success, data=None, message=""):
@@ -157,15 +161,14 @@ def format_response(success, data=None, message=""):
     返回:
         格式化的JSON响应
     """
-    response = {
-        "success": success,
-        "message": message
+    # 优化：如果message是dict，自动转为字符串
+    if isinstance(message, dict):
+        message = json.dumps(message, ensure_ascii=False)
+    return {
+        'success': success,
+        'data': data,
+        'message': message
     }
-    
-    if data:
-        response["data"] = data
-    
-    return response
 
 class NumpyEncoder(json.JSONEncoder):
     """处理NumPy数据类型的JSON编码器"""

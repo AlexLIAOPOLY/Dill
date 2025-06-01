@@ -14,9 +14,6 @@
     <!-- 引入Plotly.js -->
     <script src="https://cdn.plot.ly/plotly-2.25.2.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- 引入Choices.js美化select -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
-    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 </head>
 <body>
     <!-- 加载动画 -->
@@ -775,65 +772,6 @@
         .catch(error => {
             console.error('获取交互式数据失败:', error);
         });
-    });
-    </script>
-    <script>
-    // 全局存储 Choices.js 实例
-    window.choicesInstances = [];
-
-    function initializeChoices() {
-        // 先销毁已存在的实例
-        if (window.choicesInstances) {
-            window.choicesInstances.forEach(instance => instance.destroy());
-            window.choicesInstances = [];
-        }
-
-        document.querySelectorAll('select.model-select').forEach(function(sel) {
-            const choices = new Choices(sel, {
-                searchEnabled: false,
-                itemSelectText: '',
-                shouldSort: false,
-                // important: Choices.js 应该从 option 的当前 textContent 获取文本
-                // 我们会在 applyLang 中更新 option 的 textContent
-            });
-            window.choicesInstances.push(choices);
-
-            // 下拉菜单彻底防遮挡：弹出时挂到body下，fixed定位
-            sel.addEventListener('showDropdown', function() {
-                setTimeout(() => {
-                    const dropdown = sel.parentNode.querySelector('.choices__list--dropdown');
-                    if (dropdown && !dropdown.classList.contains('moved-to-body')) {
-                        const rect = sel.getBoundingClientRect();
-                        dropdown.style.position = 'fixed';
-                        dropdown.style.left = rect.left + 'px';
-                        dropdown.style.top = (rect.bottom + 2) + 'px';
-                        dropdown.style.width = rect.width + 'px';
-                        dropdown.style.zIndex = 99999;
-                        dropdown.classList.add('moved-to-body');
-                        document.body.appendChild(dropdown);
-                    }
-                }, 10);
-            });
-            sel.addEventListener('hideDropdown', function() {
-                setTimeout(() => {
-                    const dropdown = document.querySelector('.choices__list--dropdown.moved-to-body');
-                    if (dropdown && sel.parentNode) {
-                        sel.parentNode.appendChild(dropdown);
-                        dropdown.classList.remove('moved-to-body');
-                        dropdown.style.position = '';
-                        dropdown.style.left = '';
-                        dropdown.style.top = '';
-                        dropdown.style.width = '';
-                        dropdown.style.zIndex = '';
-                    }
-                }, 10);
-            });
-        });
-    }
-
-    // Choices.js初始化所有select
-    document.addEventListener('DOMContentLoaded', function() {
-      initializeChoices(); // 调用新的初始化函数
     });
     </script>
 </body>

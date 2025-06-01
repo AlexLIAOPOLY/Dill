@@ -7,6 +7,10 @@ import base64
 from scipy.ndimage import gaussian_filter
 import math
 
+# 新增：全局字体设置，优先使用常见的无衬线字体
+plt.rcParams['font.sans-serif'] = ['Arial', 'DejaVu Sans', 'Liberation Sans', 'SimHei', 'Microsoft YaHei']
+plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示为方块的问题
+
 def parse_phi_expr(phi_expr, t):
     try:
         safe_dict = {'sin': np.sin, 'cos': np.cos, 'pi': np.pi, 'e': np.e, 't': t, 'math': math}
@@ -120,6 +124,15 @@ class CARModel:
         thickness = 1 - np.power(deprotection, contrast)
         return thickness
     
+    def calculate_exposure_dose(self, x, I_avg, V, K, t_exp, sine_type='1d', Kx=None, Ky=None, phi_expr=None, y=0):
+        if sine_type == 'multi' and Kx is not None:
+            phi = parse_phi_expr(phi_expr, 0) if phi_expr is not None else 0.0
+            intensity = I_avg * (1 + V * np.cos(Kx * x + Ky * y + phi))
+        else:
+            intensity = I_avg * (1 + V * np.cos(K * x))
+        exposure_dose = intensity * t_exp
+        return exposure_dose
+    
     def generate_data(self, I_avg, V, K, t_exp, acid_gen_efficiency, diffusion_length, reaction_rate, amplification, contrast, sine_type='1d', Kx=None, Ky=None, phi_expr=None):
         """
         生成模型数据用于交互式图表
@@ -160,6 +173,10 @@ class CARModel:
         # 计算光刻胶厚度分布
         thickness = self.calculate_dissolution(deprotection, contrast)
         
+        # 检查有效性
+        if (not initial_acid.any() or not diffused_acid.any() or not deprotection.any() or not thickness.any() or
+            np.isnan(initial_acid).all() or np.isnan(diffused_acid).all() or np.isnan(deprotection).all() or np.isnan(thickness).all()):
+            raise ValueError('CAR模型计算结果无效，可能参数设置不合理或数值溢出。')
         return {
             'x': x,
             'initial_acid': initial_acid.tolist(),
@@ -190,6 +207,7 @@ class CARModel:
         返回:
             包含多个Base64编码图像的字典
         """
+        plt.close('all')
         # 创建坐标
         x = np.linspace(0, 10, 1000)  # 0到10微米，1000个点
         
@@ -206,6 +224,11 @@ class CARModel:
         
         # 计算光刻胶厚度分布
         thickness = self.calculate_dissolution(deprotection, contrast)
+        
+        # 检查有效性
+        if (not initial_acid.any() or not diffused_acid.any() or not deprotection.any() or not thickness.any() or
+            np.isnan(initial_acid).all() or np.isnan(diffused_acid).all() or np.isnan(deprotection).all() or np.isnan(thickness).all()):
+            raise ValueError('CAR模型计算结果无效，可能参数设置不合理或数值溢出。')
         
         # 生成图像集
         plots = {}
@@ -272,4 +295,5 @@ class CARModel:
         plots['thickness_plot'] = base64.b64encode(buffer4.getvalue()).decode()
         plt.close(fig4)
         
+        plots['exposure_plot'] = plots['acid_diffusion_plot']
         return plots 

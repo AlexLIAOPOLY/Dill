@@ -184,8 +184,8 @@ function initModelSelection() {
             enhancedDillDesc.style.display = 'block';
             if (carDesc) carDesc.style.display = 'none';
             clearAllParameterSets();
-            addParameterSetWithConfig('参数组 1', { z_h: 10, T: 100, t_B: 10, I0: 1.0, M0: 1.0, t_exp: 5 });
-            addParameterSetWithConfig('参数组 2', { z_h: 20, T: 110, t_B: 15, I0: 1.0, M0: 1.0, t_exp: 5 });
+            addParameterSetWithConfig('参数组 1', { z_h: 10, T: 100, t_B: 10, I0: 1.0, M0: 1.0, t_exp: 5, K: 2 });
+            addParameterSetWithConfig('参数组 2', { z_h: 20, T: 110, t_B: 15, I0: 1.0, M0: 1.0, t_exp: 5, K: 2 });
         } else if (this.value === 'car') {
             if (dillDesc) dillDesc.style.display = 'none';
             if (enhancedDillDesc) enhancedDillDesc.style.display = 'none';
@@ -378,6 +378,7 @@ function duplicateParameterSet(parameterSet) {
         newSet.querySelector('.slider.I0').value = parameterSet.querySelector('.slider.I0').value;
         newSet.querySelector('.slider.M0').value = parameterSet.querySelector('.slider.M0').value;
         newSet.querySelector('.slider.t_exp_enhanced').value = parameterSet.querySelector('.slider.t_exp_enhanced').value;
+        newSet.querySelector('.slider.K_enhanced').value = parameterSet.querySelector('.slider.K_enhanced').value;
     } else if (currentModelType === 'car') {
         newSet.querySelector('.slider.car_I_avg').value = parameterSet.querySelector('.slider.car_I_avg').value;
         newSet.querySelector('.slider.car_V').value = parameterSet.querySelector('.slider.car_V').value;
@@ -450,6 +451,7 @@ function getAllParameterSets() {
             params['I0'] = parseFloat(set.querySelector('.slider.I0').value);
             params['M0'] = parseFloat(set.querySelector('.slider.M0').value);
             params['t_exp'] = parseFloat(set.querySelector('.slider.t_exp_enhanced').value);
+            params['K'] = parseFloat(set.querySelector('.slider.K_enhanced').value);
         } else if (currentModelType === 'car') {
             params['I_avg'] = parseFloat(set.querySelector('.slider.car_I_avg').value);
             params['V'] = parseFloat(set.querySelector('.slider.car_V').value);
@@ -579,56 +581,33 @@ function displayComparisonResults(data) {
  * @param {Object} data 比较结果数据
  */
 function displayInteractiveComparisonResults(data) {
-    if (currentModelType === 'car') {
-        document.getElementById('car-comparison-results').style.display = 'block';
-        const carPlotContainer = document.getElementById('car-comparison-plot-container');
-        carPlotContainer.innerHTML = '';
-        // 假设后端返回data.car_plot_data: {x, y, traces, layout, config}
-        if (data.car_plot_data) {
-            Plotly.newPlot(carPlotContainer, data.car_plot_data.traces, data.car_plot_data.layout, data.car_plot_data.config);
-        }
-        // 隐藏其他模型的结果区
-        document.getElementById('exposure-comparison-plot-container').style.display = 'none';
-        document.getElementById('thickness-comparison-plot-container').style.display = 'none';
-        document.getElementById('exposure-comparison-plot').style.display = 'none';
-        document.getElementById('thickness-comparison-plot').style.display = 'none';
-    } else {
-        document.getElementById('car-comparison-results').style.display = 'none';
-        console.log('准备显示交互式图表，数据:', data);
-        
-        // 隐藏静态图像
-        document.getElementById('exposure-comparison-plot').style.display = 'none';
-        document.getElementById('thickness-comparison-plot').style.display = 'none';
-        
-        // 显示交互式图表容器
-        const exposurePlotContainer = document.getElementById('exposure-comparison-plot-container');
-        const thicknessPlotContainer = document.getElementById('thickness-comparison-plot-container');
-        exposurePlotContainer.style.display = 'block';
-        thicknessPlotContainer.style.display = 'block';
-        
-        // 创建交互式图表
-        createExposureComparisonPlot(exposurePlotContainer, data);
-        createThicknessComparisonPlot(thicknessPlotContainer, data);
-        
-        // 初始化阈值控制器（在图表创建完成后）
+    // 统一所有模型都用交互式Plotly图表
+    document.getElementById('car-comparison-results').style.display = 'none';
+    // 隐藏静态图像
+    document.getElementById('exposure-comparison-plot').style.display = 'none';
+    document.getElementById('thickness-comparison-plot').style.display = 'none';
+
+    // 显示交互式图表容器
+    const exposurePlotContainer = document.getElementById('exposure-comparison-plot-container');
+    const thicknessPlotContainer = document.getElementById('thickness-comparison-plot-container');
+    exposurePlotContainer.style.display = 'block';
+    thicknessPlotContainer.style.display = 'block';
+
+    // 创建交互式图表
+    createExposureComparisonPlot(exposurePlotContainer, data);
+    createThicknessComparisonPlot(thicknessPlotContainer, data);
+
+    // 初始化阈值控制器
+    setTimeout(() => {
+        initAllThresholdControls();
         setTimeout(() => {
-            initAllThresholdControls();
-            console.log('阈值控制器已初始化');
-            
-            // 再次重新初始化以确保使用最新的数据范围
-            setTimeout(() => {
-                reinitializeThresholdControls();
-                console.log('阈值控制器已根据数据范围重新初始化');
-            }, 200);
-        }, 100);
-        
-        // 创建图例(这里我们不需要额外的图例，因为Plotly有内置图例)
-        document.getElementById('exposure-legend').innerHTML = '';
-        document.getElementById('thickness-legend').innerHTML = '';
-        
-        // 应用动画效果
-        animateResults();
-    }
+            reinitializeThresholdControls();
+        }, 200);
+    }, 100);
+
+    document.getElementById('exposure-legend').innerHTML = '';
+    document.getElementById('thickness-legend').innerHTML = '';
+    animateResults();
 }
 
 /**
@@ -2101,6 +2080,9 @@ function addParameterSetWithConfig(customName, params, skipClearCharts = false) 
         }
         if (params.t_exp !== undefined) {
             updateSliderValue(newSet, '.slider.t_exp_enhanced', params.t_exp);
+        }
+        if (params.K !== undefined) {
+            updateSliderValue(newSet, '.slider.K_enhanced', params.K);
         }
     } else if (currentModelType === 'car') {
         // CAR模型参数

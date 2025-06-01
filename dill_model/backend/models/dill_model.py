@@ -142,6 +142,7 @@ class DillModel:
             }
     
     def generate_plots(self, I_avg, V, K, t_exp, C, sine_type='1d', Kx=None, Ky=None, phi_expr=None, y_range=None):
+        plt.close('all')
         x = np.linspace(0, 10, 1000)
         if y_range is not None and len(y_range) > 1:
             y = np.array(y_range)
