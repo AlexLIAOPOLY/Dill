@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="css/style.css?v=1.1">
     <link rel="stylesheet" href="css/animations.css?v=1.1">
     <link rel="stylesheet" href="css/popup-enhanced.css?v=1.0">
+    <link rel="stylesheet" href="css/loading-animation.css">
     <!-- 引入Font Awesome图标 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- 引入Plotly.js -->
@@ -18,7 +19,39 @@
 <body>
     <!-- 加载动画 -->
     <div id="loading" class="loading">
-        <div class="spinner"></div>
+        <div class="loader-container">
+            <!-- 多层旋转环 -->
+            <div class="spinner-ring"></div>
+            <div class="spinner-ring"></div>
+            <div class="spinner-ring"></div>
+            
+            <!-- 中心圆点 -->
+            <div class="spinner-core"></div>
+            
+            <!-- 波浪效果 -->
+            <div class="wave"></div>
+            <div class="wave"></div>
+            <div class="wave"></div>
+            
+            <!-- 粒子效果 -->
+            <div class="particles">
+                <div class="particle"></div>
+                <div class="particle"></div>
+                <div class="particle"></div>
+                <div class="particle"></div>
+                <div class="particle"></div>
+                <div class="particle"></div>
+            </div>
+            
+            <!-- 分子路径 -->
+            <div class="molecule-path">
+                <div class="path"><div class="molecule"></div></div>
+                <div class="path"><div class="molecule"></div></div>
+                <div class="path"><div class="molecule"></div></div>
+                <div class="path"><div class="molecule"></div></div>
+            </div>
+        </div>
+        <div class="loading-text" data-i18n="loading">加载中...</div>
     </div>
     
     <!-- 页头 -->
@@ -471,6 +504,7 @@
         <div class="parameter-set" data-set-id="">
             <div class="parameter-set-header sticky">
                 <button class="drag-handle-btn" data-i18n-title="drag_handle_title" aria-label="拖拽排序"><i class="fas fa-grip-lines"></i></button>
+                <button class="collapse-set-btn" aria-label="折叠/展开" data-i18n-title="collapse_set_title"><i class="fas fa-chevron-down"></i></button>
                 <div class="parameter-set-title-container">
                     <h3 class="parameter-set-title">参数组</h3>
                     <input type="text" class="parameter-set-name-input" placeholder="自定义名称" title="输入自定义名称" data-i18n="compare_template_placeholder" data-i18n-title="compare_set_placeholder_title">
@@ -540,6 +574,19 @@
                         <input type="range" class="slider C" min="0.001" max="0.1" step="0.001" value="0.02">
                         <input type="number" class="number-input" value="0.02" min="0.001" max="0.1" step="0.001">
                     </div>
+                </div>
+                <!-- phi_expr参数输入区（多维正弦波时显示） -->
+                <div class="parameter-item phi-expr-item" style="display:none;">
+                    <div class="parameter-label">
+                        <span class="parameter-name">φ(t) (相位表达式)</span>
+                    </div>
+                    <div class="parameter-input">
+                        <input type="text" class="phi-expr-input" value="0">
+                    </div>
+                    <div class="phi-expr-hint" style="color:#888;font-size:0.95em;">示例：0, pi/2, sin(2*t)，支持sin/cos/pi/t等</div>
+                    <div class="phi-expr-error" style="color:#d00;font-size:0.95em;display:none;"></div>
+                    <button class="phi-expr-preview-btn" style="margin-top:4px;display:none;">预览分布</button>
+                    <div class="phi-expr-preview-plot" style="margin-top:8px;display:none;"></div>
                 </div>
             </div>
         </div>

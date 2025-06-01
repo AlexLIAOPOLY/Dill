@@ -244,6 +244,9 @@ function initParameterSet(parameterSet) {
     
     // 为所有滑块绑定事件
     bindSliderEvents(parameterSet);
+    
+    // 参数组渲染/切换时，处理phi_expr输入区
+    updatePhiExprUI(parameterSet);
 }
 
 /**
@@ -3044,3 +3047,120 @@ document.addEventListener('DOMContentLoaded', function() {
   enableModalSwipeClose();
   enableStickyAnimations();
 });
+
+// 工具函数：校验phi_expr表达式是否合法
+function validatePhiExpr(expr) {
+    if (!expr || typeof expr !== 'string') return false;
+    try {
+        // 只允许sin/cos/pi/t/数字/加减乘除括号
+        if (!/^[-+*/(). 0-9tcosinpi]*$/.test(expr.replace(/\s+/g, ''))) return false;
+        // eslint-disable-next-line no-new-func
+        new Function('t', 'return ' + expr.replace(/\b(sin|cos|pi)\b/g, 'Math.$1'))(0);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+// 工具函数：生成二维正弦分布
+function generate2DSine(Kx, Ky, V, phi_expr, xRange, yRange) {
+    const xPoints = 100, yPoints = 100;
+    const x = Array.from({length: xPoints}, (_, i) => xRange[0] + (xRange[1]-xRange[0])*i/(xPoints-1));
+    const y = Array.from({length: yPoints}, (_, i) => yRange[0] + (yRange[1]-yRange[0])*i/(yPoints-1));
+    const z = [];
+    let phiFunc;
+    try {
+        phiFunc = new Function('t', 'return ' + phi_expr.replace(/\b(sin|cos|pi)\b/g, 'Math.$1'));
+    } catch {
+        phiFunc = () => 0;
+    }
+    for (let j = 0; j < yPoints; j++) {
+        const row = [];
+        for (let i = 0; i < xPoints; i++) {
+            const t = 0; // 预览时t=0
+            const phi = phiFunc(t);
+            row.push(1 + V * Math.cos(Kx * x[i] + Ky * y[j] + phi));
+        }
+        z.push(row);
+    }
+    return {x, y, z};
+}
+
+// 扩展updatePhiExprUI，支持实时校验、错误提示、禁用比较按钮、预览分布
+function updatePhiExprUI(parameterSet) {
+    const phiExprItem = parameterSet.querySelector('.phi-expr-item');
+    if (!phiExprItem) return;
+    const phiInput = phiExprItem.querySelector('.phi-expr-input');
+    const errorDiv = phiExprItem.querySelector('.phi-expr-error');
+    const previewBtn = phiExprItem.querySelector('.phi-expr-preview-btn');
+    const previewPlot = phiExprItem.querySelector('.phi-expr-preview-plot');
+    const compareBtn = document.getElementById('compare-btn');
+    // 只在二维正弦波时显示
+    const sineTypeSel = parameterSet.querySelector('.sine-type-select');
+    if (sineTypeSel && sineTypeSel.value === 'multi') {
+        phiExprItem.style.display = '';
+    } else {
+        phiExprItem.style.display = 'none';
+        return;
+    }
+    // 实时校验
+    function checkPhiExpr() {
+        const expr = phiInput.value;
+        if (validatePhiExpr(expr)) {
+            errorDiv.style.display = 'none';
+            phiInput.classList.remove('input-error');
+            compareBtn.disabled = false;
+        } else {
+            errorDiv.textContent = '表达式非法，仅允许sin/cos/pi/t/数字/加减乘除括号';
+            errorDiv.style.display = '';
+            phiInput.classList.add('input-error');
+            compareBtn.disabled = true;
+        }
+    }
+    phiInput.addEventListener('input', checkPhiExpr);
+    checkPhiExpr();
+    // 预览分布
+    previewBtn.style.display = '';
+    let isPreviewShown = false;
+    let lastPlotData = null;
+    function drawPreviewPlot() {
+        // 读取Kx、Ky、V
+        let Kx = 2, Ky = 0, V = 0.8;
+        const kxInput = parameterSet.querySelector('.kx-input');
+        const kyInput = parameterSet.querySelector('.ky-input');
+        const vInput = parameterSet.querySelector('.v-input');
+        if (kxInput) Kx = parseFloat(kxInput.value);
+        if (kyInput) Ky = parseFloat(kyInput.value);
+        if (vInput) V = parseFloat(vInput.value);
+        lastPlotData = generate2DSine(Kx, Ky, V, phiInput.value, [0, 10], [0, 10]);
+        Plotly.newPlot(previewPlot, [{z: lastPlotData.z, x: lastPlotData.x, y: lastPlotData.y, type:'heatmap', colorscale:'Viridis'}], {title:'二维正弦分布热力图',xaxis:{title:'x'},yaxis:{title:'y'}});
+        previewPlot.style.display = '';
+        setTimeout(()=>{previewPlot.scrollIntoView({behavior:'smooth', block:'center'});}, 200);
+    }
+    function updateBtnUI() {
+        previewBtn.innerHTML = isPreviewShown ? '<span class="preview-icon"></span> 收起分布' : '<span class="preview-icon"></span> 预览分布';
+    }
+    updateBtnUI();
+    previewBtn.onclick = function() {
+        if (!isPreviewShown) {
+            drawPreviewPlot();
+            isPreviewShown = true;
+            updateBtnUI();
+        } else {
+            previewPlot.style.display = 'none';
+            isPreviewShown = false;
+            updateBtnUI();
+        }
+    };
+    // 只要分布图显示，参数变动就自动刷新
+    [phiInput, parameterSet.querySelector('.kx-input'), parameterSet.querySelector('.ky-input'), parameterSet.querySelector('.v-input')].forEach(param => {
+        if (param) {
+            param.addEventListener('input', function() {
+                if (isPreviewShown) drawPreviewPlot();
+            });
+            param.addEventListener('change', function() {
+                if (isPreviewShown) drawPreviewPlot();
+            });
+        }
+    });
+}

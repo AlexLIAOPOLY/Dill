@@ -145,12 +145,26 @@ def open_browser_when_ready(url, max_wait_time=15):
         
         print(f"🌐 正在打开浏览器访问: {url}")
         try:
-            # 尝试打开浏览器
-            success = webbrowser.open(url)
-            if success:
-                print(f"✅ 浏览器已打开")
-            else:
-                print(f"⚠️  无法自动打开浏览器，请手动访问: {url}")
+            # 优先尝试用谷歌浏览器打开
+            try:
+                chrome = webbrowser.get('chrome')
+                success = chrome.open(url)
+                if success:
+                    print(f"✅ 已用谷歌浏览器打开")
+                else:
+                    print(f"⚠️  谷歌浏览器未能打开，尝试用系统默认浏览器...")
+                    fallback = webbrowser.open(url)
+                    if fallback:
+                        print(f"✅ 已用系统默认浏览器打开")
+                    else:
+                        print(f"⚠️  无法自动打开浏览器，请手动访问: {url}")
+            except webbrowser.Error:
+                # 没有chrome时用默认
+                fallback = webbrowser.open(url)
+                if fallback:
+                    print(f"✅ 已用系统默认浏览器打开")
+                else:
+                    print(f"⚠️  无法自动打开浏览器，请手动访问: {url}")
         except Exception as e:
             print(f"⚠️  打开浏览器时出错: {e}")
             print(f"请手动在浏览器中访问: {url}")

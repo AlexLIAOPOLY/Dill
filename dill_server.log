@@ -1,0 +1,251 @@
+
+╔══════════════════════════════════════════════════════════════╗
+║                    Dill模型计算工具                          ║
+║                   版本: v1.2.0                              ║
+║                   启动时间: 2025-06-01 22:58:56                    ║
+╚══════════════════════════════════════════════════════════════╝
+    
+✅ 所有依赖包检查通过
+⚠️  端口 8080 已被占用，正在寻找可用端口...
+✅ 找到可用端口: 8082
+🔧 正在创建应用实例...
+🚀 服务器启动信息:
+   主机地址: 0.0.0.0
+   端口号: 8082
+   调试模式: 关闭
+   本机IP: 192.168.1.246
+
+📱 访问地址:
+   本地访问: http://127.0.0.1:8082
+   网络访问: http://192.168.1.246:8082
+
+💡 提示:
+   - 服务器启动后会自动打开浏览器
+   - 按 Ctrl+C 停止服务器
+   - 使用 --debug 参数启用调试模式
+============================================================
+🎯 服务器正在启动...
+   请稍等，服务器启动完成后会自动打开浏览器...
+
+ * Serving Flask app 'backend.app'
+ * Debug mode: off
+[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8082
+ * Running on http://192.168.1.246:8082
+[33mPress CTRL+C to quit[0m
+127.0.0.1 - - [01/Jun/2025 22:59:15] "[36mGET / HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 22:59:15] "[36mGET /css/style.css?v=1.1 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 22:59:15] "[36mGET /css/animations.css?v=1.1 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 22:59:15] "[36mGET /css/popup-enhanced.css?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 22:59:15] "[36mGET /css/car-model.css?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 22:59:15] "GET /css/loading-animation.css HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 22:59:15] "[36mGET /js/common.js?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 22:59:15] "[36mGET /js/lang.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 22:59:15] "[36mGET /js/main.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 22:59:15] "[36mGET /js/car-model.js?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 22:59:15] "[36mGET /favicon.ico HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 22:59:22] "POST /api/calculate_data HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 22:59:22] "POST /api/calculate_data HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 22:59:22] "POST /api/calculate HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 22:59:22] "POST /api/calculate HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 22:59:24] "POST /api/calculate_data HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 22:59:24] "POST /api/calculate_data HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 22:59:24] "POST /api/calculate HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 22:59:24] "POST /api/calculate HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 22:59:25] "POST /api/calculate_data HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 22:59:25] "POST /api/calculate_data HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 22:59:25] "POST /api/calculate HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 22:59:25] "POST /api/calculate HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 22:59:28] "POST /api/calculate_data HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 22:59:28] "POST /api/calculate_data HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 22:59:28] "POST /api/calculate HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 22:59:28] "POST /api/calculate HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 22:59:30] "[36mGET /compare.html HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 22:59:30] "[36mGET /css/animations.css?v=1.1 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 22:59:30] "[36mGET /css/style.css?v=1.1 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 22:59:30] "[36mGET /css/popup-enhanced.css?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 22:59:30] "[36mGET /css/loading-animation.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 22:59:30] "[36mGET /js/common.js?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 22:59:30] "[36mGET /js/compare.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 22:59:30] "[36mGET /js/lang.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 22:59:31] "[36mGET /favicon.ico HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 22:59:33] "POST /api/compare_data HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 22:59:40] "POST /api/compare_data HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 22:59:43] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 22:59:43] "[36mGET /js/common.js?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 22:59:43] "[36mGET /css/animations.css?v=1.1 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 22:59:43] "[36mGET /css/popup-enhanced.css?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 22:59:43] "[36mGET /css/style.css?v=1.1 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 22:59:43] "[36mGET /css/loading-animation.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 22:59:43] "[36mGET /js/lang.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 22:59:43] "[36mGET /css/car-model.css?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 22:59:43] "[36mGET /js/main.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 22:59:43] "[36mGET /js/car-model.js?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 22:59:43] "[36mGET /favicon.ico HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:01:36] "[36mGET / HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:01:36] "[36mGET /css/car-model.css?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:01:36] "[36mGET /css/style.css?v=1.1 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:01:36] "[36mGET /css/animations.css?v=1.1 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:01:36] "[36mGET /css/popup-enhanced.css?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:01:36] "[36mGET /css/loading-animation.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:01:36] "GET /js/main.js HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:01:36] "[36mGET /js/common.js?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:01:36] "[36mGET /js/car-model.js?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:01:36] "[36mGET /js/lang.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:01:36] "[36mGET /favicon.ico HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:01:41] "POST /api/calculate_data HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:01:41] "POST /api/calculate_data HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:01:41] "POST /api/calculate HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:01:41] "POST /api/calculate HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:07:31] "[31m[1mPOST /api/calculate HTTP/1.1[0m" 400 -
+127.0.0.1 - - [01/Jun/2025 23:07:31] "[31m[1mPOST /api/calculate_data HTTP/1.1[0m" 400 -
+127.0.0.1 - - [01/Jun/2025 23:07:31] "POST /api/calculate_data HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:07:32] "POST /api/calculate HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:09:13] "POST /api/calculate_data HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:09:13] "POST /api/calculate_data HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:09:13] "POST /api/calculate HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:09:13] "POST /api/calculate HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:10:24] "[36mGET /compare.html HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:10:24] "[36mGET /css/style.css?v=1.1 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:10:24] "[36mGET /css/loading-animation.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:10:24] "[36mGET /css/animations.css?v=1.1 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:10:24] "[36mGET /css/popup-enhanced.css?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:10:24] "[36mGET /js/common.js?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:10:24] "[36mGET /js/compare.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:10:24] "[36mGET /js/lang.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:10:25] "[36mGET /favicon.ico HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:11:05] "POST /api/compare_data HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:14:34] "POST /api/compare_data HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:19:55] "[36mGET /index.html HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:19:55] "[36mGET /css/style.css?v=1.1 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:19:55] "[36mGET /css/popup-enhanced.css?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:19:55] "[36mGET /css/animations.css?v=1.1 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:19:55] "[36mGET /css/car-model.css?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:19:55] "[36mGET /js/common.js?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:19:55] "[36mGET /css/loading-animation.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:19:56] "[36mGET /js/main.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:19:56] "[36mGET /js/lang.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:19:56] "[36mGET /js/car-model.js?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:19:56] "[36mGET /favicon.ico HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:20:14] "POST /api/calculate_data HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:20:14] "POST /api/calculate_data HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:20:15] "POST /api/calculate HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:20:15] "POST /api/calculate HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:20:28] "POST /api/calculate_data HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:20:28] "POST /api/calculate_data HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:20:28] "POST /api/calculate HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:20:28] "POST /api/calculate HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:20:46] "[31m[1mPOST /api/calculate HTTP/1.1[0m" 400 -
+127.0.0.1 - - [01/Jun/2025 23:20:46] "[31m[1mPOST /api/calculate_data HTTP/1.1[0m" 400 -
+127.0.0.1 - - [01/Jun/2025 23:20:46] "[31m[1mPOST /api/calculate_data HTTP/1.1[0m" 400 -
+127.0.0.1 - - [01/Jun/2025 23:20:46] "[31m[1mPOST /api/calculate HTTP/1.1[0m" 400 -
+收到前端参数: {'model_type': 'dill', 'y_min': 0, 'y_max': 10, 'y_points': 100, 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'sine_type': 'single', 'K': 2}
+收到前端参数: {'model_type': 'dill', 'y_min': 0, 'y_max': 10, 'y_points': 100, 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'sine_type': 'single', 'K': 2}
+收到前端参数: {'model_type': 'dill', 'sine_type': 'single', 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'K': 2}
+收到前端参数: {'model_type': 'dill', 'sine_type': 'single', 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'K': 2}
+收到前端参数: {'model_type': 'dill', 'y_min': 0, 'y_max': 10, 'y_points': 100, 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'sine_type': 'single', 'K': 2}
+收到前端参数: {'model_type': 'dill', 'y_min': 0, 'y_max': 10, 'y_points': 100, 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'sine_type': 'single', 'K': 2}
+收到前端参数: {'model_type': 'dill', 'sine_type': 'single', 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'K': 2}
+收到前端参数: {'model_type': 'dill', 'sine_type': 'single', 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'K': 2}
+收到前端参数: {'model_type': 'dill', 'y_min': 0, 'y_max': 10, 'y_points': 100, 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'sine_type': 'single', 'K': 2}
+收到前端参数: {'model_type': 'dill', 'y_min': 0, 'y_max': 10, 'y_points': 100, 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'sine_type': 'single', 'K': 2}
+收到前端参数: {'model_type': 'dill', 'sine_type': 'single', 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'K': 2}
+收到前端参数: {'model_type': 'dill', 'sine_type': 'single', 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'K': 2}
+收到前端参数: {'model_type': 'dill', 'y_min': 0, 'y_max': 10, 'y_points': 100, 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'sine_type': 'single', 'K': 2}
+收到前端参数: {'model_type': 'dill', 'y_min': 0, 'y_max': 10, 'y_points': 100, 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'sine_type': 'single', 'K': 2}
+收到前端参数: {'model_type': 'dill', 'sine_type': 'single', 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'K': 2}
+收到前端参数: {'model_type': 'dill', 'sine_type': 'single', 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'K': 2}
+收到前端参数: {'model_type': 'dill', 'y_min': 0, 'y_max': 10, 'y_points': 100, 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'sine_type': 'single', 'K': 2}
+收到前端参数: {'model_type': 'dill', 'y_min': 0, 'y_max': 10, 'y_points': 100, 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'sine_type': 'single', 'K': 2}
+收到前端参数: {'model_type': 'dill', 'sine_type': 'single', 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'K': 2}
+收到前端参数: {'model_type': 'dill', 'sine_type': 'single', 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'K': 2}
+收到前端参数: {'model_type': 'enhanced_dill', 'y_min': 0, 'y_max': 10, 'y_points': 100, 'z_h': 10, 'T': 100, 't_B': 10, 'I0': 1, 'M0': 1, 't_exp': 5, 'sine_type': 'single'}
+参数校验失败: 缺少必要参数: K, 参数: {'model_type': 'enhanced_dill', 'y_min': 0, 'y_max': 10, 'y_points': 100, 'z_h': 10, 'T': 100, 't_B': 10, 'I0': 1, 'M0': 1, 't_exp': 5, 'sine_type': 'single'}
+收到前端参数: {'model_type': 'enhanced_dill', 'y_min': 0, 'y_max': 10, 'y_points': 100, 'z_h': 10, 'T': 100, 't_B': 10, 'I0': 1, 'M0': 1, 't_exp': 5, 'sine_type': 'single'}
+参数校验失败: 缺少必要参数: K, 参数: {'model_type': 'enhanced_dill', 'y_min': 0, 'y_max': 10, 'y_points': 100, 'z_h': 10, 'T': 100, 't_B': 10, 'I0': 1, 'M0': 1, 't_exp': 5, 'sine_type': 'single'}
+收到前端参数: {'model_type': 'enhanced_dill', 'sine_type': 'single', 'z_h': 10, 'T': 100, 't_B': 10, 'I0': 1, 'M0': 1, 't_exp': 5, 'K': 2}
+收到前端参数: {'model_type': 'enhanced_dill', 'sine_type': 'single', 'z_h': 10, 'T': 100, 't_B': 10, 'I0': 1, 'M0': 1, 't_exp': 5, 'K': 2}
+收到前端参数: {'model_type': 'car', 'y_min': 0, 'y_max': 10, 'y_points': 100, 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'acid_gen_efficiency': 0.5, 'diffusion_length': 3, 'reaction_rate': 0.3, 'amplification': 10, 'contrast': 3, 'sine_type': 'single', 'K': 2}
+收到前端参数: {'model_type': 'car', 'y_min': 0, 'y_max': 10, 'y_points': 100, 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'acid_gen_efficiency': 0.5, 'diffusion_length': 3, 'reaction_rate': 0.3, 'amplification': 10, 'contrast': 3, 'sine_type': 'single', 'K': 2}
+收到前端参数: {'model_type': 'car', 'sine_type': 'single', 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'acid_gen_efficiency': 0.5, 'diffusion_length': 3, 'reaction_rate': 0.3, 'amplification': 10, 'contrast': 3, 'K': 2}
+收到前端参数: {'model_type': 'car', 'sine_type': 'single', 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'acid_gen_efficiency': 0.5, 'diffusion_length': 3, 'reaction_rate': 0.3, 'amplification': 10, 'contrast': 3, 'K': 2}
+收到前端参数: {'model_type': 'dill', 'y_min': 0, 'y_max': 10, 'y_points': 100, 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'sine_type': 'multi', 'Kx': 2, 'Ky': 1, 'phi_expr': '0'}
+收到前端参数: {'model_type': 'dill', 'y_min': 0, 'y_max': 10, 'y_points': 100, 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'sine_type': 'multi', 'Kx': 2, 'Ky': 1, 'phi_expr': '0'}
+收到前端参数: {'model_type': 'dill', 'sine_type': 'multi', 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'Kx': 2, 'Ky': 1, 'phi_expr': '0', 'y_min': 0, 'y_max': 10, 'y_points': 100}
+收到前端参数: {'model_type': 'dill', 'sine_type': 'multi', 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'Kx': 2, 'Ky': 1, 'phi_expr': '0', 'y_min': 0, 'y_max': 10, 'y_points': 100}
+收到前端参数: {'model_type': 'dill', 'y_min': 0, 'y_max': 10, 'y_points': 100, 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'sine_type': 'single', 'K': 2}
+收到前端参数: {'model_type': 'dill', 'y_min': 0, 'y_max': 10, 'y_points': 100, 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'sine_type': 'single', 'K': 2}
+收到前端参数: {'model_type': 'dill', 'sine_type': 'single', 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'K': 2}
+收到前端参数: {'model_type': 'dill', 'sine_type': 'single', 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'K': 2}
+收到前端参数: {'model_type': 'dill', 'y_min': 0, 'y_max': 10, 'y_points': 100, 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'sine_type': 'multi', 'Kx': 200, 'Ky': 1.2, 'phi_expr': '0'}
+参数校验失败: Kx必须为正且不超过100, 参数: {'model_type': 'dill', 'y_min': 0, 'y_max': 10, 'y_points': 100, 'I_avg': 10.0, 'V': 0.8, 't_exp': 5.0, 'C': 0.02, 'sine_type': 'multi', 'Kx': 200.0, 'Ky': 1.2, 'phi_expr': '0'}
+收到前端参数: {'model_type': 'dill', 'y_min': 0, 'y_max': 10, 'y_points': 100, 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'sine_type': 'multi', 'Kx': 200, 'Ky': 1.2, 'phi_expr': '0'}
+参数校验失败: Kx必须为正且不超过100, 参数: {'model_type': 'dill', 'y_min': 0, 'y_max': 10, 'y_points': 100, 'I_avg': 10.0, 'V': 0.8, 't_exp': 5.0, 'C': 0.02, 'sine_type': 'multi', 'Kx': 200.0, 'Ky': 1.2, 'phi_expr': '0'}
+收到前端参数: {'model_type': 'dill', 'sine_type': 'multi', 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'Kx': 200, 'Ky': 1.2, 'phi_expr': '0', 'y_min': 0, 'y_max': 10, 'y_points': 100}
+参数校验失败: Kx必须为正且不超过100, 参数: {'model_type': 'dill', 'sine_type': 'multi', 'I_avg': 10.0, 'V': 0.8, 't_exp': 5.0, 'C': 0.02, 'Kx': 200.0, 'Ky': 1.2, 'phi_expr': '0', 'y_min': 0, 'y_max': 10, 'y_points': 100}
+收到前端参数: {'model_type': 'dill', 'sine_type': 'multi', 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'Kx': 200, 'Ky': 1.2, 'phi_expr': '0', 'y_min': 0, 'y_max': 10, 'y_points': 100}
+参数校验失败: Kx必须为正且不超过100, 参数: {'model_type': 'dill', 'sine_type': 'multi', 'I_avg': 10.0, 'V': 0.8, 't_exp': 5.0, 'C': 0.02, 'Kx': 200.0, 'Ky': 1.2, 'phi_expr': '0', 'y_min': 0, 'y_max': 10, 'y_points': 100}
+收到前端参数: {'model_type': 'dill', 'y_min': 0, 'y_max': 10, 'y_points': 100, 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'sine_type': 'multi', 'Kx': 100, 'Ky': 1.2, 'phi_expr': '0'}
+收到前端参数: {'model_type': 'dill', 'y_min': 0, 'y_max': 10, 'y_points': 100, 'I_avg': 10, 'V': 0.8, 't_exp': 5, 'C': 0.02, 'sine_type': 'multi', 'Kx': 100, 'Ky': 1.2, 'phi_expr': '0'}127.0.0.1 - - [01/Jun/2025 23:21:00] "POST /api/calculate_data HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:21:00] "POST /api/calculate_data HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:21:00] "POST /api/calculate HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:21:00] "POST /api/calculate HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:23:09] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:23:09] "[36mGET /css/style.css?v=1.1 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:23:09] "[36mGET /css/animations.css?v=1.1 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:23:09] "[36mGET /css/popup-enhanced.css?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:23:09] "[36mGET /css/car-model.css?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:23:09] "[36mGET /css/loading-animation.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:23:09] "[36mGET /js/common.js?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:23:09] "[36mGET /js/main.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:23:09] "[36mGET /js/lang.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:23:09] "[36mGET /js/car-model.js?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:23:09] "GET /favicon.ico HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:23:31] "[36mGET /index.html HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:23:31] "[36mGET /css/style.css?v=1.1 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:23:31] "[36mGET /css/popup-enhanced.css?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:23:31] "[36mGET /css/animations.css?v=1.1 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:23:31] "[36mGET /css/car-model.css?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:23:31] "[36mGET /css/loading-animation.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:23:31] "[36mGET /js/common.js?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:23:31] "[36mGET /js/main.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:23:31] "[36mGET /js/lang.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:23:31] "[36mGET /js/car-model.js?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:23:31] "[36mGET /favicon.ico HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:28:41] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:28:41] "[36mGET /css/popup-enhanced.css?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:28:41] "[36mGET /css/animations.css?v=1.1 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:28:41] "[36mGET /css/car-model.css?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:28:41] "[36mGET /css/loading-animation.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:28:41] "[36mGET /css/style.css?v=1.1 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:28:41] "[36mGET /js/car-model.js?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:28:41] "[36mGET /js/main.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:28:41] "[36mGET /js/common.js?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:28:41] "[36mGET /js/lang.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:28:41] "GET /favicon.ico HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:29:58] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:29:58] "[36mGET /css/animations.css?v=1.1 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:29:58] "[36mGET /css/popup-enhanced.css?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:29:58] "[36mGET /css/style.css?v=1.1 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:29:58] "[36mGET /css/car-model.css?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:29:58] "[36mGET /js/main.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:29:58] "[36mGET /js/lang.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:29:58] "[36mGET /js/car-model.js?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:29:58] "[36mGET /js/common.js?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:29:58] "[36mGET /css/loading-animation.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:29:58] "GET /favicon.ico HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:40:53] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:40:53] "[36mGET /css/popup-enhanced.css?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:40:53] "[36mGET /css/animations.css?v=1.1 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:40:53] "[36mGET /css/style.css?v=1.1 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:40:53] "[36mGET /css/car-model.css?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:40:53] "[36mGET /css/loading-animation.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:40:53] "GET /js/main.js HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:40:53] "[36mGET /js/common.js?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:40:53] "[36mGET /js/lang.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:40:53] "[36mGET /js/car-model.js?v=1.0 HTTP/1.1[0m" 304 -
+127.0.0.1 - - [01/Jun/2025 23:40:54] "GET /favicon.ico HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:40:58] "POST /api/calculate_data HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:40:58] "POST /api/calculate_data HTTP/1.1" 200 -
+127.0.0.1 - - [01/Jun/2025 23:40:58] "POST /api/calculate HTTP/1.1" 200 -

@@ -289,10 +289,25 @@ def compare_data():
                 I0 = float(params.get('I0', 1.0))
                 M0 = float(params.get('M0', 1.0))
                 t_exp = float(params['t_exp'])
-                # 只调用一次 generate_data，所有 x 取同一个值
-                enhanced_data = enhanced_model.generate_data(z_h, T, t_B, I0, M0, t_exp)
-                exposure_dose = [enhanced_data['I'][0]] * len(x)
-                thickness = [enhanced_data['M'][0]] * len(x)
+                K = float(params.get('K_enhanced', 2.0))  # 获取空间频率参数
+                V = float(params.get('V', 0.8))  # 获取对比度参数，默认0.8
+                
+                # 考虑空间分布
+                thickness_data = []
+                exposure_dose_data = []
+                
+                # 对每个位置点计算相应的厚度和曝光剂量
+                for pos in x:
+                    # 计算该位置的入射光强度，考虑空间频率
+                    local_I0 = I0 * (1 + V * np.cos(K * pos))
+                    # 生成该位置的厚度数据
+                    enhanced_data = enhanced_model.generate_data(z_h, T, t_B, local_I0, M0, t_exp)
+                    # 取深度平均值或表面值
+                    thickness_data.append(enhanced_data['M'][0])
+                    exposure_dose_data.append(enhanced_data['I'][0] * t_exp)
+                
+                exposure_dose = exposure_dose_data
+                thickness = thickness_data
             else:
                 I_avg = float(params['I_avg'])
                 V = float(params['V'])
@@ -349,9 +364,25 @@ def generate_comparison_plots_with_enhanced(parameter_sets):
             I0 = float(params.get('I0', 1.0))
             M0 = float(params.get('M0', 1.0))
             t_exp = float(params['t_exp'])
-            enhanced_data = enhanced_model.generate_data(z_h, T, t_B, I0, M0, t_exp)
-            exposure_dose = [enhanced_data['I'][0]] * len(x)
-            label = f"Set {i+1}: 厚胶模型 (z_h={z_h}, T={T}, t_B={t_B}, t_exp={t_exp})"
+            K = float(params.get('K_enhanced', 2.0))  # 获取空间频率参数
+            V = float(params.get('V', 0.8))  # 获取对比度参数，默认0.8
+            
+            # 考虑空间分布
+            thickness_data = []
+            exposure_dose_data = []
+            
+            # 对每个位置点计算相应的厚度和曝光剂量
+            for pos in x:
+                # 计算该位置的入射光强度，考虑空间频率
+                local_I0 = I0 * (1 + V * np.cos(K * pos))
+                # 生成该位置的厚度数据
+                enhanced_data = enhanced_model.generate_data(z_h, T, t_B, local_I0, M0, t_exp)
+                # 取深度平均值或表面值
+                thickness_data.append(enhanced_data['M'][0])
+                exposure_dose_data.append(enhanced_data['I'][0] * t_exp)
+            
+            thickness = thickness_data
+            label = f"Set {i+1}: 厚胶模型 (z_h={z_h}, T={T}, t_B={t_B}, K={K})"
         else:
             I_avg = float(params['I_avg'])
             V = float(params['V'])
@@ -403,8 +434,25 @@ def generate_comparison_plots_with_enhanced(parameter_sets):
             I0 = float(params.get('I0', 1.0))
             M0 = float(params.get('M0', 1.0))
             t_exp = float(params['t_exp'])
-            enhanced_data = enhanced_model.generate_data(z_h, T, t_B, I0, M0, t_exp)
-            thickness = [enhanced_data['M'][0]] * len(x)
+            K = float(params.get('K_enhanced', 2.0))  # 获取空间频率参数
+            V = float(params.get('V', 0.8))  # 获取对比度参数，默认0.8
+            
+            # 考虑空间分布
+            thickness_data = []
+            exposure_dose_data = []
+            
+            # 对每个位置点计算相应的厚度和曝光剂量
+            for pos in x:
+                # 计算该位置的入射光强度，考虑空间频率
+                local_I0 = I0 * (1 + V * np.cos(K * pos))
+                # 生成该位置的厚度数据
+                enhanced_data = enhanced_model.generate_data(z_h, T, t_B, local_I0, M0, t_exp)
+                # 取深度平均值或表面值
+                thickness_data.append(enhanced_data['M'][0])
+                exposure_dose_data.append(enhanced_data['I'][0] * t_exp)
+            
+            exposure_dose = exposure_dose_data
+            thickness = thickness_data
             label = f"Set {i+1}: 厚胶模型 (z_h={z_h}, T={T}, t_B={t_B}, t_exp={t_exp})"
         else:
             I_avg = float(params['I_avg'])

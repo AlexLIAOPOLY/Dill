@@ -90,7 +90,9 @@ function initApp() {
         // 显示加载动画
         loading.classList.add('active');
         loading.setAttribute('data-i18n', 'loading');
-        loading.textContent = LANGS[currentLang].loading;
+        // 修复：只修改动画里的文字部分，不覆盖整个动画结构
+        const loadingText = loading.querySelector('.loading-text');
+        if (loadingText) loadingText.textContent = LANGS[currentLang].loading;
         // 隐藏错误消息
         errorMessage.classList.remove('visible');
         // 隐藏结果区域
@@ -133,12 +135,20 @@ function initApp() {
                         errorMessage.textContent = msg || LANGS[currentLang].error_message;
                         errorMessage.setAttribute('data-i18n', 'error_message');
                         errorMessage.classList.add('visible');
-                        
                         // 添加摇晃动画
                         errorMessage.classList.add('shake');
                         setTimeout(() => {
                             errorMessage.classList.remove('shake');
                         }, 800);
+                        // 修正：报错时自动滚动到页面顶部，延迟50ms确保DOM渲染
+                        setTimeout(() => {
+                            window.scrollTo({top: 0, behavior: 'smooth'});
+                            document.querySelectorAll('.main-content, .container').forEach(el => {
+                                if (el.scrollTop !== undefined) el.scrollTop = 0;
+                            });
+                        }, 50);
+                        // 新增：高亮出错参数卡片
+                        highlightErrorCard(msg);
                     });
             });
     });
@@ -1186,31 +1196,168 @@ function addPhiExprHint() {
 }
 document.addEventListener('DOMContentLoaded', addPhiExprHint);
 
-// phi_expr参数校验
+// 工具函数：校验phi_expr表达式是否合法
 function validatePhiExpr(expr) {
+    if (!expr || typeof expr !== 'string') return false;
     try {
+        // 只允许sin/cos/pi/t/数字/加减乘除括号
+        if (!/^[-+*/(). 0-9tcosinpi]*$/.test(expr.replace(/\s+/g, ''))) return false;
         // eslint-disable-next-line no-new-func
-        new Function('t', 'return ' + expr.replace(/\b(sin|cos|pi|e)\b/g, 'Math.$1'))(0);
+        new Function('t', 'return ' + expr.replace(/\b(sin|cos|pi)\b/g, 'Math.$1'))(0);
         return true;
     } catch {
         return false;
     }
 }
 
-// 在计算前校验phi_expr
-const oldGetParameterValues = getParameterValues;
-getParameterValues = function() {
-    const params = oldGetParameterValues();
-    const phiFields = [
-        params.phi_expr,
-        params.enhanced_phi_expr,
-        params.car_phi_expr
-    ];
-    for (const expr of phiFields) {
-        if (expr && !validatePhiExpr(expr)) {
-            alert('phi(t)表达式格式有误，请参考示例！');
-            throw new Error('phi_expr invalid');
+// 工具函数：生成二维正弦分布
+function generate2DSine(Kx, Ky, V, phi_expr, xRange, yRange) {
+    const xPoints = 100, yPoints = 100;
+    const x = Array.from({length: xPoints}, (_, i) => xRange[0] + (xRange[1]-xRange[0])*i/(xPoints-1));
+    const y = Array.from({length: yPoints}, (_, i) => yRange[0] + (yRange[1]-yRange[0])*i/(yPoints-1));
+    const phiFunc = (t) => {
+        try {
+            // eslint-disable-next-line no-new-func
+            return new Function('t', 'return ' + phi_expr.replace(/\b(sin|cos|pi)\b/g, 'Math.$1'))(t);
+        } catch { return 0; }
+    };
+    const phi = phiFunc(0);
+    const z = [];
+    for (let j = 0; j < yPoints; j++) {
+        const row = [];
+        for (let i = 0; i < xPoints; i++) {
+            row.push(1 + V * Math.cos(Kx * x[i] + Ky * y[j] + phi));
         }
+        z.push(row);
     }
-    return params;
-}; 
+    return {x, y, z};
+}
+
+// 绑定phi_expr输入区说明、校验、预览功能
+function bindPhiExprUI() {
+    const configs = [
+        {input: 'phi_expr', kx: 'Kx', ky: 'Ky', v: 'V', btn: 'phi-expr-preview-btn', plot: 'phi-expr-preview-plot', err: 'phi-expr-error'},
+        {input: 'enhanced_phi_expr', kx: 'enhanced_Kx', ky: 'enhanced_Ky', v: 'V', btn: 'phi-expr-preview-btn', plot: 'phi-expr-preview-plot', err: 'phi-expr-error'},
+        {input: 'car_phi_expr', kx: 'car_Kx', ky: 'car_Ky', v: 'car_V', btn: 'phi-expr-preview-btn', plot: 'phi-expr-preview-plot', err: 'phi-expr-error'}
+    ];
+    configs.forEach(cfg => {
+        const input = document.getElementById(cfg.input);
+        const kxInput = document.getElementById(cfg.kx);
+        const kyInput = document.getElementById(cfg.ky);
+        const vInput = document.getElementById(cfg.v);
+        const btn = document.getElementById(cfg.btn);
+        const plot = document.getElementById(cfg.plot);
+        const errDiv = input?.parentNode?.parentNode?.querySelector('.phi-expr-error');
+        const calcBtn = document.getElementById('calculate-btn');
+        if (!input || !btn || !plot) return;
+        // 实时校验
+        input.addEventListener('input', function() {
+            const expr = input.value;
+            if (!validatePhiExpr(expr)) {
+                input.style.borderColor = '#d00';
+                if (errDiv) { errDiv.textContent = '表达式格式有误，仅支持sin/cos/pi/t/数字/加减乘除等。'; errDiv.style.display = ''; }
+                calcBtn.disabled = true;
+                btn.disabled = true;
+            } else {
+                input.style.borderColor = '';
+                if (errDiv) { errDiv.textContent = ''; errDiv.style.display = 'none'; }
+                calcBtn.disabled = false;
+                btn.disabled = false;
+            }
+        });
+        // 预览分布
+        btn.style.display = '';
+        let isPreviewShown = false;
+        let lastPlotData = null;
+        function drawPreviewPlot(scrollToPlot = false) {
+            let Kx = 2, Ky = 0, V = 0.8;
+            if (kxInput) Kx = parseFloat(kxInput.value);
+            if (kyInput) Ky = parseFloat(kyInput.value);
+            if (vInput) V = parseFloat(vInput.value);
+            const xRange = [0, 10], yRange = [0, 10];
+            const expr = input.value;
+            if (!validatePhiExpr(expr)) {
+                if (errDiv) { errDiv.textContent = '表达式格式有误，无法预览。'; errDiv.style.display = ''; }
+                return;
+            }
+            lastPlotData = generate2DSine(Kx, Ky, V, expr, xRange, yRange);
+            plot.style.display = '';
+            Plotly.newPlot(plot, [{
+                z: lastPlotData.z, x: lastPlotData.x, y: lastPlotData.y, type: 'heatmap', colorscale: 'Viridis',
+                colorbar: {title: 'I(x,y)'}
+            }], {
+                title: '二维正弦分布预览', xaxis: {title: 'x'}, yaxis: {title: 'y'},
+                margin: {t:40, l:40, r:20, b:10}, height: 260
+            }, {displayModeBar: false});
+            if (scrollToPlot) {
+                setTimeout(()=>{plot.scrollIntoView({behavior:'smooth', block:'center'});}, 200);
+            }
+        }
+        function updateBtnUI() {
+            btn.innerHTML = isPreviewShown ? '<span class="preview-icon"></span> 收起分布' : '<span class="preview-icon"></span> 预览分布';
+        }
+        updateBtnUI();
+        btn.addEventListener('click', function() {
+            if (!isPreviewShown) {
+                drawPreviewPlot();
+                isPreviewShown = true;
+                updateBtnUI();
+            } else {
+                plot.style.display = 'none';
+                isPreviewShown = false;
+                updateBtnUI();
+            }
+        });
+        // 只要分布图显示，参数变动就自动刷新（但不自动滚动）
+        [input, kxInput, kyInput, vInput].forEach(param => {
+            if (param) {
+                param.addEventListener('input', function() {
+                    if (isPreviewShown) drawPreviewPlot(false);
+                });
+                param.addEventListener('change', function() {
+                    if (isPreviewShown) drawPreviewPlot(false);
+                });
+                // 仅在blur时自动滚动
+                param.addEventListener('blur', function() {
+                    if (isPreviewShown) drawPreviewPlot(true);
+                });
+            }
+        });
+    });
+}
+document.addEventListener('DOMContentLoaded', bindPhiExprUI);
+
+function highlightErrorCard(msg) {
+    // 先移除所有高亮
+    document.querySelectorAll('.parameter-item.error').forEach(e=>e.classList.remove('error'));
+    // 简单关键词判断
+    if (/phi|表达式|expr|格式|sin|cos|pi|t/.test(msg)) {
+        let el = document.getElementById('phi_expr');
+        if (el) el.closest('.parameter-item').classList.add('error');
+    }
+    if (/Kx|空间频率x/.test(msg)) {
+        let el = document.getElementById('Kx');
+        if (el) el.closest('.parameter-item').classList.add('error');
+    }
+    if (/Ky|空间频率y/.test(msg)) {
+        let el = document.getElementById('Ky');
+        if (el) el.closest('.parameter-item').classList.add('error');
+    }
+    if (/V|可见度|对比度/.test(msg)) {
+        let el = document.getElementById('V');
+        if (el) el.closest('.parameter-item').classList.add('error');
+    }
+    if (/C|速率常数/.test(msg)) {
+        let el = document.getElementById('C');
+        if (el) el.closest('.parameter-item').classList.add('error');
+    }
+    if (/t_exp|曝光时间/.test(msg)) {
+        let el = document.getElementById('t_exp');
+        if (el) el.closest('.parameter-item').classList.add('error');
+    }
+    // 其它参数可按需扩展
+    // 3秒后自动移除高亮
+    setTimeout(()=>{
+        document.querySelectorAll('.parameter-item.error').forEach(e=>e.classList.remove('error'));
+    }, 3000);
+} 

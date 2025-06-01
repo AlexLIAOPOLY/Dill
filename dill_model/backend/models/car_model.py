@@ -6,15 +6,35 @@ from io import BytesIO
 import base64
 from scipy.ndimage import gaussian_filter
 import math
+import ast
 
 # 新增：全局字体设置，优先使用常见的无衬线字体
 plt.rcParams['font.sans-serif'] = ['Arial', 'DejaVu Sans', 'Liberation Sans', 'SimHei', 'Microsoft YaHei']
 plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示为方块的问题
 
 def parse_phi_expr(phi_expr, t):
+    """
+    安全解析phi_expr表达式，t为时间，只允许sin/cos/pi/t等
+    """
+    allowed_names = {'sin': np.sin, 'cos': np.cos, 'pi': np.pi, 't': t}
+    allowed_nodes = (
+        ast.Expression, ast.BinOp, ast.UnaryOp, ast.Num, ast.Load,
+        ast.Call, ast.Name, ast.Constant, ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Pow,
+        ast.USub, ast.UAdd, ast.Mod, ast.FloorDiv, ast.Tuple, ast.List
+    )
     try:
-        safe_dict = {'sin': np.sin, 'cos': np.cos, 'pi': np.pi, 'e': np.e, 't': t, 'math': math}
-        return eval(str(phi_expr), {"__builtins__": None}, safe_dict)
+        node = ast.parse(str(phi_expr), mode='eval')
+        for n in ast.walk(node):
+            if not isinstance(n, allowed_nodes):
+                raise ValueError(f"不允许的表达式节点: {type(n).__name__}")
+            if isinstance(n, ast.Name) and n.id not in allowed_names:
+                raise ValueError(f"不允许的变量: {n.id}")
+            if isinstance(n, ast.Call) and (
+                not isinstance(n.func, ast.Name) or n.func.id not in allowed_names
+            ):
+                raise ValueError(f"不允许的函数: {getattr(n.func, 'id', None)}")
+        code = compile(node, '<string>', 'eval')
+        return eval(code, {"__builtins__": None}, allowed_names)
     except Exception:
         try:
             return float(phi_expr)

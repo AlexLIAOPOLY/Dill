@@ -4,11 +4,31 @@ import math
 import matplotlib.pyplot as plt
 from io import BytesIO
 import base64
+import ast
 
 def parse_phi_expr(phi_expr, t):
+    """
+    安全解析phi_expr表达式，t为时间，只允许sin/cos/pi/t等
+    """
+    allowed_names = {'sin': np.sin, 'cos': np.cos, 'pi': np.pi, 't': t}
+    allowed_nodes = (
+        ast.Expression, ast.BinOp, ast.UnaryOp, ast.Num, ast.Load,
+        ast.Call, ast.Name, ast.Constant, ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Pow,
+        ast.USub, ast.UAdd, ast.Mod, ast.FloorDiv, ast.Tuple, ast.List
+    )
     try:
-        safe_dict = {'sin': np.sin, 'cos': np.cos, 'pi': np.pi, 'e': np.e, 't': t, 'math': math}
-        return eval(str(phi_expr), {"__builtins__": None}, safe_dict)
+        node = ast.parse(str(phi_expr), mode='eval')
+        for n in ast.walk(node):
+            if not isinstance(n, allowed_nodes):
+                raise ValueError(f"不允许的表达式节点: {type(n).__name__}")
+            if isinstance(n, ast.Name) and n.id not in allowed_names:
+                raise ValueError(f"不允许的变量: {n.id}")
+            if isinstance(n, ast.Call) and (
+                not isinstance(n.func, ast.Name) or n.func.id not in allowed_names
+            ):
+                raise ValueError(f"不允许的函数: {getattr(n.func, 'id', None)}")
+        code = compile(node, '<string>', 'eval')
+        return eval(code, {"__builtins__": None}, allowed_names)
     except Exception:
         try:
             return float(phi_expr)
@@ -50,9 +70,12 @@ class EnhancedDillModel:
         dMdt = -I * M * C
         return [dIdz, dMdt]
 
-    def simulate(self, z_h, T, t_B, I0=1.0, M0=1.0, t_exp=5.0, num_points=100, sine_type='1d', Kx=None, Ky=None, phi_expr=None, V=0, y=0):
+    def simulate(self, z_h, T, t_B, I0=1.0, M0=1.0, t_exp=5.0, num_points=100, sine_type='1d', Kx=None, Ky=None, phi_expr=None, V=0, y=0, K=None):
         """
         用显式欧拉法在(z, t)二维网格上同步推进I(z, t)和M(z, t)，实现理论上更严谨的耦合积分。
+        
+        参数：
+        - K：空间频率，如果提供此参数，将覆盖Kx
         """
         A, B, C = self.get_abc(z_h, T, t_B)
         z = np.linspace(0, z_h, num_points)
@@ -60,6 +83,12 @@ class EnhancedDillModel:
         t = np.linspace(0, t_exp, t_points)
         dz = z[1] - z[0]
         dt = t[1] - t[0]
+        
+        # 支持K参数（比较模块使用）
+        if K is not None:
+            Kx = K
+            sine_type = 'multi'
+            
         # 多维正弦波支持：I0可为I(x)分布
         if sine_type == 'multi' and Kx is not None:
             x = np.linspace(0, 10, num_points)
@@ -93,23 +122,27 @@ class EnhancedDillModel:
         M_final = M[:, -1]
         return z, I_z, M_final
 
-    def generate_data(self, z_h, T, t_B, I0=1.0, M0=1.0, t_exp=5.0, sine_type='1d', Kx=None, Ky=None, phi_expr=None, V=0):
+    def generate_data(self, z_h, T, t_B, I0=1.0, M0=1.0, t_exp=5.0, sine_type='1d', Kx=None, Ky=None, phi_expr=None, V=0, K=None):
         """
         生成增强Dill模型的曝光后分布数据
+        
+        参数：
+        - K：空间频率参数，用于比较模块
+        - V：干涉条纹可见度，用于控制空间调制深度
         """
-        z, I, M = self.simulate(z_h, T, t_B, I0, M0, t_exp, sine_type=sine_type, Kx=Kx, Ky=Ky, phi_expr=phi_expr, V=V)
+        z, I, M = self.simulate(z_h, T, t_B, I0, M0, t_exp, sine_type=sine_type, Kx=Kx, Ky=Ky, phi_expr=phi_expr, V=V, K=K)
         return {
             'z': z.tolist(),
             'I': I.tolist(),
             'M': M.tolist()
         }
 
-    def generate_plots(self, z_h, T, t_B, I0=1.0, M0=1.0, t_exp=5.0, sine_type='1d', Kx=None, Ky=None, phi_expr=None, V=0):
+    def generate_plots(self, z_h, T, t_B, I0=1.0, M0=1.0, t_exp=5.0, sine_type='1d', Kx=None, Ky=None, phi_expr=None, V=0, K=None):
         """
         Generate exposure dose and PAC concentration distribution plots (English labels)
         """
         plt.close('all')
-        z, I, M = self.simulate(z_h, T, t_B, I0, M0, t_exp, sine_type=sine_type, Kx=Kx, Ky=Ky, phi_expr=phi_expr, V=V)
+        z, I, M = self.simulate(z_h, T, t_B, I0, M0, t_exp, sine_type=sine_type, Kx=Kx, Ky=Ky, phi_expr=phi_expr, V=V, K=K)
         # Exposure dose distribution plot (I)
         fig1 = plt.figure(figsize=(10, 6))
         plt.plot(z, I, 'b-', linewidth=2)

@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="css/animations.css?v=1.1">
     <link rel="stylesheet" href="css/popup-enhanced.css?v=1.0">
     <link rel="stylesheet" href="css/car-model.css?v=1.0">
+    <link rel="stylesheet" href="css/loading-animation.css">
     <!-- 引入Plotly.js -->
     <script src="https://cdn.plot.ly/plotly-2.25.2.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -18,7 +19,39 @@
 <body>
     <!-- 加载动画 -->
     <div id="loading" class="loading">
-        <div class="spinner"></div>
+        <div class="loader-container">
+            <!-- 多层旋转环 -->
+            <div class="spinner-ring"></div>
+            <div class="spinner-ring"></div>
+            <div class="spinner-ring"></div>
+            
+            <!-- 中心圆点 -->
+            <div class="spinner-core"></div>
+            
+            <!-- 波浪效果 -->
+            <div class="wave"></div>
+            <div class="wave"></div>
+            <div class="wave"></div>
+            
+            <!-- 粒子效果 -->
+            <div class="particles">
+                <div class="particle"></div>
+                <div class="particle"></div>
+                <div class="particle"></div>
+                <div class="particle"></div>
+                <div class="particle"></div>
+                <div class="particle"></div>
+            </div>
+            
+            <!-- 分子路径 -->
+            <div class="molecule-path">
+                <div class="path"><div class="molecule"></div></div>
+                <div class="path"><div class="molecule"></div></div>
+                <div class="path"><div class="molecule"></div></div>
+                <div class="path"><div class="molecule"></div></div>
+            </div>
+        </div>
+        <div class="loading-text" data-i18n="loading">加载中...</div>
     </div>
     
     <!-- 页头 -->
@@ -256,36 +289,37 @@
                         <label for="dill-sine-type" data-i18n="sine_wave_type_label">正弦波类型：</label>
                         <select id="dill-sine-type" class="model-select">
                             <option value="single" selected data-i18n="sine_wave_type_single">一维正弦波</option>
-                            <option value="multi" data-i18n="sine_wave_type_multi">多维正弦波</option>
+                            <option value="multi" data-i18n="sine_wave_type_multi">二维正弦波</option>
                         </select>
                     </div>
                     <div id="dill-multisine-params" style="display:none;">
                         <div class="parameter-item slider-fill">
                             <div class="parameter-label"><span class="parameter-name" data-i18n="kx_label">Kx (空间频率x)</span></div>
                             <div class="parameter-input"><input type="number" id="Kx" value="2" min="0.1" max="10" step="0.1"></div>
-                            <div class="parameter-description" data-i18n="kx_description">x方向空间频率，单位：rad/μm</div>
+                            <div class="parameter-description" data-i18n="kx_description">x方向空间频率，单位：rad/μm，范围：0.1~10</div>
                         </div>
                         <div class="parameter-item slider-fill">
                             <div class="parameter-label"><span class="parameter-name" data-i18n="ky_label">Ky (空间频率y)</span></div>
-                            <div class="parameter-input"><input type="number" id="Ky" value="0" min="0" max="10" step="0.1"></div>
-                            <div class="parameter-description" data-i18n="ky_description">y方向空间频率，单位：rad/μm（0表示仅x方向）</div>
+                            <div class="parameter-input"><input type="number" id="Ky" value="1" min="0.1" max="100" step="0.1"></div>
+                            <div class="parameter-description" data-i18n="ky_description">y方向空间频率，单位：rad/μm，范围：0.1~100（必须大于0）</div>
                         </div>
                         <div class="parameter-item slider-fill">
                             <div class="parameter-label"><span class="parameter-name" data-i18n="phi_label">φ(t) (相位表达式)</span></div>
                             <div class="parameter-input"><input type="text" id="phi_expr" value="0"></div>
-                            <div class="parameter-description" data-i18n="phi_description">相位，可为常数或t的函数，如0, 1.57, sin(2*t)</div>
-                            <div class="parameter-description" data-i18n="phi_description_supports">示例: 0, pi/2, sin(2*t), 支持 sin/cos/pi/t等</div>
+                            <div class="phi-expr-error" style="color:#d00;font-size:0.95em;display:none;"></div>
+                            <button id="phi-expr-preview-btn" style="margin-top:4px;display:none;">预览分布</button>
+                            <div id="phi-expr-preview-plot" style="margin-top:8px;display:none;"></div>
                         </div>
                     </div>
 
                     <!-- y范围输入区，插入到参数区合适位置 -->
                     <div class="parameter-item" id="y-range-container">
                         <label data-i18n="y_range_label">y范围 (μm)：</label>
-                        <input type="number" id="y_min" value="0" step="0.1"> ~
-                        <input type="number" id="y_max" value="0" step="0.1">
+                        <input type="number" id="y_min" value="0" min="0" max="100" step="0.1"> ~
+                        <input type="number" id="y_max" value="10" min="0" max="100" step="0.1">
                         <label data-i18n="y_resolution_label">分辨率：</label>
-                        <input type="number" id="y_points" value="1" min="1" max="200" step="1">
-                        <span class="parameter-description" data-i18n="y_range_description">二维分布时有效，y_min=y_max表示一维</span>
+                        <input type="number" id="y_points" value="100" min="1" max="200" step="1">
+                        <span class="parameter-description" data-i18n="y_range_description">二维分布时有效，y_min=y_max表示一维，y范围0~100，分辨率1~200</span>
                     </div>
                 </div>
                 
@@ -326,25 +360,26 @@
                         <label for="enhanced-dill-sine-type" data-i18n="sine_wave_type_label">正弦波类型：</label>
                         <select id="enhanced-dill-sine-type" class="model-select">
                             <option value="single" selected data-i18n="sine_wave_type_single">一维正弦波</option>
-                            <option value="multi" data-i18n="sine_wave_type_multi">多维正弦波</option>
+                            <option value="multi" data-i18n="sine_wave_type_multi">二维正弦波</option>
                         </select>
                     </div>
                     <div id="enhanced-dill-multisine-params" style="display:none;">
                         <div class="parameter-item slider-fill">
                             <div class="parameter-label"><span class="parameter-name" data-i18n="kx_label">Kx (空间频率x)</span></div>
                             <div class="parameter-input"><input type="number" id="enhanced_Kx" value="2" min="0.1" max="10" step="0.1"></div>
-                            <div class="parameter-description" data-i18n="kx_description">x方向空间频率，单位：rad/μm</div>
+                            <div class="parameter-description" data-i18n="kx_description">x方向空间频率，单位：rad/μm，范围：0.1~10</div>
                         </div>
                         <div class="parameter-item slider-fill">
                             <div class="parameter-label"><span class="parameter-name" data-i18n="ky_label">Ky (空间频率y)</span></div>
-                            <div class="parameter-input"><input type="number" id="enhanced_Ky" value="0" min="0" max="10" step="0.1"></div>
-                            <div class="parameter-description" data-i18n="ky_description">y方向空间频率，单位：rad/μm（0表示仅x方向）</div>
+                            <div class="parameter-input"><input type="number" id="enhanced_Ky" value="1" min="0.1" max="100" step="0.1"></div>
+                            <div class="parameter-description" data-i18n="ky_description">y方向空间频率，单位：rad/μm，范围：0.1~100（必须大于0）</div>
                         </div>
                         <div class="parameter-item slider-fill">
                             <div class="parameter-label"><span class="parameter-name" data-i18n="phi_label">φ(t) (相位表达式)</span></div>
                             <div class="parameter-input"><input type="text" id="enhanced_phi_expr" value="0"></div>
-                            <div class="parameter-description" data-i18n="phi_description">相位，可为常数或t的函数，如0, 1.57, sin(2*t)</div>
-                             <div class="parameter-description" data-i18n="phi_description_supports">示例: 0, pi/2, sin(2*t), 支持 sin/cos/pi/t等</div>
+                            <div class="phi-expr-error" style="color:#d00;font-size:0.95em;display:none;"></div>
+                            <button id="phi-expr-preview-btn" style="margin-top:4px;display:none;">预览分布</button>
+                            <div id="phi-expr-preview-plot" style="margin-top:8px;display:none;"></div>
                         </div>
                     </div>
                 </div>
@@ -481,25 +516,26 @@
                         <label for="car-sine-type" data-i18n="sine_wave_type_label">正弦波类型：</label>
                         <select id="car-sine-type" class="model-select">
                             <option value="single" selected data-i18n="sine_wave_type_single">一维正弦波</option>
-                            <option value="multi" data-i18n="sine_wave_type_multi">多维正弦波</option>
+                            <option value="multi" data-i18n="sine_wave_type_multi">二维正弦波</option>
                         </select>
                     </div>
                     <div id="car-multisine-params" style="display:none;">
                         <div class="parameter-item slider-fill">
                             <div class="parameter-label"><span class="parameter-name" data-i18n="kx_label">Kx (空间频率x)</span></div>
                             <div class="parameter-input"><input type="number" id="car_Kx" value="2" min="0.1" max="10" step="0.1"></div>
-                            <div class="parameter-description" data-i18n="kx_description">x方向空间频率，单位：rad/μm</div>
+                            <div class="parameter-description" data-i18n="kx_description">x方向空间频率，单位：rad/μm，范围：0.1~10</div>
                         </div>
                         <div class="parameter-item slider-fill">
                             <div class="parameter-label"><span class="parameter-name" data-i18n="ky_label">Ky (空间频率y)</span></div>
-                            <div class="parameter-input"><input type="number" id="car_Ky" value="0" min="0" max="10" step="0.1"></div>
-                            <div class="parameter-description" data-i18n="ky_description">y方向空间频率，单位：rad/μm（0表示仅x方向）</div>
+                            <div class="parameter-input"><input type="number" id="car_Ky" value="1" min="0.1" max="100" step="0.1"></div>
+                            <div class="parameter-description" data-i18n="ky_description">y方向空间频率，单位：rad/μm，范围：0.1~100（必须大于0）</div>
                         </div>
                         <div class="parameter-item slider-fill">
                             <div class="parameter-label"><span class="parameter-name" data-i18n="phi_label">φ(t) (相位表达式)</span></div>
                             <div class="parameter-input"><input type="text" id="car_phi_expr" value="0"></div>
-                            <div class="parameter-description" data-i18n="phi_description">相位，可为常数或t的函数，如0, 1.57, sin(2*t)</div>
-                            <div class="parameter-description" data-i18n="phi_description_supports">示例: 0, pi/2, sin(2*t), 支持 sin/cos/pi/t等</div>
+                            <div class="phi-expr-error" style="color:#d00;font-size:0.95em;display:none;"></div>
+                            <button id="phi-expr-preview-btn" style="margin-top:4px;display:none;">预览分布</button>
+                            <div id="phi-expr-preview-plot" style="margin-top:8px;display:none;"></div>
                         </div>
                     </div>
                 </div>

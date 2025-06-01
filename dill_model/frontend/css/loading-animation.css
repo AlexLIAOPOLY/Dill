@@ -1,0 +1,263 @@
+/* 高级加载动画样式 */
+.loading {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.65);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    backdrop-filter: blur(3px);
+    transition: opacity 0.3s ease;
+}
+
+.loading.active {
+    display: flex;
+}
+
+/* 加载文字样式 */
+.loading-text {
+    margin-top: 20px;
+    font-size: 18px;
+    font-weight: 500;
+    color: #3498db;
+    letter-spacing: 1px;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* 复杂加载动画容器 */
+.loader-container {
+    position: relative;
+    width: 150px;
+    height: 150px;
+}
+
+/* 主旋转环 */
+.spinner-ring {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border: 4px solid transparent;
+    border-radius: 50%;
+    border-top: 4px solid #3498db;
+    animation: spin 1.5s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+}
+
+/* 第二旋转环 */
+.spinner-ring:nth-child(2) {
+    width: 80%;
+    height: 80%;
+    border-top-color: #2ecc71;
+    border-right-color: #2ecc71;
+    top: 10%;
+    left: 10%;
+    animation: spin-reverse 2s cubic-bezier(0.165, 0.84, 0.44, 1) infinite;
+}
+
+/* 第三旋转环 */
+.spinner-ring:nth-child(3) {
+    width: 60%;
+    height: 60%;
+    border-top-color: #e74c3c;
+    top: 20%;
+    left: 20%;
+    animation: spin 2.5s cubic-bezier(0.39, 0.575, 0.565, 1) infinite;
+}
+
+/* 中心圆点 */
+.spinner-core {
+    position: absolute;
+    width: 30%;
+    height: 30%;
+    background-color: #3498db;
+    border-radius: 50%;
+    top: 35%;
+    left: 35%;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+/* 粒子效果 */
+.particles {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+
+.particle {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background-color: #3498db;
+    border-radius: 50%;
+    animation: particle-animation 3s ease-in-out infinite;
+}
+
+.particle:nth-child(1) {
+    top: 20%;
+    left: 50%;
+    animation-delay: 0s;
+    background-color: #3498db;
+}
+
+.particle:nth-child(2) {
+    top: 50%;
+    left: 80%;
+    animation-delay: 0.4s;
+    background-color: #2ecc71;
+}
+
+.particle:nth-child(3) {
+    top: 80%;
+    left: 50%;
+    animation-delay: 0.8s;
+    background-color: #e74c3c;
+}
+
+.particle:nth-child(4) {
+    top: 50%;
+    left: 20%;
+    animation-delay: 1.2s;
+    background-color: #f39c12;
+}
+
+.particle:nth-child(5) {
+    top: 35%;
+    left: 35%;
+    animation-delay: 1.6s;
+    background-color: #9b59b6;
+}
+
+.particle:nth-child(6) {
+    top: 65%;
+    left: 65%;
+    animation-delay: 2s;
+    background-color: #16a085;
+}
+
+/* 分子路径效果 */
+.molecule-path {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.6;
+}
+
+.molecule {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background-color: #3498db;
+    border-radius: 50%;
+}
+
+.path {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    animation: rotate-path 12s linear infinite;
+}
+
+.path:nth-child(1) .molecule {
+    top: 0;
+    left: 50%;
+    animation: move-along-path 3s cubic-bezier(0.36, 0.45, 0.63, 0.53) infinite;
+}
+
+.path:nth-child(2) .molecule {
+    top: 50%;
+    left: 100%;
+    animation: move-along-path 3s cubic-bezier(0.36, 0.45, 0.63, 0.53) infinite;
+    animation-delay: 0.5s;
+    background-color: #2ecc71;
+}
+
+.path:nth-child(3) .molecule {
+    top: 100%;
+    left: 50%;
+    animation: move-along-path 3s cubic-bezier(0.36, 0.45, 0.63, 0.53) infinite;
+    animation-delay: 1s;
+    background-color: #e74c3c;
+}
+
+.path:nth-child(4) .molecule {
+    top: 50%;
+    left: 0;
+    animation: move-along-path 3s cubic-bezier(0.36, 0.45, 0.63, 0.53) infinite;
+    animation-delay: 1.5s;
+    background-color: #f39c12;
+}
+
+/* 波浪效果 */
+.wave {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    opacity: 0;
+    border: 2px solid #3498db;
+    animation: wave-animation 3s cubic-bezier(.25,.46,.45,.94) infinite;
+}
+
+.wave:nth-child(2) {
+    animation-delay: 0.6s;
+    border-color: #2ecc71;
+}
+
+.wave:nth-child(3) {
+    animation-delay: 1.2s;
+    border-color: #e74c3c;
+}
+
+/* 动画定义 */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes spin-reverse {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(-360deg); }
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 0.7; }
+    50% { transform: scale(1.1); opacity: 1; }
+}
+
+@keyframes particle-animation {
+    0%, 100% { transform: scale(1) translate(0, 0); opacity: 0.7; }
+    50% { transform: scale(1.5) translate(10px, 10px); opacity: 1; }
+}
+
+@keyframes rotate-path {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes move-along-path {
+    0%, 100% { transform: scale(1) translate(0, 0); }
+    50% { transform: scale(1.5) translate(5px, -5px); }
+}
+
+@keyframes wave-animation {
+    0% { transform: scale(0.5); opacity: 0.8; }
+    100% { transform: scale(1.5); opacity: 0; }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .loader-container {
+        width: 120px;
+        height: 120px;
+    }
+    
+    .loading-text {
+        font-size: 16px;
+    }
+} 
