@@ -232,19 +232,58 @@ function displayCarResults(results) {
     resultsContainer.innerHTML = html;
 }
 
+// 通用导出图片和数据函数
+function addExportButtonsForPlot(plotDiv, plotName, xData, yData) {
+    // 创建按钮容器
+    const btnContainer = document.createElement('div');
+    btnContainer.className = 'plot-export-btns';
+    btnContainer.style.textAlign = 'center';
+    btnContainer.style.margin = '10px 0 20px 0';
+    // 导出图片按钮
+    const exportImgBtn = document.createElement('button');
+    exportImgBtn.textContent = '导出图片';
+    exportImgBtn.onclick = function() {
+        Plotly.downloadImage(plotDiv, {format: 'png', filename: plotName});
+    };
+    // 导出数据按钮
+    const exportDataBtn = document.createElement('button');
+    exportDataBtn.textContent = '导出数据';
+    exportDataBtn.onclick = function() {
+        let csv = 'x,y\n';
+        for (let i = 0; i < xData.length; i++) {
+            csv += `${xData[i]},${yData[i]}\n`;
+        }
+        let blob = new Blob([csv], {type: 'text/csv'});
+        let link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = plotName + '.csv';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+    btnContainer.appendChild(exportImgBtn);
+    btnContainer.appendChild(exportDataBtn);
+    // 插入到图表下方
+    plotDiv.parentNode.insertBefore(btnContainer, plotDiv.nextSibling);
+}
+
 // 渲染交互式图表
 function renderCarInteractivePlots(data) {
     // 准备容器
     const plotContainer = document.getElementById('car-interactive-plots');
     if (!plotContainer || !data || !data.x) return;
-    
+    plotContainer.innerHTML = '';
     // 创建初始光酸和扩散后光酸对比图
     if (data.initial_acid && data.diffused_acid) {
+        // 新增：大标题
+        const acidTitle = document.createElement('h3');
+        acidTitle.className = 'plot-title';
+        acidTitle.textContent = '光酸分布对比';
+        plotContainer.appendChild(acidTitle);
         const acidComparisonDiv = document.createElement('div');
         acidComparisonDiv.id = 'car-acid-comparison-plot';
         acidComparisonDiv.className = 'car-plot-container';
         plotContainer.appendChild(acidComparisonDiv);
-        
         const acidTraces = [
             {
                 x: data.x,
@@ -263,7 +302,6 @@ function renderCarInteractivePlots(data) {
                 line: { color: '#1f77b4', width: 2 }
             }
         ];
-        
         const acidLayout = {
             title: '光酸分布对比',
             xaxis: { title: '位置 (μm)' },
@@ -272,17 +310,27 @@ function renderCarInteractivePlots(data) {
             margin: { t: 40, b: 40, l: 60, r: 10 },
             hovermode: 'closest'
         };
-        
         Plotly.newPlot('car-acid-comparison-plot', acidTraces, acidLayout);
+        // 弹窗支持
+        acidComparisonDiv.on('plotly_click', function(eventData) {
+            if (eventData.points && eventData.points.length > 0) {
+                const pt = eventData.points[0];
+                window.showSinglePointDetailsPopup(pt, 'car_acid_concentration', acidComparisonDiv, eventData);
+            }
+        });
+        addExportButtonsForPlot(acidComparisonDiv, 'car_acid_comparison', data.x, data.initial_acid);
     }
-    
     // 创建树脂脱保护程度图
     if (data.deprotection) {
+        // 新增：大标题
+        const deprotectionTitle = document.createElement('h3');
+        deprotectionTitle.className = 'plot-title';
+        deprotectionTitle.textContent = '树脂脱保护程度分布';
+        plotContainer.appendChild(deprotectionTitle);
         const deprotectionDiv = document.createElement('div');
         deprotectionDiv.id = 'car-deprotection-plot';
         deprotectionDiv.className = 'car-plot-container';
         plotContainer.appendChild(deprotectionDiv);
-        
         const deprotectionTrace = [{
             x: data.x,
             y: data.deprotection,
@@ -291,7 +339,6 @@ function renderCarInteractivePlots(data) {
             mode: 'lines',
             line: { color: '#d62728', width: 2 }
         }];
-        
         const deprotectionLayout = {
             title: '树脂脱保护程度分布',
             xaxis: { title: '位置 (μm)' },
@@ -299,17 +346,26 @@ function renderCarInteractivePlots(data) {
             margin: { t: 40, b: 40, l: 60, r: 10 },
             hovermode: 'closest'
         };
-        
         Plotly.newPlot('car-deprotection-plot', deprotectionTrace, deprotectionLayout);
+        deprotectionDiv.on('plotly_click', function(eventData) {
+            if (eventData.points && eventData.points.length > 0) {
+                const pt = eventData.points[0];
+                window.showSinglePointDetailsPopup(pt, 'car_deprotection_degree', deprotectionDiv, eventData);
+            }
+        });
+        addExportButtonsForPlot(deprotectionDiv, 'car_deprotection', data.x, data.deprotection);
     }
-    
     // 创建最终光刻胶厚度图
     if (data.thickness) {
+        // 新增：大标题
+        const thicknessTitle = document.createElement('h3');
+        thicknessTitle.className = 'plot-title';
+        thicknessTitle.textContent = '显影后光刻胶厚度分布';
+        plotContainer.appendChild(thicknessTitle);
         const thicknessDiv = document.createElement('div');
         thicknessDiv.id = 'car-thickness-plot';
         thicknessDiv.className = 'car-plot-container';
         plotContainer.appendChild(thicknessDiv);
-        
         const thicknessTrace = [{
             x: data.x,
             y: data.thickness,
@@ -320,7 +376,6 @@ function renderCarInteractivePlots(data) {
             fillcolor: 'rgba(148, 103, 189, 0.2)',
             line: { color: '#9467bd', width: 2 }
         }];
-        
         const thicknessLayout = {
             title: '显影后光刻胶厚度分布',
             xaxis: { title: '位置 (μm)' },
@@ -328,8 +383,14 @@ function renderCarInteractivePlots(data) {
             margin: { t: 40, b: 40, l: 60, r: 10 },
             hovermode: 'closest'
         };
-        
         Plotly.newPlot('car-thickness-plot', thicknessTrace, thicknessLayout);
+        thicknessDiv.on('plotly_click', function(eventData) {
+            if (eventData.points && eventData.points.length > 0) {
+                const pt = eventData.points[0];
+                window.showSinglePointDetailsPopup(pt, 'car_thickness', thicknessDiv, eventData);
+            }
+        });
+        addExportButtonsForPlot(thicknessDiv, 'car_thickness', data.x, data.thickness);
     }
 }
 
@@ -370,4 +431,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('car-params')) {
         initCarModel();
     }
-}); 
+});
+
+// 保证 showSinglePointDetailsPopup 全局可用
+if (typeof window.showSinglePointDetailsPopup !== 'function' && typeof showSinglePointDetailsPopup === 'function') {
+    window.showSinglePointDetailsPopup = showSinglePointDetailsPopup;
+} 

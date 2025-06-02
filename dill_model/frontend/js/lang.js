@@ -578,6 +578,16 @@ function applyLang() {
             }
         }
     });
+
+    // After applying language to all static elements,
+    // if plots were previously generated, re-render them with the new language.
+    if (typeof clearAllCharts === 'function' && typeof displayInteractiveResults === 'function' && window.lastPlotData) {
+        console.log('[lang] Re-rendering plots with new language.');
+        // It's important that clearAllCharts and displayInteractiveResults are defined,
+        // which should be the case if main.js is loaded.
+        clearAllCharts(); // Clear existing plots
+        displayInteractiveResults(window.lastPlotData); // Re-display with new language
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function() {

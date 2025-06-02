@@ -133,8 +133,11 @@ class EnhancedDillModel:
         z, I, M = self.simulate(z_h, T, t_B, I0, M0, t_exp, sine_type=sine_type, Kx=Kx, Ky=Ky, phi_expr=phi_expr, V=V, K=K)
         return {
             'z': z.tolist(),
+            'x': z.tolist(),  # 新增别名，兼容前端
             'I': I.tolist(),
-            'M': M.tolist()
+            'exposure_dose': I.tolist(),  # 新增别名，兼容前端
+            'M': M.tolist(),
+            'thickness': M.tolist()  # 新增别名，兼容前端
         }
 
     def generate_plots(self, z_h, T, t_B, I0=1.0, M0=1.0, t_exp=5.0, sine_type='1d', Kx=None, Ky=None, phi_expr=None, V=0, K=None):

@@ -11,6 +11,38 @@ document.addEventListener('DOMContentLoaded', () => {
     enableParameterSetDragSort();
     enableModalSwipeClose();
     enableStickyAnimations();
+    
+    // 使用事件委托处理所有复制按钮和添加按钮
+    document.body.addEventListener('click', function(e) {
+        // 处理复制按钮
+        if (e.target.closest('.parameter-set-control-btn .fa-copy') || 
+            (e.target.classList.contains('parameter-set-control-btn') && e.target.innerHTML.includes('fa-copy'))) {
+            
+            const parameterSet = e.target.closest('.parameter-set');
+            if (parameterSet) {
+                console.log('点击复制参数组');
+                e.preventDefault();
+                duplicateParameterSet(parameterSet);
+                return;
+            }
+        }
+        
+        // 处理添加参数组按钮
+        if (e.target.closest('#add-parameter-set-btn') || e.target.id === 'add-parameter-set-btn') {
+            console.log('点击添加参数组');
+            e.preventDefault();
+            addParameterSet();
+            return;
+        }
+        
+        // 处理移动端添加参数按钮
+        if (e.target.closest('.add-set-fab')) {
+            console.log('点击移动端添加参数组');
+            e.preventDefault();
+            addParameterSet();
+            return;
+        }
+    });
 });
 
 // 全局图表控制状态
@@ -39,115 +71,113 @@ function initCompareApp() {
     initParameterSets();
     
     // 全局距离测量按钮事件
-    globalDistanceMeasureBtn.addEventListener('click', () => {
-        globalMeasurementActive = !globalMeasurementActive;
-        globalDistanceMeasureBtn.classList.toggle('active', globalMeasurementActive);
-        // 触发图表更新
-        updateAllChartsForGlobalControls();
-    });
+    if (globalDistanceMeasureBtn) {
+        globalDistanceMeasureBtn.addEventListener('click', () => {
+            globalMeasurementActive = !globalMeasurementActive;
+            globalDistanceMeasureBtn.classList.toggle('active', globalMeasurementActive);
+            // 触发图表更新
+            updateAllChartsForGlobalControls();
+        });
+    }
     
-    // 预设配置按钮事件
-    const presetPaperConfigBtn = document.getElementById('preset-paper-config');
-    const presetContrastStudyBtn = document.getElementById('preset-contrast-study');
-    const presetExposureStudyBtn = document.getElementById('preset-exposure-study');
+    // 预设配置按钮事件 - 虽然UI上已被注释，但保留功能以便兼容其他部分调用
+    // 创建虚拟预设按钮元素，保证原来的功能仍可通过JS调用
+    const presetPaperConfigBtn = document.getElementById('preset-paper-config') || document.createElement('button');
+    const presetContrastStudyBtn = document.getElementById('preset-contrast-study') || document.createElement('button');
+    const presetExposureStudyBtn = document.getElementById('preset-exposure-study') || document.createElement('button');
     
-    // 只保留参数应用，不再切换卡片显示
+    // 绑定事件处理程序，但不需要修改UI类
     presetPaperConfigBtn.addEventListener('click', () => {
         applyPaperPresetConfiguration();
-        presetPaperConfigBtn.classList.add('active');
-        presetContrastStudyBtn.classList.remove('active');
-        presetExposureStudyBtn.classList.remove('active');
     });
     
     presetContrastStudyBtn.addEventListener('click', () => {
         applyContrastStudyConfiguration();
-        presetContrastStudyBtn.classList.add('active');
-        presetPaperConfigBtn.classList.remove('active');
-        presetExposureStudyBtn.classList.remove('active');
     });
     
     presetExposureStudyBtn.addEventListener('click', () => {
         applyExposureStudyConfiguration();
-        presetExposureStudyBtn.classList.add('active');
-        presetPaperConfigBtn.classList.remove('active');
-        presetContrastStudyBtn.classList.remove('active');
     });
     
-    // 添加新参数组事件
-    addParameterSetBtn.addEventListener('click', () => {
-        addParameterSet();
-    });
+    // 不再在这里绑定添加参数组按钮事件，改用事件委托方式
+    // if (addParameterSetBtn) {
+    //    addParameterSetBtn.addEventListener('click', () => {
+    //        addParameterSet();
+    //    });
+    // }
     
     // 比较按钮事件
-    compareBtn.addEventListener('click', () => {
-        // 显示加载动画
-        loading.classList.add('active');
-        // 隐藏错误消息
-        errorMessage.classList.remove('visible');
-        // 隐藏结果区域
-        comparisonResultsSection.classList.remove('visible');
-        
-        // 获取所有参数组的参数
-        const parameterSets = getAllParameterSets();
-        console.log('收集到的参数组数量:', parameterSets.length);
-        console.log('参数组数据:', JSON.stringify(parameterSets));
-        
-        // 更新阈值控制器的可见性
-        updateThresholdControlsVisibility(parameterSets.length);
+    if (compareBtn) {
+        compareBtn.addEventListener('click', () => {
+            // 显示加载动画
+            loading.classList.add('active');
+            // 隐藏错误消息
+            errorMessage.classList.remove('visible');
+            // 隐藏结果区域
+            comparisonResultsSection.classList.remove('visible');
+            
+            // 获取所有参数组的参数
+            const parameterSets = getAllParameterSets();
+            console.log('收集到的参数组数量:', parameterSets.length);
+            console.log('参数组数据:', JSON.stringify(parameterSets));
+            
+            // 更新阈值控制器的可见性
+            updateThresholdControlsVisibility(parameterSets.length);
 
-        // 首先尝试获取交互式图表数据
-        compareParameterSetsData(parameterSets)
-            .then(data => {
-                // 隐藏加载动画
-                loading.classList.remove('active');
-                
-                console.log('API返回的数据:', data);
-                console.log('曝光剂量数组长度:', data.exposure_doses.length);
-                console.log('厚度数组长度:', data.thicknesses.length);
-                
-                // 显示交互式比较结果
-                displayInteractiveComparisonResults(data);
-                
-                // 添加动画效果
-                comparisonResultsSection.classList.add('visible');
-                
-                // 滚动到结果区域
-                comparisonResultsSection.scrollIntoView({ behavior: 'smooth' });
-            })
-            .catch(error => {
-                console.error('获取交互式数据失败:', error);
-                // 如果获取交互式数据失败，尝试获取静态图片
-                compareParameterSets(parameterSets)
-                    .then(data => {
-                        // 隐藏加载动画
-                        loading.classList.remove('active');
-                        
-                        // 显示比较结果
-                        displayComparisonResults(data);
-                        
-                        // 添加动画效果
-                        comparisonResultsSection.classList.add('visible');
-                        
-                        // 滚动到结果区域
-                        comparisonResultsSection.scrollIntoView({ behavior: 'smooth' });
-                    })
-                    .catch(error => {
-                        console.error('获取静态图片失败:', error);
-                        // 隐藏加载动画
-                        loading.classList.remove('active');
-                        
-                        // 显示错误消息
-                        errorMessage.textContent = error.message || '比较计算过程中发生错误';
-                        errorMessage.classList.add('visible');
-                        
-                        // 添加摇晃动画
-                        errorMessage.classList.add('shake');
-                        setTimeout(() => {
-                            errorMessage.classList.remove('shake');
-                        }, 800);
-                    });
-            });
-    });
+            // 首先尝试获取交互式图表数据
+            compareParameterSetsData(parameterSets)
+                .then(data => {
+                    // 隐藏加载动画
+                    loading.classList.remove('active');
+                    
+                    console.log('API返回的数据:', data);
+                    console.log('曝光剂量数组长度:', data.exposure_doses.length);
+                    console.log('厚度数组长度:', data.thicknesses.length);
+                    
+                    // 显示交互式比较结果
+                    displayInteractiveComparisonResults(data);
+                    
+                    // 添加动画效果
+                    comparisonResultsSection.classList.add('visible');
+                    
+                    // 滚动到结果区域
+                    comparisonResultsSection.scrollIntoView({ behavior: 'smooth' });
+                })
+                .catch(error => {
+                    console.error('获取交互式数据失败:', error);
+                    // 如果获取交互式数据失败，尝试获取静态图片
+                    compareParameterSets(parameterSets)
+                        .then(data => {
+                            // 隐藏加载动画
+                            loading.classList.remove('active');
+                            
+                            // 显示比较结果
+                            displayComparisonResults(data);
+                            
+                            // 添加动画效果
+                            comparisonResultsSection.classList.add('visible');
+                            
+                            // 滚动到结果区域
+                            comparisonResultsSection.scrollIntoView({ behavior: 'smooth' });
+                        })
+                        .catch(error => {
+                            console.error('获取静态图片失败:', error);
+                            // 隐藏加载动画
+                            loading.classList.remove('active');
+                            
+                            // 显示错误消息
+                            errorMessage.textContent = error.message || '比较计算过程中发生错误';
+                            errorMessage.classList.add('visible');
+                            
+                            // 添加摇晃动画
+                            errorMessage.classList.add('shake');
+                            setTimeout(() => {
+                                errorMessage.classList.remove('shake');
+                            }, 800);
+                        });
+                });
+        });
+    }
     
     // 应用进入动画
     applyEntryAnimations();
@@ -219,11 +249,7 @@ function initParameterSets() {
  * @param {HTMLElement} parameterSet 参数组元素
  */
 function initParameterSet(parameterSet) {
-    // 为复制按钮绑定事件
-    const copyBtn = parameterSet.querySelector('.fa-copy').parentElement;
-    copyBtn.addEventListener('click', () => {
-        duplicateParameterSet(parameterSet);
-    });
+    // 移除复制按钮的直接事件绑定，使用全局事件委托代替
     
     // 为删除按钮绑定事件（如果存在）
     const removeBtn = parameterSet.querySelector('.remove-set-btn');
@@ -239,10 +265,21 @@ function initParameterSet(parameterSet) {
         nameInput.addEventListener('input', () => {
             // 清空图表显示
             clearAllCharts();
+            
+            const parameterTitle = parameterSet.querySelector('.parameter-set-title');
+            if (parameterTitle && nameInput.value.trim()) {
+                parameterTitle.textContent = nameInput.value;
+            } else if (parameterTitle) {
+                const setId = parameterSet.dataset.setId;
+                parameterTitle.textContent = `参数组 ${setId}`;
+            }
         });
     }
     
-    // 为所有滑块绑定事件
+    // 绑定折叠/展开按钮事件
+    initParameterSetCollapse(parameterSet, false);
+    
+    // 绑定滑动条和数字输入框的事件
     bindSliderEvents(parameterSet);
     
     // 参数组渲染/切换时，处理phi_expr输入区
@@ -263,48 +300,56 @@ function bindSliderEvents(parameterSet) {
         const input = item.querySelector('.number-input');
         const valueDisplay = item.querySelector('.parameter-value');
         
-        // 滑块值变化时更新输入框和显示值
-        slider.addEventListener('input', () => {
-            input.value = slider.value;
-            valueDisplay.textContent = slider.value;
+        // 检查核心元素是否存在
+        if (slider && input && valueDisplay) {
+            // 滑块值变化时更新输入框和显示值
+            slider.addEventListener('input', () => {
+                input.value = slider.value;
+                valueDisplay.textContent = slider.value;
+                
+                // 添加脉动效果
+                valueDisplay.classList.add('pulse');
+                setTimeout(() => {
+                    valueDisplay.classList.remove('pulse');
+                }, 300);
+                
+                // 清空图表显示
+                clearAllCharts();
+            });
             
-            // 添加脉动效果
-            valueDisplay.classList.add('pulse');
-            setTimeout(() => {
-                valueDisplay.classList.remove('pulse');
-            }, 300);
-            
-            // 清空图表显示
-            clearAllCharts();
-        });
-        
-        // 输入框值变化时更新滑块和显示值
-        input.addEventListener('input', () => {
-            // 验证输入值是否在范围内
-            let value = parseFloat(input.value);
-            const min = parseFloat(slider.min);
-            const max = parseFloat(slider.max);
-            
-            if (isNaN(value)) {
-                value = min;
-            } else if (value < min) {
-                value = min;
-            } else if (value > max) {
-                value = max;
+            // 输入框值变化时更新滑块和显示值
+            input.addEventListener('input', () => {
+                // 验证输入值是否在范围内
+                let value = parseFloat(input.value);
+                const min = parseFloat(slider.min);
+                const max = parseFloat(slider.max);
+                
+                if (isNaN(value)) {
+                    value = min;
+                } else if (value < min) {
+                    value = min;
+                } else if (value > max) {
+                    value = max;
+                }
+                
+                slider.value = value;
+                valueDisplay.textContent = value;
+                
+                // 添加闪烁效果
+                valueDisplay.classList.add('blink');
+                setTimeout(() => {
+                    valueDisplay.classList.remove('blink');
+                }, 300);
+                
+                // 清空图表显示
+                clearAllCharts();
+            });
+        } else {
+            // 如果是phi-expr-item，则它是特殊的，没有这些标准滑块是正常的
+            if (!item.classList.contains('phi-expr-item')) {
+                console.warn('参数项缺少标准滑块/输入框/值显示元素:', item);
             }
-            
-            slider.value = value;
-            valueDisplay.textContent = value;
-            
-            // 添加闪烁效果
-            valueDisplay.classList.add('blink');
-            setTimeout(() => {
-                valueDisplay.classList.remove('blink');
-            }, 300);
-            
-            // 清空图表显示
-            clearAllCharts();
-        });
+        }
     });
 }
 
@@ -367,39 +412,88 @@ function duplicateParameterSet(parameterSet) {
     newSet.dataset.setId = nextId;
     const title = newSet.querySelector('.parameter-set-title');
     title.innerHTML = LANGS[currentLang]['compare_set_title'].replace('{n}', nextId);
-    initParameterSet(newSet);
+    initParameterSet(newSet); // 初始化新参数组的事件等
+
+    // 复制参数值，增加元素存在性检查
     if (currentModelType === 'dill') {
-        newSet.querySelector('.slider.I_avg').value = parameterSet.querySelector('.slider.I_avg').value;
-        newSet.querySelector('.slider.V').value = parameterSet.querySelector('.slider.V').value;
-        newSet.querySelector('.slider.K').value = parameterSet.querySelector('.slider.K').value;
-        newSet.querySelector('.slider.t_exp').value = parameterSet.querySelector('.slider.t_exp').value;
-        newSet.querySelector('.slider.C').value = parameterSet.querySelector('.slider.C').value;
+        const iAvgSlider = parameterSet.querySelector('.slider.I_avg');
+        if (iAvgSlider) newSet.querySelector('.slider.I_avg').value = iAvgSlider.value;
+        
+        const vSlider = parameterSet.querySelector('.slider.V');
+        if (vSlider) newSet.querySelector('.slider.V').value = vSlider.value;
+        
+        const kSlider = parameterSet.querySelector('.slider.K');
+        if (kSlider) newSet.querySelector('.slider.K').value = kSlider.value;
+        
+        const tExpSlider = parameterSet.querySelector('.slider.t_exp');
+        if (tExpSlider) newSet.querySelector('.slider.t_exp').value = tExpSlider.value;
+        
+        const cSlider = parameterSet.querySelector('.slider.C');
+        if (cSlider) newSet.querySelector('.slider.C').value = cSlider.value;
+        
     } else if (currentModelType === 'enhanced_dill') {
-        newSet.querySelector('.slider.z_h').value = parameterSet.querySelector('.slider.z_h').value;
-        newSet.querySelector('.slider.T').value = parameterSet.querySelector('.slider.T').value;
-        newSet.querySelector('.slider.t_B').value = parameterSet.querySelector('.slider.t_B').value;
-        newSet.querySelector('.slider.I0').value = parameterSet.querySelector('.slider.I0').value;
-        newSet.querySelector('.slider.M0').value = parameterSet.querySelector('.slider.M0').value;
-        newSet.querySelector('.slider.t_exp_enhanced').value = parameterSet.querySelector('.slider.t_exp_enhanced').value;
-        newSet.querySelector('.slider.K_enhanced').value = parameterSet.querySelector('.slider.K_enhanced').value;
+        const zhSlider = parameterSet.querySelector('.slider.z_h');
+        if (zhSlider) newSet.querySelector('.slider.z_h').value = zhSlider.value;
+
+        const tSlider = parameterSet.querySelector('.slider.T');
+        if (tSlider) newSet.querySelector('.slider.T').value = tSlider.value;
+
+        const tbSlider = parameterSet.querySelector('.slider.t_B');
+        if (tbSlider) newSet.querySelector('.slider.t_B').value = tbSlider.value;
+
+        const i0Slider = parameterSet.querySelector('.slider.I0');
+        if (i0Slider) newSet.querySelector('.slider.I0').value = i0Slider.value;
+
+        const m0Slider = parameterSet.querySelector('.slider.M0');
+        if (m0Slider) newSet.querySelector('.slider.M0').value = m0Slider.value;
+
+        const tExpEnhancedSlider = parameterSet.querySelector('.slider.t_exp_enhanced');
+        if (tExpEnhancedSlider) newSet.querySelector('.slider.t_exp_enhanced').value = tExpEnhancedSlider.value;
+
+        const kEnhancedSlider = parameterSet.querySelector('.slider.K_enhanced');
+        if (kEnhancedSlider) newSet.querySelector('.slider.K_enhanced').value = kEnhancedSlider.value;
+        
     } else if (currentModelType === 'car') {
-        newSet.querySelector('.slider.car_I_avg').value = parameterSet.querySelector('.slider.car_I_avg').value;
-        newSet.querySelector('.slider.car_V').value = parameterSet.querySelector('.slider.car_V').value;
-        newSet.querySelector('.slider.car_K').value = parameterSet.querySelector('.slider.car_K').value;
-        newSet.querySelector('.slider.car_t_exp').value = parameterSet.querySelector('.slider.car_t_exp').value;
-        newSet.querySelector('.slider.car_acid_gen_efficiency').value = parameterSet.querySelector('.slider.car_acid_gen_efficiency').value;
-        newSet.querySelector('.slider.car_diffusion_length').value = parameterSet.querySelector('.slider.car_diffusion_length').value;
-        newSet.querySelector('.slider.car_reaction_rate').value = parameterSet.querySelector('.slider.car_reaction_rate').value;
-        newSet.querySelector('.slider.car_amplification').value = parameterSet.querySelector('.slider.car_amplification').value;
-        newSet.querySelector('.slider.car_contrast').value = parameterSet.querySelector('.slider.car_contrast').value;
+        const carIAvgSlider = parameterSet.querySelector('.slider.car_I_avg');
+        if (carIAvgSlider) newSet.querySelector('.slider.car_I_avg').value = carIAvgSlider.value;
+
+        const carVSlider = parameterSet.querySelector('.slider.car_V');
+        if (carVSlider) newSet.querySelector('.slider.car_V').value = carVSlider.value;
+
+        const carKSlider = parameterSet.querySelector('.slider.car_K');
+        if (carKSlider) newSet.querySelector('.slider.car_K').value = carKSlider.value;
+
+        const carTExpSlider = parameterSet.querySelector('.slider.car_t_exp');
+        if (carTExpSlider) newSet.querySelector('.slider.car_t_exp').value = carTExpSlider.value;
+
+        const carAcidGenEffSlider = parameterSet.querySelector('.slider.car_acid_gen_efficiency');
+        if (carAcidGenEffSlider) newSet.querySelector('.slider.car_acid_gen_efficiency').value = carAcidGenEffSlider.value;
+
+        const carDiffLenSlider = parameterSet.querySelector('.slider.car_diffusion_length');
+        if (carDiffLenSlider) newSet.querySelector('.slider.car_diffusion_length').value = carDiffLenSlider.value;
+
+        const carReactRateSlider = parameterSet.querySelector('.slider.car_reaction_rate');
+        if (carReactRateSlider) newSet.querySelector('.slider.car_reaction_rate').value = carReactRateSlider.value;
+
+        const carAmpSlider = parameterSet.querySelector('.slider.car_amplification');
+        if (carAmpSlider) newSet.querySelector('.slider.car_amplification').value = carAmpSlider.value;
+
+        const carContrastSlider = parameterSet.querySelector('.slider.car_contrast');
+        if (carContrastSlider) newSet.querySelector('.slider.car_contrast').value = carContrastSlider.value;
     }
+
+    // 更新新参数组中所有滑块对应的数字输入框和值显示
     newSet.querySelectorAll('.parameter-item').forEach(item => {
         const slider = item.querySelector('.slider');
         const input = item.querySelector('.number-input');
         const valueDisplay = item.querySelector('.parameter-value');
-        input.value = slider.value;
-        valueDisplay.textContent = slider.value;
+        
+        if (slider && input && valueDisplay) {
+            input.value = slider.value;
+            valueDisplay.textContent = slider.value;
+        }
     });
+
     parameterSetsContainer.appendChild(newSet);
     newSet.classList.add('fade-in');
     setTimeout(() => { newSet.classList.remove('fade-in'); }, 500);
@@ -646,7 +740,8 @@ function createExposureComparisonPlot(container, data) {
                 width: 2
             },
             hoverinfo: 'x+y+name',
-            hovertemplate: '位置: %{x:.2f} μm<br>曝光剂量: %{y:.2f} mJ/cm²<br>' + setName + '<extra></extra>'
+            hovertemplate: '位置: %{x:.2f} μm<br>曝光剂量: %{y:.2f} mJ/cm²<br>' + setName + '<extra></extra>',
+            meta: { setId: item.setId } // 添加setId到meta中
         };
     });
     
@@ -921,7 +1016,7 @@ function createThicknessComparisonPlot(container, data) {
         'rgb(214, 39, 40)', 'rgb(148, 103, 189)', 'rgb(140, 86, 75)'
     ];
     
-    console.log('创建厚度图表，厚度数据组数:', data.thicknesses.length);
+    console.log('创建厚度比较图表，数据组数:', data.thicknesses.length);
     
     // 准备数据
     const traces = data.thicknesses.map((item, index) => {
@@ -929,7 +1024,7 @@ function createThicknessComparisonPlot(container, data) {
         const setName = item.params.customName && item.params.customName !== '' 
             ? item.params.customName 
             : `参数组 ${item.setId}`;
-            
+
         return {
             x: data.x,
             y: item.data,
@@ -941,7 +1036,8 @@ function createThicknessComparisonPlot(container, data) {
                 width: 2
             },
             hoverinfo: 'x+y+name',
-            hovertemplate: '位置: %{x:.2f} μm<br>相对厚度: %{y:.2f}<br>' + setName + '<extra></extra>'
+            hovertemplate: '位置: %{x:.2f} μm<br>厚度: %{y:.3f}<br>' + setName + '<extra></extra>',
+            meta: { setId: item.setId } // 添加setId到meta中
         };
     });
     
@@ -2406,193 +2502,297 @@ function getPointDetailedInfo(point, plotType, eventData) {
     const x = point.x;
     const y = point.y;
     const traceIndex = point.curveNumber;
-    const pointIndex = point.pointNumber;
-    
+    // const pointIndex = point.pointNumber; // 不再直接使用 pointIndex 来确定参数组，因为一条曲线可能包含多个点
+
+    // 获取当前选择的模型类型
+    const modelSelect = document.getElementById('model-select');
+    const currentModelType = modelSelect ? modelSelect.value : 'dill'; // 默认为dill
+
     // 获取参数组信息
+    // 注意：Plotly的eventData.points[0].fullData.name 包含了生成trace时设置的name，通常是 "参数组 X" 或自定义名称
+    // 我们需要一种更可靠的方式来关联点击的点到其原始参数组 DOM 元素
+    // 假设图表中的trace顺序与参数组DOM元素的顺序严格对应
     const parameterSets = document.querySelectorAll('.parameter-set');
-    const currentSet = parameterSets[traceIndex];
+    let currentSet;
+    let actualTraceIndex = traceIndex;
+
+    // 如果图表包含额外的非数据trace（例如全局阈值线），需要调整索引
+    // 这里的逻辑可能需要根据图表具体如何添加trace来细化
+    // 假设我们的数据trace总是在其他辅助trace（如阈值线）之前
+    if (traceIndex < parameterSets.length) {
+        currentSet = parameterSets[traceIndex];
+    } else {
+        // 尝试从 Plotly 的 fullData 中获取原始的参数组ID (如果之前有存储)
+        // 这是一个备用方案，更稳健的做法是在创建trace时附加原始setId
+        console.warn(`Trace index ${traceIndex} out of bounds for parameter sets. Attempting fallback or default.`);
+        // 如果无法定位，可能需要提示用户或显示通用信息
+        // currentSet = parameterSets[0]; // 或者不设置，让后续逻辑处理
+    }
     
-    let setName = `参数组 ${traceIndex + 1}`;
+    // 如果 eventData 并且 eventData.points[0].fullData 存在，尝试从中获取 setId
+    // 这需要在创建trace时，将setId作为自定义数据传递
+    if (eventData && eventData.points && eventData.points[0] && eventData.points[0].fullData && eventData.points[0].fullData.meta) {
+        const setIdFromTrace = eventData.points[0].fullData.meta.setId;
+        if (setIdFromTrace) {
+            currentSet = document.querySelector(`.parameter-set[data-set-id="${setIdFromTrace}"]`);
+            // 更新 actualTraceIndex 以便正确获取 setName
+            if (currentSet) {
+                 const allSets = Array.from(parameterSets);
+                 actualTraceIndex = allSets.indexOf(currentSet);
+            }
+        }
+    }
+
+
+    let setName = `参数组 ${actualTraceIndex + 1}`; // 使用调整后的索引
     let params = {};
-    
+    let html = '';
+
     if (currentSet) {
         const nameInput = currentSet.querySelector('.parameter-set-name-input');
         if (nameInput && nameInput.value.trim()) {
             setName = nameInput.value.trim();
         }
-        
-        // 获取参数值
-        params = {
-            I_avg: parseFloat(currentSet.querySelector('.I_avg').value),
-            V: parseFloat(currentSet.querySelector('.V').value),
-            K: parseFloat(currentSet.querySelector('.K').value),
-            t_exp: parseFloat(currentSet.querySelector('.t_exp').value),
-            C: parseFloat(currentSet.querySelector('.C').value)
-        };
-    }
-    
-    // 根据图表类型生成不同的信息
-    let html = '';
-    
-    if (plotType === 'exposure') {
-        html = `
-            <div class="point-info-section">
-                <h4>🎯 位置信息</h4>
-                <div class="info-grid">
-                    <div class="info-item">
-                        <span class="info-label">X坐标:</span>
-                        <span class="info-value">${x.toFixed(3)} μm</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">曝光剂量:</span>
-                        <span class="info-value">${y.toFixed(2)} mJ/cm²</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="point-info-section">
-                <h4>📋 参数组信息</h4>
-                <div class="info-item">
-                    <span class="info-label">名称:</span>
-                    <span class="info-value">${setName}</span>
-                </div>
-                <div class="info-grid">
-                    <div class="info-item">
-                        <span class="info-label">I_avg:</span>
-                        <span class="info-value">${params.I_avg} mW/cm²</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">V:</span>
-                        <span class="info-value">${params.V}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">K:</span>
-                        <span class="info-value">${params.K}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">t_exp:</span>
-                        <span class="info-value">${params.t_exp} s</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">C:</span>
-                        <span class="info-value">${params.C}</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="point-info-section">
-                <h4>🧮 计算公式</h4>
-                <div class="formula-container">
-                    <div class="formula-title">Dill模型曝光剂量计算：</div>
-                    <div class="formula-math">
-                        E(x) = I_avg × t_exp × exp(-K × ∫[0 to x] C(x') dx')
-                    </div>
-                    <div class="formula-explanation">
-                        <div>• I_avg: 平均光强度</div>
-                        <div>• t_exp: 曝光时间</div>
-                        <div>• K: 吸收系数</div>
-                        <div>• C(x): 光刻胶浓度分布</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="point-info-section">
-                <h4>📊 数值分析</h4>
-                <div class="analysis-grid">
-                    <div class="analysis-item">
-                        <span class="analysis-label">相对强度:</span>
-                        <span class="analysis-value">${((y / (params.I_avg * params.t_exp)) * 100).toFixed(1)}%</span>
-                    </div>
-                    <div class="analysis-item">
-                        <span class="analysis-label">衰减因子:</span>
-                        <span class="analysis-value">${(y / (params.I_avg * params.t_exp)).toFixed(4)}</span>
-                    </div>
-                </div>
-            </div>
-        `;
+
+        // 根据当前模型类型获取参数
+        if (currentModelType === 'dill') {
+            params = {
+                I_avg: parseFloat(currentSet.querySelector('.I_avg').value),
+                V: parseFloat(currentSet.querySelector('.V').value),
+                K: parseFloat(currentSet.querySelector('.K').value),
+                t_exp: parseFloat(currentSet.querySelector('.t_exp').value),
+                C: parseFloat(currentSet.querySelector('.C').value)
+            };
+            html = getDillPopupHtml(x, y, setName, params, plotType);
+        } else if (currentModelType === 'enhanced_dill') {
+            params = {
+                z_h: parseFloat(currentSet.querySelector('.z_h').value),
+                T: parseFloat(currentSet.querySelector('.T').value),
+                t_B: parseFloat(currentSet.querySelector('.t_B').value),
+                I0: parseFloat(currentSet.querySelector('.I0').value),
+                M0: parseFloat(currentSet.querySelector('.M0').value),
+                t_exp_enhanced: parseFloat(currentSet.querySelector('.t_exp_enhanced').value),
+                K_enhanced: parseFloat(currentSet.querySelector('.K_enhanced') ? currentSet.querySelector('.K_enhanced').value : currentSet.querySelector('.K').value) // 兼容旧版或Dill参数名
+            };
+            html = getEnhancedDillPopupHtml(x, y, setName, params, plotType);
+        } else if (currentModelType === 'car') {
+            params = {
+                car_I_avg: parseFloat(currentSet.querySelector('.car_I_avg').value),
+                car_V: parseFloat(currentSet.querySelector('.car_V').value),
+                car_K: parseFloat(currentSet.querySelector('.car_K').value),
+                car_t_exp: parseFloat(currentSet.querySelector('.car_t_exp').value),
+                car_acid_gen_efficiency: parseFloat(currentSet.querySelector('.car_acid_gen_efficiency').value),
+                car_diffusion_length: parseFloat(currentSet.querySelector('.car_diffusion_length').value),
+                car_reaction_rate: parseFloat(currentSet.querySelector('.car_reaction_rate').value),
+                car_amplification: parseFloat(currentSet.querySelector('.car_amplification').value),
+                car_contrast: parseFloat(currentSet.querySelector('.car_contrast').value)
+            };
+            html = getCarPopupHtml(x, y, setName, params, plotType);
+        }
     } else {
+        // 如果无法找到对应的参数组，显示通用信息或错误
         html = `
             <div class="point-info-section">
-                <h4>🎯 位置信息</h4>
-                <div class="info-grid">
-                    <div class="info-item">
-                        <span class="info-label">X坐标:</span>
-                        <span class="info-value">${x.toFixed(3)} μm</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">相对厚度:</span>
-                        <span class="info-value">${y.toFixed(4)}</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="point-info-section">
-                <h4>📋 参数组信息</h4>
-                <div class="info-item">
-                    <span class="info-label">名称:</span>
-                    <span class="info-value">${setName}</span>
-                </div>
-                <div class="info-grid">
-                    <div class="info-item">
-                        <span class="info-label">I_avg:</span>
-                        <span class="info-value">${params.I_avg} mW/cm²</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">V:</span>
-                        <span class="info-value">${params.V}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">K:</span>
-                        <span class="info-value">${params.K}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">t_exp:</span>
-                        <span class="info-value">${params.t_exp} s</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">C:</span>
-                        <span class="info-value">${params.C}</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="point-info-section">
-                <h4>🧮 计算公式</h4>
-                <div class="formula-container">
-                    <div class="formula-title">Dill模型厚度计算：</div>
-                    <div class="formula-math">
-                        T(x) = T₀ × (1 - V × (1 - exp(-E(x)/E_th)))
-                    </div>
-                    <div class="formula-explanation">
-                        <div>• T₀: 初始厚度</div>
-                        <div>• V: 对比度参数</div>
-                        <div>• E(x): 曝光剂量</div>
-                        <div>• E_th: 阈值剂量</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="point-info-section">
-                <h4>📊 数值分析</h4>
-                <div class="analysis-grid">
-                    <div class="analysis-item">
-                        <span class="analysis-label">厚度百分比:</span>
-                        <span class="analysis-value">${(y * 100).toFixed(2)}%</span>
-                    </div>
-                    <div class="analysis-item">
-                        <span class="analysis-label">溶解程度:</span>
-                        <span class="analysis-value">${((1 - y) * 100).toFixed(2)}%</span>
-                    </div>
-                </div>
+                <h4>⚠️ 信息获取失败</h4>
+                <p>未能找到点击点对应的参数组详细信息。</p>
+                <p>X: ${x.toFixed(3)} μm, Y: ${y.toFixed(2)}</p>
             </div>
         `;
     }
-    
+
     return { html };
 }
 
+// 为Dill模型生成弹窗HTML的辅助函数
+function getDillPopupHtml(x, y, setName, params, plotType) {
+    let valueLabel = '';
+    let valueUnit = '';
+    let formulaTitle = '';
+    let formulaMath = '';
+    let formulaExplanation = '';
+
+    if (plotType === 'exposure') {
+        valueLabel = '曝光剂量:';
+        valueUnit = 'mJ/cm²';
+        formulaTitle = 'Dill模型曝光剂量计算：';
+        formulaMath = 'D(x) = I_avg × t_exp × (1 + V × cos(2πKx))'; // 简化公式示例
+        formulaExplanation = `
+            <div>• I_avg: 平均光强度 (${params.I_avg} mW/cm²)</div>
+            <div>• t_exp: 曝光时间 (${params.t_exp} s)</div>
+            <div>• V: 干涉条纹可见度 (${params.V})</div>
+            <div>• K: 空间频率 (${params.K})</div>
+        `;
+    } else if (plotType === 'thickness') {
+        valueLabel = '光刻胶厚度:';
+        valueUnit = 'μm (归一化)'; // 假设是归一化厚度
+        formulaTitle = 'Dill模型光刻胶厚度计算：';
+        formulaMath = 'M(x) = exp(-C × D(x))';
+        formulaExplanation = `
+            <div>• C: 光敏速率常数 (${params.C})</div>
+            <div>• D(x): 该点曝光剂量 (${y.toFixed(2)} mJ/cm² - 若适用)</div>
+        `;
+    }
+
+    return `
+        <div class="point-info-section">
+            <h4>🎯 位置信息</h4>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">X坐标:</span>
+                    <span class="info-value">${x.toFixed(3)} μm</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">${valueLabel}</span>
+                    <span class="info-value">${y.toFixed(3)} ${valueUnit}</span>
+                </div>
+            </div>
+        </div>
+        <div class="point-info-section">
+            <h4>📋 参数组: ${setName} (Dill模型)</h4>
+            <div class="info-grid responsive-grid">
+                <div class="info-item"><span class="info-label">I_avg:</span><span class="info-value">${params.I_avg} mW/cm²</span></div>
+                <div class="info-item"><span class="info-label">V:</span><span class="info-value">${params.V}</span></div>
+                <div class="info-item"><span class="info-label">K:</span><span class="info-value">${params.K}</span></div>
+                <div class="info-item"><span class="info-label">t_exp:</span><span class="info-value">${params.t_exp} s</span></div>
+                <div class="info-item"><span class="info-label">C:</span><span class="info-value">${params.C}</span></div>
+            </div>
+        </div>
+        <div class="point-info-section">
+            <h4>🧮 计算公式 (简化示例)</h4>
+            <div class="formula-container">
+                <div class="formula-title">${formulaTitle}</div>
+                <div class="formula-math">${formulaMath}</div>
+                <div class="formula-explanation">${formulaExplanation}</div>
+            </div>
+        </div>
+    `;
+}
+
+// 为增强Dill模型生成弹窗HTML的辅助函数
+function getEnhancedDillPopupHtml(x, y, setName, params, plotType) {
+    let valueLabel = '';
+    let valueUnit = '';
+    let formulaTitle = '';
+    let formulaMath = '';
+    let formulaExplanation = '';
+
+    if (plotType === 'exposure') {
+        valueLabel = '曝光剂量:';
+        valueUnit = 'mJ/cm²';
+        formulaTitle = '增强Dill模型曝光剂量:';
+        // 实际公式复杂，这里仅作示意
+        formulaMath = 'D(x,z) = ∫ I(x,z,t) dt';
+        formulaExplanation = `
+            <div>参数涉及胶厚、前烘温度、时间等影响A,B,C的值。</div>
+            <div>• I(x,z,t): 光强度分布</div>
+        `;
+    } else if (plotType === 'thickness') {
+        valueLabel = '光刻胶厚度:';
+        valueUnit = 'μm (归一化)';
+        formulaTitle = '增强Dill模型光刻胶厚度:';
+        formulaMath = '∂M/∂t = -I·M·C(z_h,T,t_B)';
+        formulaExplanation = `
+            <div>• M: 归一化光敏剂浓度</div>
+            <div>• C(z_h,T,t_B): 光敏速率常数</div>
+        `;
+    }
+    
+    return `
+        <div class="point-info-section">
+            <h4>🎯 位置信息</h4>
+            <div class="info-grid">
+                <div class="info-item"><span class="info-label">X坐标:</span><span class="info-value">${x.toFixed(3)} μm</span></div>
+                <div class="info-item"><span class="info-label">${valueLabel}</span><span class="info-value">${y.toFixed(3)} ${valueUnit}</span></div>
+            </div>
+        </div>
+        <div class="point-info-section">
+            <h4>📋 参数组: ${setName} (增强Dill)</h4>
+            <div class="info-grid responsive-grid">
+                <div class="info-item"><span class="info-label">胶厚(z_h):</span><span class="info-value">${params.z_h} μm</span></div>
+                <div class="info-item"><span class="info-label">前烘温度(T):</span><span class="info-value">${params.T} °C</span></div>
+                <div class="info-item"><span class="info-label">前烘时间(t_B):</span><span class="info-value">${params.t_B} min</span></div>
+                <div class="info-item"><span class="info-label">初始光强(I0):</span><span class="info-value">${params.I0}</span></div>
+                <div class="info-item"><span class="info-label">初始PAC(M0):</span><span class="info-value">${params.M0}</span></div>
+                <div class="info-item"><span class="info-label">曝光时间(t_exp):</span><span class="info-value">${params.t_exp_enhanced} s</span></div>
+                <div class="info-item"><span class="info-label">空间频率(K):</span><span class="info-value">${params.K_enhanced}</span></div>
+            </div>
+        </div>
+        <div class="point-info-section">
+            <h4>🧮 计算公式 (核心)</h4>
+            <div class="formula-container">
+                <div class="formula-title">${formulaTitle}</div>
+                <div class="formula-math">${formulaMath}</div>
+                <div class="formula-explanation">${formulaExplanation}</div>
+            </div>
+        </div>
+    `;
+}
+
+// 为CAR模型生成弹窗HTML的辅助函数
+function getCarPopupHtml(x, y, setName, params, plotType) {
+    let valueLabel = '';
+    let valueUnit = '';
+    let formulaTitle = '';
+    let formulaMath = '';
+    let formulaExplanation = '';
+
+    if (plotType === 'exposure') { // CAR模型通常不直接看曝光剂量曲线，而是看显影后形貌或者脱保护度
+        valueLabel = '脱保护度/形貌相关值:'; // 根据实际输出调整
+        valueUnit = ''; // 根据实际输出调整
+        formulaTitle = 'CAR模型核心过程:';
+        formulaMath = '光酸生成 → 扩散 → 催化 → 显影';
+        formulaExplanation = `
+             <div>• η: 光酸产生效率 (${params.car_acid_gen_efficiency})</div>
+             <div>• EPDL: 扩散长度 (${params.car_diffusion_length})</div>
+        `;
+    } else if (plotType === 'thickness') { // 通常指显影后的厚度或归一化浓度
+        valueLabel = '显影后厚度/M:';
+        valueUnit = ''; // 根据实际输出调整
+        formulaTitle = 'CAR模型脱保护度:';
+        formulaMath = 'M = 1-exp(-k·[H⁺]_diff·A)';
+        formulaExplanation = `
+            <div>• k: 反应速率 (${params.car_reaction_rate})</div>
+            <div>• A: 放大因子 (${params.car_amplification})</div>
+            <div>• γ: 对比度因子 (${params.car_contrast})</div>
+        `;
+    }
+
+    return `
+        <div class="point-info-section">
+            <h4>🎯 位置信息</h4>
+            <div class="info-grid">
+                <div class="info-item"><span class="info-label">X坐标:</span><span class="info-value">${x.toFixed(3)} μm</span></div>
+                <div class="info-item"><span class="info-label">${valueLabel}</span><span class="info-value">${y.toFixed(3)} ${valueUnit}</span></div>
+            </div>
+        </div>
+        <div class="point-info-section">
+            <h4>📋 参数组: ${setName} (CAR模型)</h4>
+            <div class="info-grid responsive-grid">
+                <div class="info-item"><span class="info-label">I_avg:</span><span class="info-value">${params.car_I_avg} mW/cm²</span></div>
+                <div class="info-item"><span class="info-label">V:</span><span class="info-value">${params.car_V}</span></div>
+                <div class="info-item"><span class="info-label">K:</span><span class="info-value">${params.car_K}</span></div>
+                <div class="info-item"><span class="info-label">t_exp:</span><span class="info-value">${params.car_t_exp} s</span></div>
+                <div class="info-item"><span class="info-label">η:</span><span class="info-value">${params.car_acid_gen_efficiency}</span></div>
+                <div class="info-item"><span class="info-label">EPDL:</span><span class="info-value">${params.car_diffusion_length}</span></div>
+                <div class="info-item"><span class="info-label">k:</span><span class="info-value">${params.car_reaction_rate}</span></div>
+                <div class="info-item"><span class="info-label">A:</span><span class="info-value">${params.car_amplification}</span></div>
+                <div class="info-item"><span class="info-label">γ:</span><span class="info-value">${params.car_contrast}</span></div>
+            </div>
+        </div>
+        <div class="point-info-section">
+            <h4>🧮 计算公式 (核心)</h4>
+            <div class="formula-container">
+                <div class="formula-title">${formulaTitle}</div>
+                <div class="formula-math">${formulaMath}</div>
+                <div class="formula-explanation">${formulaExplanation}</div>
+            </div>
+        </div>
+    `;
+}
+
+
 /**
- * 移除点详细信息弹窗
+ * 移除点的详细信息弹窗
  */
 function removePointDetailsPopup() {
     const existingPopup = document.getElementById('point-details-popup');
@@ -2891,10 +3091,38 @@ function initParameterSetCollapse(parameterSet, isFirst) {
 function initMobileFabBar() {
   const addFab = document.querySelector('.add-set-fab');
   const calcFab = document.querySelector('.calc-fab');
-  if (addFab) addFab.addEventListener('click', addParameterSet);
+  
+  // 不再直接绑定移动端添加按钮事件，使用全局事件委托代替
+  // if (addFab) {
+  //   console.log('绑定移动端添加参数组按钮事件');
+  //   addFab.addEventListener('click', () => {
+  //     console.log('移动端点击添加新参数组');
+  //     addParameterSet();
+  //   });
+  //   // 添加触摸事件以减少移动设备上的点击延迟
+  //   addFab.addEventListener('touchstart', (e) => {
+  //     e.preventDefault(); // 防止双重触发
+  //     console.log('移动端触摸添加新参数组');
+  //     addParameterSet();
+  //   });
+  // } else {
+  //   console.error('找不到移动端添加参数组按钮');
+  // }
+  
   if (calcFab) {
     const compareBtn = document.getElementById('compare-btn');
-    if (compareBtn) calcFab.addEventListener('click', () => compareBtn.click());
+    if (compareBtn) {
+      calcFab.addEventListener('click', () => {
+        console.log('移动端点击计算按钮');
+        compareBtn.click();
+      });
+      // 添加触摸事件支持
+      calcFab.addEventListener('touchstart', (e) => {
+        e.preventDefault(); // 防止双重触发
+        console.log('移动端触摸计算按钮');
+        compareBtn.click();
+      });
+    }
   }
 }
 

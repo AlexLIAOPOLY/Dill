@@ -554,6 +554,14 @@
                     <div class="plot-item">
                         <h3 class="plot-title" data-i18n="exposure_dist">曝光剂量分布</h3>
                         <div id="exposure-plot-container" class="plot-container"></div>
+                        <div class="individual-threshold-controls threshold-analysis-hint" id="exposure-thresholds-container">
+                          <div class="threshold-control" data-idx="0">
+                            <span class="threshold-label-text">曝光剂量阈值:</span>
+                            <input type="range" class="threshold-slider" min="10" max="200" step="1" value="80">
+                            <span class="threshold-value-text">80 mJ/cm²</span>
+                            <button class="toggle-threshold-visibility-btn">显示</button>
+                          </div>
+                        </div>
                         <div class="plot-export-btns">
                             <button id="export-exposure-img" data-i18n="export_img">导出图片</button>
                             <button id="export-exposure-data" data-i18n="export_data">导出数据</button>
@@ -566,6 +574,14 @@
                     <div class="plot-item">
                         <h3 class="plot-title" data-i18n="thickness_dist">光刻胶厚度分布</h3>
                         <div id="thickness-plot-container" class="plot-container"></div>
+                        <div class="individual-threshold-controls threshold-analysis-hint" id="thickness-thresholds-container">
+                          <div class="threshold-control" data-idx="0">
+                            <span class="threshold-label-text">厚度阈值:</span>
+                            <input type="range" class="threshold-slider" min="0" max="1" step="0.01" value="0.3">
+                            <span class="threshold-value-text">0.3</span>
+                            <button class="toggle-threshold-visibility-btn">显示</button>
+                          </div>
+                        </div>
                         <div class="plot-export-btns">
                             <button id="export-thickness-img" data-i18n="export_img">导出图片</button>
                             <button id="export-thickness-data" data-i18n="export_data">导出数据</button>
@@ -683,131 +699,6 @@
             carFullDetails.classList.add('details-visible');
             this.innerHTML = LANGS[currentLang].btn_collapse;
         }
-    });
-
-    // 计算按钮事件，传递model_type参数
-    const calculateBtn = document.getElementById('calculate-btn');
-    calculateBtn.addEventListener('click', function() {
-        let modelType = modelSelect.value;
-        let postData = { model_type: modelType };
-        
-        // 通用参数：y范围，对所有模型和类型都适用
-        postData['y_min'] = parseFloat(document.getElementById('y_min').value);
-        postData['y_max'] = parseFloat(document.getElementById('y_max').value);
-        postData['y_points'] = parseInt(document.getElementById('y_points').value);
-
-        if (modelType === 'dill') {
-            postData['I_avg'] = parseFloat(document.getElementById('I_avg').value);
-            postData['V'] = parseFloat(document.getElementById('V').value);
-            postData['t_exp'] = parseFloat(document.getElementById('t_exp').value);
-            postData['C'] = parseFloat(document.getElementById('C').value);
-
-            const sineType = document.getElementById('dill-sine-type').value;
-            postData['sine_type'] = sineType;
-            if (sineType === 'multi') {
-                postData['Kx'] = parseFloat(document.getElementById('Kx').value);
-                postData['Ky'] = parseFloat(document.getElementById('Ky').value);
-                postData['phi_expr'] = document.getElementById('phi_expr').value;
-            } else { // 'single' or other defaults to 1D
-                postData['K'] = parseFloat(document.getElementById('K').value);
-            }
-        } else if (modelType === 'enhanced_dill') {
-            postData['z_h'] = parseFloat(document.getElementById('z_h').value);
-            postData['T'] = parseFloat(document.getElementById('T').value);
-            postData['t_B'] = parseFloat(document.getElementById('t_B').value);
-            postData['I0'] = parseFloat(document.getElementById('I0').value);
-            postData['M0'] = parseFloat(document.getElementById('M0').value);
-            postData['t_exp'] = parseFloat(document.getElementById('t_exp_enhanced').value);
-
-            const sineType = document.getElementById('enhanced-dill-sine-type').value;
-            postData['sine_type'] = sineType;
-            if (sineType === 'multi') {
-                postData['Kx'] = parseFloat(document.getElementById('enhanced_Kx').value);
-                postData['Ky'] = parseFloat(document.getElementById('enhanced_Ky').value);
-                postData['phi_expr'] = document.getElementById('enhanced_phi_expr').value;
-            } else { // For enhanced_dill, if 1D, it might not use a global K, check model.
-                // Assuming it might also need a K if 1D, or backend handles K if sine_type is not multi.
-                // If enhanced_dill 1D doesn't use K, this K part can be omitted.
-                // For now, let's assume K might be relevant if not multi, or backend ignores if not needed.
-                // postData['K'] = ...; // Add if relevant for 1D enhanced Dill
-            }
-        } else if (modelType === 'car') {
-            postData['I_avg'] = parseFloat(document.getElementById('car_I_avg').value);
-            postData['V'] = parseFloat(document.getElementById('car_V').value);
-            postData['t_exp'] = parseFloat(document.getElementById('car_t_exp').value);
-            postData['acid_gen_efficiency'] = parseFloat(document.getElementById('car_acid_gen_efficiency').value);
-            postData['diffusion_length'] = parseFloat(document.getElementById('car_diffusion_length').value);
-            postData['reaction_rate'] = parseFloat(document.getElementById('car_reaction_rate').value);
-            postData['amplification'] = parseFloat(document.getElementById('car_amplification').value);
-            postData['contrast'] = parseFloat(document.getElementById('car_contrast').value);
-
-            const sineType = document.getElementById('car-sine-type').value;
-            postData['sine_type'] = sineType;
-            if (sineType === 'multi') {
-                postData['Kx'] = parseFloat(document.getElementById('car_Kx').value);
-                postData['Ky'] = parseFloat(document.getElementById('car_Ky').value);
-                postData['phi_expr'] = document.getElementById('car_phi_expr').value;
-            } else { // 'single' or other defaults to 1D
-                postData['K'] = parseFloat(document.getElementById('car_K').value);
-            }
-        }
-        
-        // 显示加载动画
-        document.getElementById('loading').style.display = 'flex';
-        
-        // 发起POST请求
-        fetch('/api/calculate', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(postData)
-        })
-        .then(response => response.json())
-        .then(data => {
-            // 隐藏加载动画
-            document.getElementById('loading').style.display = 'none';
-            
-            if (data.success) {
-                if (modelType === 'car') {
-                    // 显示CAR模型结果
-                    displayCarResults(data.data);
-                } else {
-                    // 显示普通模型结果
-                    document.getElementById('exposure-plot').src = 'data:image/png;base64,' + data.data.exposure_plot;
-                    document.getElementById('thickness-plot').src = 'data:image/png;base64,' + data.data.thickness_plot;
-                }
-            } else {
-                showErrorMessage(data.message);
-            }
-        })
-        .catch(error => {
-            document.getElementById('loading').style.display = 'none';
-            showErrorMessage('请求失败: ' + error.message);
-        });
-        
-        // 同时请求交互式数据
-        fetch('/api/calculate_data', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(postData)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                if (modelType === 'car') {
-                    renderCarInteractivePlots(data.data);
-                } else {
-                    // 处理其他模型的交互式数据
-                    // ...原有代码...
-                }
-            }
-        })
-        .catch(error => {
-            console.error('获取交互式数据失败:', error);
-        });
     });
     </script>
 </body>

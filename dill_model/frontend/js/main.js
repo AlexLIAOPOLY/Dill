@@ -18,8 +18,6 @@ function initApp() {
     const errorMessage = document.getElementById('error-message');
     const loading = document.getElementById('loading');
     const modelSelect = document.getElementById('model-select'); // 获取模型选择下拉框
-    const toggleDetailsBtn = document.getElementById('toggle-model-details-btn'); // 获取切换详情按钮
-    const modelFullDetails = document.getElementById('model-full-details'); // 获取详情内容区域
     const modelSelectionSection = document.getElementById('model-selection-section'); // 获取模型选择区域
     
     // 为所有滑块绑定事件
@@ -28,68 +26,10 @@ function initApp() {
     // 为计算按钮绑定事件
     calculateBtn.addEventListener('click', function() {
         let modelType = modelSelect.value;
-        let postData = { model_type: modelType };
-        if (modelType === 'dill') {
-            // 正弦波类型分支
-            const sineType = document.getElementById('dill-sine-type').value;
-            postData['sine_type'] = sineType;
-            postData['I_avg'] = parseFloat(document.getElementById('I_avg').value);
-            postData['V'] = parseFloat(document.getElementById('V').value);
-            postData['t_exp'] = parseFloat(document.getElementById('t_exp').value);
-            postData['C'] = parseFloat(document.getElementById('C').value);
-            if (sineType === 'multi') {
-                postData['Kx'] = parseFloat(document.getElementById('Kx').value);
-                postData['Ky'] = parseFloat(document.getElementById('Ky').value);
-                postData['phi_expr'] = document.getElementById('phi_expr').value;
-                // 不传K
-            } else {
-                postData['K'] = parseFloat(document.getElementById('K').value);
-            }
-            // y范围参数（仅多维时有效）
-            if (sineType === 'multi') {
-                postData['y_min'] = parseFloat(document.getElementById('y_min').value);
-                postData['y_max'] = parseFloat(document.getElementById('y_max').value);
-                postData['y_points'] = parseInt(document.getElementById('y_points').value);
-            }
-        } else if (modelType === 'enhanced_dill') {
-            const sineType = document.getElementById('enhanced-dill-sine-type').value;
-            postData['sine_type'] = sineType;
-            postData['z_h'] = parseFloat(document.getElementById('z_h').value);
-            postData['T'] = parseFloat(document.getElementById('T').value);
-            postData['t_B'] = parseFloat(document.getElementById('t_B').value);
-            postData['I0'] = parseFloat(document.getElementById('I0').value);
-            postData['M0'] = parseFloat(document.getElementById('M0').value);
-            postData['t_exp'] = parseFloat(document.getElementById('t_exp_enhanced').value);
-            // 优化：无论 single 还是 multi 都传递 K
-            postData['K'] = parseFloat(document.getElementById('K').value);
-            if (sineType === 'multi') {
-                postData['Kx'] = parseFloat(document.getElementById('enhanced_Kx').value);
-                postData['Ky'] = parseFloat(document.getElementById('enhanced_Ky').value);
-                postData['phi_expr'] = document.getElementById('enhanced_phi_expr').value;
-            }
-        } else if (modelType === 'car') {
-            const sineType = document.getElementById('car-sine-type').value;
-            postData['sine_type'] = sineType;
-            postData['I_avg'] = parseFloat(document.getElementById('car_I_avg').value);
-            postData['V'] = parseFloat(document.getElementById('car_V').value);
-            postData['t_exp'] = parseFloat(document.getElementById('car_t_exp').value);
-            postData['acid_gen_efficiency'] = parseFloat(document.getElementById('car_acid_gen_efficiency').value);
-            postData['diffusion_length'] = parseFloat(document.getElementById('car_diffusion_length').value);
-            postData['reaction_rate'] = parseFloat(document.getElementById('car_reaction_rate').value);
-            postData['amplification'] = parseFloat(document.getElementById('car_amplification').value);
-            postData['contrast'] = parseFloat(document.getElementById('car_contrast').value);
-            if (sineType === 'multi') {
-                postData['Kx'] = parseFloat(document.getElementById('car_Kx').value);
-                postData['Ky'] = parseFloat(document.getElementById('car_Ky').value);
-                postData['phi_expr'] = document.getElementById('car_phi_expr').value;
-            } else {
-                postData['K'] = parseFloat(document.getElementById('car_K').value);
-            }
-        }
+        let postData = getParameterValues(); // 使用 getParameterValues 获取所有参数
         
         // 显示加载动画
         loading.classList.add('active');
-        loading.setAttribute('data-i18n', 'loading');
         // 修复：只修改动画里的文字部分，不覆盖整个动画结构
         const loadingText = loading.querySelector('.loading-text');
         if (loadingText) loadingText.textContent = LANGS[currentLang].loading;
@@ -104,52 +44,46 @@ function initApp() {
                 // 隐藏加载动画
                 loading.classList.remove('active');
                 
-                // 显示结果
+                // 主图始终渲染
                 displayInteractiveResults(data);
+                
+                // 只有CAR模型时，额外渲染右侧多图
+                if (modelType === 'car') {
+                    if (typeof renderCarInteractivePlots === 'function') {
+                        renderCarInteractivePlots(data);
+                        // 确保CAR模型结果区可见
+                        const carInteractivePlotsContainer = document.getElementById('car-interactive-plots');
+                        if (carInteractivePlotsContainer) carInteractivePlotsContainer.style.display = 'block';
+                    } else {
+                        console.error('renderCarInteractivePlots function not found.');
+                        showErrorMessage('CAR模型图表渲染函数未找到。');
+                    }
+                }
                 
                 // 添加动画效果
                 resultsSection.classList.add('visible');
             })
             .catch(error => {
-                // 如果获取数据失败，尝试获取图像
-                calculateDillModel(postData)
-                    .then(data => {
-                        // 隐藏加载动画
-                        loading.classList.remove('active');
-                        
-                        // 显示结果
-                        displayResults(data);
-                        
-                        // 添加动画效果
-                        resultsSection.classList.add('visible');
-                    })
-                    .catch(error => {
-                        // 隐藏加载动画
-                        loading.classList.remove('active');
-                        
-                        // 判断后端返回的message_zh/message_en
-                        let msg = error.message;
-                        if (error && error.message_zh && error.message_en) {
-                            msg = (window.currentLang === 'zh') ? error.message_zh : error.message_en;
-                        }
-                        errorMessage.textContent = msg || LANGS[currentLang].error_message;
-                        errorMessage.setAttribute('data-i18n', 'error_message');
-                        errorMessage.classList.add('visible');
-                        // 添加摇晃动画
-                        errorMessage.classList.add('shake');
-                        setTimeout(() => {
-                            errorMessage.classList.remove('shake');
-                        }, 800);
-                        // 修正：报错时自动滚动到页面顶部，延迟50ms确保DOM渲染
-                        setTimeout(() => {
-                            window.scrollTo({top: 0, behavior: 'smooth'});
-                            document.querySelectorAll('.main-content, .container').forEach(el => {
-                                if (el.scrollTop !== undefined) el.scrollTop = 0;
-                            });
-                        }, 50);
-                        // 新增：高亮出错参数卡片
-                        highlightErrorCard(msg);
-                    });
+                // 隐藏加载动画
+                loading.classList.remove('active');
+                
+                // 判断后端返回的message_zh/message_en
+                let msg = error.message;
+                if (error && error.message_zh && error.message_en) {
+                    msg = (window.currentLang === 'zh') ? error.message_zh : error.message_en;
+                }
+                errorMessage.textContent = msg || LANGS[currentLang].error_message;
+                errorMessage.classList.add('visible');
+                // 添加摇晃动画
+                errorMessage.classList.add('shake');
+                setTimeout(() => {
+                    errorMessage.classList.remove('shake');
+                }, 800);
+                // 修正：报错时自动滚动到页面顶部
+                setTimeout(() => {
+                    window.scrollTo({top: 0, behavior: 'smooth'});
+                }, 50);
+                highlightErrorCard(msg);
             });
     });
     
@@ -175,22 +109,22 @@ function initApp() {
     });
 
     // 切换模型详细说明的显示状态
-    if (toggleDetailsBtn && modelFullDetails) {
-        toggleDetailsBtn.addEventListener('click', () => {
-            const isHidden = !modelFullDetails.classList.contains('details-visible');
-            if (isHidden) {
-                modelFullDetails.classList.add('details-visible');
-                toggleDetailsBtn.textContent = '隐藏详细说明';
-                // 可选：平滑滚动到详情区域的顶部
-                // setTimeout(() => { // 延迟以等待展开动画完成
-                //     modelFullDetails.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                // }, 700); // 动画时间
-            } else {
-                modelFullDetails.classList.remove('details-visible');
-                toggleDetailsBtn.textContent = '显示详细说明';
-            }
-        });
-    }
+    // if (toggleDetailsBtn && modelFullDetails) {
+    //     toggleDetailsBtn.addEventListener('click', () => {
+    //         const isHidden = !modelFullDetails.classList.contains('details-visible');
+    //         if (isHidden) {
+    //             modelFullDetails.classList.add('details-visible');
+    //             toggleDetailsBtn.textContent = '隐藏详细说明';
+    //             // 可选：平滑滚动到详情区域的顶部
+    //             // setTimeout(() => { // 延迟以等待展开动画完成
+    //             //     modelFullDetails.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    //             // }, 700); // 动画时间
+    //         } else {
+    //             modelFullDetails.classList.remove('details-visible');
+    //             toggleDetailsBtn.textContent = '显示详细说明';
+    //         }
+    //     });
+    // }
 
     // 切换Dill模型详细说明的显示状态
     const dillToggleBtn = document.getElementById('dill-toggle-details');
@@ -257,8 +191,13 @@ function initApp() {
     // 正弦波类型切换逻辑（Dill）
     const dillSineType = document.getElementById('dill-sine-type');
     const dillMultisineParams = document.getElementById('dill-multisine-params');
-    const dillK = document.getElementById('K').closest('.parameter-item');
+    const dillK = document.getElementById('K')?.closest('.parameter-item');
     const dillYRange = document.getElementById('y-range-container');
+    // 新增：关键DOM元素检查和调试输出
+    if (!dillSineType) console.error('找不到dill-sine-type');
+    if (!dillMultisineParams) console.error('找不到dill-multisine-params');
+    if (!dillK) console.error('找不到K参数区');
+    if (!dillYRange) console.error('找不到y-range-container');
     function updateDillYRangeDisplay() {
         if (dillSineType.value === 'multi') {
             dillYRange.style.display = '';
@@ -267,6 +206,7 @@ function initApp() {
         }
     }
     dillSineType.addEventListener('change', function() {
+        console.log('正弦波类型切换:', this.value);
         if (this.value === 'multi') {
             dillMultisineParams.style.display = 'block';
             if (dillK) dillK.style.display = 'none';
@@ -276,6 +216,8 @@ function initApp() {
         }
         updateDillYRangeDisplay();
     });
+    // 新增：页面加载时主动触发一次change，确保初始状态正确
+    dillSineType.dispatchEvent(new Event('change'));
     updateDillYRangeDisplay();
     // 正弦波类型切换逻辑（增强Dill）
     const enhancedDillSineType = document.getElementById('enhanced-dill-sine-type');
@@ -549,53 +491,44 @@ function displayResults(data) {
  * @param {Object} data 结果数据
  */
 function displayInteractiveResults(data) {
+    const modelSelect = document.getElementById('model-select');
+    const currentModelType = modelSelect ? modelSelect.value : 'dill';
+    // 调试输出
+    if (currentModelType === 'car') {
+        console.log('CAR主图数据', data.x, data.initial_acid, data.thickness);
+    }
     // 隐藏静态图像
-    document.getElementById('exposure-plot').style.display = 'none';
-    document.getElementById('thickness-plot').style.display = 'none';
-    
-    // 显示交互式图表容器
+    const staticExposurePlot = document.getElementById('exposure-plot');
+    const staticThicknessPlot = document.getElementById('thickness-plot');
+    if (staticExposurePlot) staticExposurePlot.style.display = 'none';
+    if (staticThicknessPlot) staticThicknessPlot.style.display = 'none';
     const exposurePlotContainer = document.getElementById('exposure-plot-container');
     const thicknessPlotContainer = document.getElementById('thickness-plot-container');
+    const heatmapPlotItem = document.getElementById('heatmap-plot-item');
+    const heatmapPlotContainer = document.getElementById('heatmap-plot-container');
+    if (!exposurePlotContainer || !thicknessPlotContainer || !heatmapPlotItem || !heatmapPlotContainer) {
+        console.error("One or more plot containers are missing from the DOM.");
+        return;
+    }
     exposurePlotContainer.style.display = 'block';
     thicknessPlotContainer.style.display = 'block';
-    
-    // 创建曝光剂量图表
-    createExposurePlot(exposurePlotContainer, data);
-    
-    // 创建光刻胶厚度图表
-    createThicknessPlot(thicknessPlotContainer, data);
-    
-    // 应用动画效果
-    animateResults();
-
-    // 导出按钮国际化
-    document.getElementById('export-img-btn').textContent = LANGS[currentLang].export_img;
-    document.getElementById('export-data-btn').textContent = LANGS[currentLang].export_data;
-
-    // 在displayInteractiveResults中保存数据
-    window.lastPlotData = data;
-
-    // 结果展示区二维热力图
-    if (data.y && data.exposure_dose && Array.isArray(data.y) && Array.isArray(data.exposure_dose[0])) {
-        document.getElementById('heatmap-plot-item').style.display = '';
-        const x = data.x;
-        const y = data.y;
-        const z = data.exposure_dose;
-        Plotly.newPlot('heatmap-plot-container', [{
-            z: z,
-            x: x,
-            y: y,
-            type: 'heatmap',
-            colorscale: 'Viridis',
-            colorbar: { title: '曝光剂量' }
-        }], {
-            title: '二维曝光剂量分布',
-            xaxis: { title: 'x (μm)' },
-            yaxis: { title: 'y (μm)' }
-        });
+    if (currentModelType === 'enhanced_dill') {
+        createExposurePlot(exposurePlotContainer, { x: data.z, exposure_dose: data.I });
+        createThicknessPlot(thicknessPlotContainer, { x: data.z, thickness: data.M });
+    } else if (currentModelType === 'car') {
+        // CAR模型主图适配
+        createExposurePlot(exposurePlotContainer, { x: data.x, exposure_dose: data.initial_acid });
+        createThicknessPlot(thicknessPlotContainer, { x: data.x, thickness: data.thickness });
     } else {
-        document.getElementById('heatmap-plot-item').style.display = 'none';
+        createExposurePlot(exposurePlotContainer, data);
+        createThicknessPlot(thicknessPlotContainer, data);
     }
+    animateResults();
+    // 阈值滑块初始化
+    setTimeout(() => {
+        initSingleThresholdControl(document.querySelector('#exposure-thresholds-container .threshold-control'), 0, 'exposure', data);
+        initSingleThresholdControl(document.querySelector('#thickness-thresholds-container .threshold-control'), 0, 'thickness', data);
+    }, 100);
 }
 
 /**
@@ -605,9 +538,9 @@ function displayInteractiveResults(data) {
  * @param {Object} data 数据
  */
 function createExposurePlot(container, data) {
-    // 新增：数据有效性检查
-    if (!data.x || !data.exposure_dose || data.x.length === 0 || data.exposure_dose.length === 0 || data.exposure_dose.every(v => !v || isNaN(v))) {
-        container.innerHTML = '<div style="color:red;padding:20px;">无有效曝光剂量数据，无法绘图。</div>';
+    // 优化：只要 x 和 exposure_dose 都是数组且长度一致且有数值就渲染
+    if (!data || !Array.isArray(data.x) || !Array.isArray(data.exposure_dose) || data.x.length === 0 || data.exposure_dose.length === 0 || data.x.length !== data.exposure_dose.length) {
+        container.innerHTML = `<div style=\"color:red;padding:20px;\">${LANGS[currentLang].error_no_exposure_data || '无有效曝光剂量数据，无法绘图。'}</div>`;
         return;
     }
     const trace = {
@@ -619,7 +552,7 @@ function createExposurePlot(container, data) {
             color: 'rgb(31, 119, 180)',
             width: 2
         },
-        name: '曝光剂量'
+        name: LANGS[currentLang].exposure_dose_trace_name || '曝光剂量'
     };
     
     const layout = {
@@ -651,9 +584,10 @@ function createExposurePlot(container, data) {
     
     Plotly.newPlot(container, [trace], layout, config);
     
-    // 添加点击事件处理
+    // 添加点击事件处理，确保调用 showSinglePointDetailsPopup
     container.on('plotly_click', function(eventData) {
         const pt = eventData.points[0];
+        // 调用通用的弹窗显示函数
         showSinglePointDetailsPopup(pt, 'exposure', container, eventData);
     });
 }
@@ -665,9 +599,9 @@ function createExposurePlot(container, data) {
  * @param {Object} data 数据
  */
 function createThicknessPlot(container, data) {
-    // 新增：数据有效性检查
-    if (!data.x || !data.thickness || data.x.length === 0 || data.thickness.length === 0 || data.thickness.every(v => !v || isNaN(v))) {
-        container.innerHTML = '<div style="color:red;padding:20px;">无有效厚度数据，无法绘图。</div>';
+    // 优化：只要 x 和 thickness 都是数组且长度一致且有数值就渲染
+    if (!data || !Array.isArray(data.x) || !Array.isArray(data.thickness) || data.x.length === 0 || data.thickness.length === 0 || data.x.length !== data.thickness.length) {
+        container.innerHTML = `<div style=\"color:red;padding:20px;\">${LANGS[currentLang].error_no_thickness_data || '无有效厚度数据，无法绘图。'}</div>`;
         return;
     }
     const trace = {
@@ -679,7 +613,7 @@ function createThicknessPlot(container, data) {
             color: 'rgb(214, 39, 40)',
             width: 2
         },
-        name: '相对厚度'
+        name: LANGS[currentLang].thickness_trace_name || '相对厚度'
     };
     
     const layout = {
@@ -711,9 +645,10 @@ function createThicknessPlot(container, data) {
     
     Plotly.newPlot(container, [trace], layout, config);
     
-    // 添加点击事件处理
+    // 添加点击事件处理，确保调用 showSinglePointDetailsPopup
     container.on('plotly_click', function(eventData) {
         const pt = eventData.points[0];
+        // 调用通用的弹窗显示函数
         showSinglePointDetailsPopup(pt, 'thickness', container, eventData);
     });
 }
@@ -829,20 +764,14 @@ function clearAllCharts() {
  * @param {Object} eventData - 完整的事件数据
  */
 function showSinglePointDetailsPopup(point, plotType, container, eventData) {
-    // 移除已存在的弹窗
     removeSinglePointDetailsPopup();
-    
-    // 获取当前参数值
     const params = getParameterValues();
-    
-    // 获取点的详细信息
     const pointInfo = getSinglePointDetailedInfo(point, plotType, params);
-    
+
     // 创建弹窗元素
     const popup = document.createElement('div');
     popup.id = 'single-point-details-popup';
     popup.className = 'point-details-popup';
-    
     popup.innerHTML = `
         <div class="point-details-content">
             <div class="point-details-header">
@@ -857,256 +786,68 @@ function showSinglePointDetailsPopup(point, plotType, container, eventData) {
             </div>
         </div>
     `;
-    
-    // 计算弹窗位置（相对于图表容器）
-    const containerRect = container.getBoundingClientRect();
-    
-    // 获取图表的实际绘图区域
-    const plotArea = container._fullLayout || {};
-    const margin = plotArea.margin || { l: 60, r: 20, t: 60, b: 60 };
-    
-    // 计算实际绘图区域的尺寸
-    const plotWidth = containerRect.width - margin.l - margin.r;
-    const plotHeight = containerRect.height - margin.t - margin.b;
-    
-    // 获取x和y轴的范围
-    const xRange = plotArea.xaxis ? (plotArea.xaxis.range || [0, 10]) : [0, 10];
-    const yRange = plotArea.yaxis ? (plotArea.yaxis.range || [0, 100]) : [0, 100];
-    
-    // 将数据坐标转换为像素坐标
-    const xPixel = margin.l + ((point.x - xRange[0]) / (xRange[1] - xRange[0])) * plotWidth;
-    const yPixel = margin.t + ((yRange[1] - point.y) / (yRange[1] - yRange[0])) * plotHeight;
-    
-    // 确保弹窗不会超出容器边界
-    const popupWidth = 320;
-    const popupHeight = 400;
-    const popupX = Math.min(containerRect.width - popupWidth - 10, Math.max(10, xPixel - popupWidth / 2));
-    const popupY = Math.min(containerRect.height - popupHeight - 10, Math.max(10, yPixel - 50));
-    
-    // 设置弹窗样式和位置
+    // fixed 定位，z-index 提高
     popup.style.cssText = `
-        position: absolute;
-        left: ${popupX}px;
-        top: ${popupY}px;
-        width: ${popupWidth}px;
-        max-height: ${popupHeight}px;
-        background: rgba(255, 255, 255, 0.98);
+        position: fixed;
+        left: 0; top: 0;
+        width: 320px;
+        max-height: 400px;
+        background: rgba(255,255,255,0.98);
         border: 2px solid #3498db;
         border-radius: 12px;
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-        z-index: 1000;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.18);
+        z-index: 99999;
         font-family: 'Roboto', Arial, sans-serif;
         font-size: 13px;
         line-height: 1.4;
         animation: popupFadeIn 0.3s ease-out;
         overflow: hidden;
     `;
-    
-    // 添加到容器
-    container.style.position = 'relative';
-    container.appendChild(popup);
-    
-    // 添加点击外部关闭功能
+    document.body.appendChild(popup);
+
+    // 计算弹窗显示位置（基于鼠标点击点或图表容器中心）
+    let mouseX = window.innerWidth / 2;
+    let mouseY = window.innerHeight / 2;
+    if (eventData && eventData.event && eventData.event.clientX !== undefined) {
+        mouseX = eventData.event.clientX;
+        mouseY = eventData.event.clientY;
+    } else if (container) {
+        // fallback: 容器中心
+        const rect = container.getBoundingClientRect();
+        mouseX = rect.left + rect.width / 2;
+        mouseY = rect.top + rect.height / 2;
+    }
+    // 弹窗尺寸
+    const popupWidth = 320;
+    const popupHeight = 400;
+    // 计算 left/top，避免超出屏幕
+    let left = mouseX - popupWidth / 2;
+    let top = mouseY - popupHeight - 20;
+    if (left < 10) left = 10;
+    if (left + popupWidth > window.innerWidth - 10) left = window.innerWidth - popupWidth - 10;
+    if (top < 10) top = mouseY + 20;
+    if (top + popupHeight > window.innerHeight - 10) top = window.innerHeight - popupHeight - 10;
+    popup.style.left = `${left}px`;
+    popup.style.top = `${top}px`;
+
+    // 延迟绑定外部点击关闭事件，防止 plotly_click 误触发
     setTimeout(() => {
-        document.addEventListener('click', handleOutsideClick);
-    }, 100);
-    
+        document.addEventListener('mousedown', handleOutsideClick, {capture:true});
+    }, 300);
     function handleOutsideClick(event) {
         if (!popup.contains(event.target)) {
             removeSinglePointDetailsPopup();
-            document.removeEventListener('click', handleOutsideClick);
+            document.removeEventListener('mousedown', handleOutsideClick, {capture:true});
         }
     }
 }
 
-/**
- * 获取单一计算页面点的详细信息
- * @param {Object} point - 点击的点数据
- * @param {string} plotType - 图表类型
- * @param {Object} params - 当前参数值
- * @returns {Object} 包含详细信息的对象
- */
-function getSinglePointDetailedInfo(point, plotType, params) {
-    const x = point.x;
-    const y = point.y;
-    
-    // 根据图表类型生成不同的信息
-    let html = '';
-    
-    if (plotType === 'exposure') {
-        html = `
-            <div class="point-info-section">
-                <h4>🎯 位置信息</h4>
-                <div class="info-grid">
-                    <div class="info-item">
-                        <span class="info-label">X坐标:</span>
-                        <span class="info-value">${x.toFixed(3)} μm</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">曝光剂量:</span>
-                        <span class="info-value">${y.toFixed(2)} mJ/cm²</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="point-info-section">
-                <h4>📋 当前参数</h4>
-                <div class="info-grid">
-                    <div class="info-item">
-                        <span class="info-label">I_avg:</span>
-                        <span class="info-value">${params.I_avg} mW/cm²</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">V:</span>
-                        <span class="info-value">${params.V}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">K:</span>
-                        <span class="info-value">${params.K}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">t_exp:</span>
-                        <span class="info-value">${params.t_exp} s</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">C:</span>
-                        <span class="info-value">${params.C}</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="point-info-section">
-                <h4>🧮 计算公式</h4>
-                <div class="formula-container">
-                    <div class="formula-title">Dill模型曝光剂量计算：</div>
-                    <div class="formula-math">
-                        E(x) = I_avg × t_exp × exp(-K × ∫[0 to x] C(x') dx')
-                    </div>
-                    <div class="formula-explanation">
-                        <div>• I_avg: 平均光强度 (${params.I_avg} mW/cm²)</div>
-                        <div>• t_exp: 曝光时间 (${params.t_exp} s)</div>
-                        <div>• K: 吸收系数 (${params.K})</div>
-                        <div>• C: 光刻胶浓度 (${params.C})</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="point-info-section">
-                <h4>📊 数值分析</h4>
-                <div class="analysis-grid">
-                    <div class="analysis-item">
-                        <span class="analysis-label">理论最大值:</span>
-                        <span class="analysis-value">${(params.I_avg * params.t_exp).toFixed(2)} mJ/cm²</span>
-                    </div>
-                    <div class="analysis-item">
-                        <span class="analysis-label">相对强度:</span>
-                        <span class="analysis-value">${((y / (params.I_avg * params.t_exp)) * 100).toFixed(1)}%</span>
-                    </div>
-                    <div class="analysis-item">
-                        <span class="analysis-label">衰减因子:</span>
-                        <span class="analysis-value">${(y / (params.I_avg * params.t_exp)).toFixed(4)}</span>
-                    </div>
-                    <div class="analysis-item">
-                        <span class="analysis-label">积分深度:</span>
-                        <span class="analysis-value">${(-Math.log(y / (params.I_avg * params.t_exp)) / params.K).toFixed(3)} μm</span>
-                    </div>
-                </div>
-            </div>
-        `;
-    } else {
-        html = `
-            <div class="point-info-section">
-                <h4>🎯 位置信息</h4>
-                <div class="info-grid">
-                    <div class="info-item">
-                        <span class="info-label">X坐标:</span>
-                        <span class="info-value">${x.toFixed(3)} μm</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">相对厚度:</span>
-                        <span class="info-value">${y.toFixed(4)}</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="point-info-section">
-                <h4>📋 当前参数</h4>
-                <div class="info-grid">
-                    <div class="info-item">
-                        <span class="info-label">I_avg:</span>
-                        <span class="info-value">${params.I_avg} mW/cm²</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">V:</span>
-                        <span class="info-label">${params.V}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">K:</span>
-                        <span class="info-value">${params.K}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">t_exp:</span>
-                        <span class="info-value">${params.t_exp} s</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">C:</span>
-                        <span class="info-value">${params.C}</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="point-info-section">
-                <h4>🧮 计算公式</h4>
-                <div class="formula-container">
-                    <div class="formula-title">Dill模型厚度计算：</div>
-                    <div class="formula-math">
-                        T(x) = T₀ × (1 - V × (1 - exp(-E(x)/E_th)))
-                    </div>
-                    <div class="formula-explanation">
-                        <div>• T₀: 初始厚度 (归一化为1)</div>
-                        <div>• V: 对比度参数 (${params.V})</div>
-                        <div>• E(x): 曝光剂量</div>
-                        <div>• E_th: 阈值剂量</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="point-info-section">
-                <h4>📊 数值分析</h4>
-                <div class="analysis-grid">
-                    <div class="analysis-item">
-                        <span class="analysis-label">厚度百分比:</span>
-                        <span class="analysis-value">${(y * 100).toFixed(2)}%</span>
-                    </div>
-                    <div class="analysis-item">
-                        <span class="analysis-label">溶解程度:</span>
-                        <span class="analysis-value">${((1 - y) * 100).toFixed(2)}%</span>
-                    </div>
-                    <div class="analysis-item">
-                        <span class="analysis-label">对比度影响:</span>
-                        <span class="analysis-value">${(params.V * 100).toFixed(1)}%</span>
-                    </div>
-                    <div class="analysis-item">
-                        <span class="analysis-label">工艺状态:</span>
-                        <span class="analysis-value">${y > 0.5 ? '未充分曝光' : '充分曝光'}</span>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-    
-    return { html };
-}
-
-/**
- * 移除单一计算页面的点详细信息弹窗
- */
 function removeSinglePointDetailsPopup() {
     const existingPopup = document.getElementById('single-point-details-popup');
     if (existingPopup) {
         existingPopup.style.animation = 'popupFadeOut 0.2s ease-in';
         setTimeout(() => {
-            existingPopup.remove();
+            if (existingPopup.parentNode) existingPopup.parentNode.removeChild(existingPopup);
         }, 200);
     }
 }
@@ -1360,4 +1101,626 @@ function highlightErrorCard(msg) {
     setTimeout(()=>{
         document.querySelectorAll('.parameter-item.error').forEach(e=>e.classList.remove('error'));
     }, 3000);
-} 
+}
+
+// 为Dill模型生成弹窗HTML的辅助函数
+function getDillPopupHtmlContent(x, y, setName, params, plotType) {
+    let valueLabel = '';
+    let valueUnit = '';
+    let formulaTitle = '';
+    let formulaMath = '';
+    let formulaExplanation = '';
+
+    if (plotType === 'exposure') {
+        valueLabel = LANGS[currentLang].popup_exposure_dose || '曝光剂量:';
+        valueUnit = 'mJ/cm²';
+        formulaTitle = LANGS[currentLang].popup_dill_exposure_title || 'Dill模型曝光剂量计算：';
+        formulaMath = 'D(x) = I_avg × t_exp × (1 + V × cos(2πKx))';
+        formulaExplanation = `
+            <div>• I_avg: ${LANGS[currentLang].param_I_avg || '平均光强度'} (${params.I_avg} mW/cm²)</div>
+            <div>• t_exp: ${LANGS[currentLang].param_t_exp || '曝光时间'} (${params.t_exp} s)</div>
+            <div>• V: ${LANGS[currentLang].param_V || '干涉条纹可见度'} (${params.V})</div>
+            <div>• K: ${LANGS[currentLang].param_K || '空间频率'} (${params.K})</div>
+        `;
+    } else if (plotType === 'thickness') {
+        valueLabel = LANGS[currentLang].popup_thickness || '光刻胶厚度:';
+        valueUnit = '(归一化)';
+        formulaTitle = LANGS[currentLang].popup_dill_thickness_title || 'Dill模型光刻胶厚度计算：';
+        formulaMath = 'M(x) = exp(-C × D(x))';
+        formulaExplanation = `
+            <div>• C: ${LANGS[currentLang].param_C || '光敏速率常数'} (${params.C})</div>
+            <div>• D(x): ${LANGS[currentLang].popup_dose_at_point || '该点曝光剂量'} (${y.toFixed(2)} mJ/cm² - 若适用)</div>
+        `;
+    } else if (plotType === 'heatmap') {
+        valueLabel = LANGS[currentLang].popup_exposure_dose || '曝光剂量:';
+        valueUnit = 'mJ/cm²';
+        formulaTitle = LANGS[currentLang].popup_dill_exposure_title || 'Dill模型二维曝光剂量:';
+        formulaMath = 'D(x,y) = I_avg × t_exp × (1 + V × cos(Kx·x + Ky·y + φ(t)))';
+        formulaExplanation = `
+            <div>• I_avg: (${params.I_avg} mW/cm²)</div>
+            <div>• t_exp: (${params.t_exp} s)</div>
+            <div>• V: (${params.V})</div>
+            <div>• Kx: (${params.Kx || params.K})</div>
+            <div>• Ky: (${params.Ky || 'N/A'})</div>
+            <div>• φ(t): (${params.phi_expr || '0'})</div>
+        `;
+    }
+
+
+    return `
+        <div class="point-info-section">
+            <h4>🎯 ${LANGS[currentLang].popup_section_location || '位置信息'}</h4>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">X:</span>
+                    <span class="info-value">${x.toFixed(3)} µm</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">${valueLabel}</span>
+                    <span class="info-value">${y.toFixed(3)} ${valueUnit}</span>
+                </div>
+            </div>
+        </div>
+        <div class="point-info-section">
+            <h4>📋 ${LANGS[currentLang].popup_section_params_dill || '参数组: Dill模型'}</h4>
+            <div class="info-grid responsive-grid">
+                <div class="info-item"><span class="info-label">I_avg:</span><span class="info-value">${params.I_avg} mW/cm²</span></div>
+                <div class="info-item"><span class="info-label">V:</span><span class="info-value">${params.V}</span></div>
+                ${params.sine_type === 'multi' ? `
+                <div class="info-item"><span class="info-label">Kx:</span><span class="info-value">${params.Kx}</span></div>
+                <div class="info-item"><span class="info-label">Ky:</span><span class="info-value">${params.Ky}</span></div>
+                <div class="info-item"><span class="info-label">φ(t):</span><span class="info-value">${params.phi_expr}</span></div>
+                ` : `
+                <div class="info-item"><span class="info-label">K:</span><span class="info-value">${params.K}</span></div>
+                `}
+                <div class="info-item"><span class="info-label">t_exp:</span><span class="info-value">${params.t_exp} s</span></div>
+                <div class="info-item"><span class="info-label">C:</span><span class="info-value">${params.C}</span></div>
+            </div>
+        </div>
+        <div class="point-info-section">
+            <h4>🧮 ${LANGS[currentLang].popup_section_formula || '计算公式 (核心)'}</h4>
+            <div class="formula-container">
+                <div class="formula-title">${formulaTitle}</div>
+                <div class="formula-math">${formulaMath}</div>
+                <div class="formula-explanation">${formulaExplanation}</div>
+            </div>
+        </div>
+    `;
+}
+
+// 为增强Dill模型生成弹窗HTML的辅助函数
+function getEnhancedDillPopupHtmlContent(x, y, setName, params, plotType) {
+    let valueLabel = '';
+    let valueUnit = '';
+    let formulaTitle = '';
+    let formulaMath = '';
+    let formulaExplanation = '';
+
+    if (plotType === 'exposure') {
+        valueLabel = LANGS[currentLang].popup_exposure_dose || '曝光剂量:';
+        valueUnit = 'mJ/cm²';
+        formulaTitle = LANGS[currentLang].popup_enhanced_exposure_title || '增强Dill模型曝光剂量:';
+        formulaMath = 'D(x,z) = ∫ I(x,z,t) dt';
+        formulaExplanation = `
+            <div>${LANGS[currentLang].popup_enhanced_desc || '参数涉及胶厚、前烘温度、时间等影响A,B,C的值。'}</div>
+            <div>• I(x,z,t): 光强度分布</div>
+        `;
+    } else if (plotType === 'thickness') {
+        valueLabel = LANGS[currentLang].popup_thickness || '光刻胶厚度:';
+        valueUnit = '(归一化)';
+        formulaTitle = LANGS[currentLang].popup_enhanced_thickness_title || '增强Dill模型光刻胶厚度:';
+        formulaMath = '∂M/∂t = -I·M·C(z_h,T,t_B)';
+        formulaExplanation = `
+            <div>• M: ${LANGS[currentLang].popup_param_M_enh || '归一化光敏剂浓度'}</div>
+            <div>• C(z_h,T,t_B): ${LANGS[currentLang].popup_param_C_enh || '光敏速率常数'}</div>
+        `;
+    } else if (plotType === 'heatmap') {
+        valueLabel = LANGS[currentLang].popup_exposure_dose || '曝光剂量:';
+        valueUnit = 'mJ/cm²';
+        formulaTitle = LANGS[currentLang].popup_enhanced_exposure_title || '增强Dill模型二维曝光剂量:';
+        formulaMath = 'D(x,y,z) based on A,B,C which depend on z_h, T, t_B';
+         formulaExplanation = `
+            <div>• Kx: (${params.Kx || params.K})</div>
+            <div>• Ky: (${params.Ky || 'N/A'})</div>
+            <div>• φ(t): (${params.phi_expr || '0'})</div>
+        `;
+    }
+    
+    return `
+        <div class="point-info-section">
+            <h4>🎯 ${LANGS[currentLang].popup_section_location || '位置信息'}</h4>
+            <div class="info-grid">
+                <div class="info-item"><span class="info-label">X:</span><span class="info-value">${x.toFixed(3)} µm</span></div>
+                <div class="info-item"><span class="info-label">${valueLabel}</span><span class="info-value">${y.toFixed(3)} ${valueUnit}</span></div>
+            </div>
+        </div>
+        <div class="point-info-section">
+            <h4>📋 ${LANGS[currentLang].popup_section_params_enhanced || '参数组: 增强Dill'}</h4>
+            <div class="info-grid responsive-grid">
+                <div class="info-item"><span class="info-label">z_h:</span><span class="info-value">${params.z_h} µm</span></div>
+                <div class="info-item"><span class="info-label">T:</span><span class="info-value">${params.T} °C</span></div>
+                <div class="info-item"><span class="info-label">t_B:</span><span class="info-value">${params.t_B} min</span></div>
+                <div class="info-item"><span class="info-label">I0:</span><span class="info-value">${params.I0}</span></div>
+                <div class="info-item"><span class="info-label">M0:</span><span class="info-value">${params.M0}</span></div>
+                <div class="info-item"><span class="info-label">t_exp:</span><span class="info-value">${params.t_exp} s</span></div>
+                ${params.sine_type === 'multi' ? `
+                <div class="info-item"><span class="info-label">Kx:</span><span class="info-value">${params.Kx}</span></div>
+                <div class="info-item"><span class="info-label">Ky:</span><span class="info-value">${params.Ky}</span></div>
+                <div class="info-item"><span class="info-label">φ(t):</span><span class="info-value">${params.phi_expr}</span></div>
+                ` : `
+                <div class="info-item"><span class="info-label">K:</span><span class="info-value">${params.K}</span></div>
+                `}
+            </div>
+        </div>
+        <div class="point-info-section">
+            <h4>🧮 ${LANGS[currentLang].popup_section_formula || '计算公式 (核心)'}</h4>
+            <div class="formula-container">
+                <div class="formula-title">${formulaTitle}</div>
+                <div class="formula-math">${formulaMath}</div>
+                <div class="formula-explanation">${formulaExplanation}</div>
+            </div>
+        </div>
+    `;
+}
+
+// 为CAR模型生成弹窗HTML的辅助函数
+function getCarPopupHtmlContent(x, y, setName, params, plotType) {
+    let valueLabel = '';
+    let valueUnit = '';
+    let formulaTitle = '';
+    let formulaMath = '';
+    let formulaExplanation = '';
+
+    // CAR模型的结果图通常是显影后的形貌或脱保护度，而不是直接的曝光剂量。
+    // 我们需要根据 plotType 和 CAR模型的典型输出来调整这些标签和公式。
+    if (plotType === 'exposure' || plotType === 'car_acid_concentration') { // 假设 'exposure' 对于CAR可以代表光酸浓度
+        valueLabel = LANGS[currentLang].popup_car_acid || '光酸浓度:';
+        valueUnit = '(归一化)';
+        formulaTitle = LANGS[currentLang].popup_car_acid_title || 'CAR模型光酸生成:';
+        formulaMath = '[H⁺] = η·D(x) = η·I(x)·t_exp';
+        formulaExplanation = `
+            <div>• η: ${LANGS[currentLang].param_car_acid_gen_efficiency || '光酸产生效率'} (${params.acid_gen_efficiency})</div>
+            <div>• I(x): 光强度</div>
+            <div>• t_exp: ${LANGS[currentLang].param_car_t_exp || '曝光时间'} (${params.t_exp} s)</div>
+        `;
+    } else if (plotType === 'thickness' || plotType === 'car_deprotection_degree') { // 'thickness' 代表脱保护度或最终厚度
+        valueLabel = LANGS[currentLang].popup_car_deprotection || '脱保护度/厚度:';
+        valueUnit = '(归一化)';
+        formulaTitle = LANGS[currentLang].popup_car_deprotection_title || 'CAR模型脱保护度:';
+        formulaMath = 'M = 1-exp(-k·[H⁺]_diff·A)';
+        formulaExplanation = `
+            <div>• k: ${LANGS[currentLang].param_car_reaction_rate || '反应速率'} (${params.reaction_rate})</div>
+            <div>• [H⁺]_diff: ${LANGS[currentLang].popup_param_H_diff_car || '扩散后光酸浓度'}</div>
+            <div>• A: ${LANGS[currentLang].param_car_amplification || '放大因子'} (${params.amplification})</div>
+            <div>• EPDL: ${LANGS[currentLang].param_car_diffusion_length || '扩散长度'} (${params.diffusion_length})</div>
+            <div>• γ: ${LANGS[currentLang].param_car_contrast || '对比度因子'} (${params.contrast})</div>
+        `;
+    } else if (plotType === 'heatmap') { // 二维热力图，通常显示光酸浓度或脱保护度
+        valueLabel = LANGS[currentLang].popup_car_value_heatmap || '值:'; // 通用标签
+        valueUnit = '(归一化)';
+        formulaTitle = LANGS[currentLang].popup_car_heatmap_title || 'CAR模型二维分布:';
+        formulaMath = '依赖于具体参数和阶段';
+        formulaExplanation = `
+            <div>• Kx: (${params.Kx || params.K})</div>
+            <div>• Ky: (${params.Ky || 'N/A'})</div>
+            <div>• φ(t): (${params.phi_expr || '0'})</div>
+        `;
+    }
+
+
+    return `
+        <div class="point-info-section">
+            <h4>🎯 ${LANGS[currentLang].popup_section_location || '位置信息'}</h4>
+            <div class="info-grid">
+                <div class="info-item"><span class="info-label">X:</span><span class="info-value">${x.toFixed(3)} µm</span></div>
+                <div class="info-item"><span class="info-label">${valueLabel}</span><span class="info-value">${y.toFixed(3)} ${valueUnit}</span></div>
+            </div>
+        </div>
+        <div class="point-info-section">
+            <h4>📋 ${LANGS[currentLang].popup_section_params_car || '参数组: CAR模型'}</h4>
+            <div class="info-grid responsive-grid">
+                <div class="info-item"><span class="info-label">I_avg:</span><span class="info-value">${params.I_avg} mW/cm²</span></div>
+                <div class="info-item"><span class="info-label">V:</span><span class="info-value">${params.V}</span></div>
+                 ${params.sine_type === 'multi' ? `
+                <div class="info-item"><span class="info-label">Kx:</span><span class="info-value">${params.Kx}</span></div>
+                <div class="info-item"><span class="info-label">Ky:</span><span class="info-value">${params.Ky}</span></div>
+                <div class="info-item"><span class="info-label">φ(t):</span><span class="info-value">${params.phi_expr}</span></div>
+                ` : `
+                <div class="info-item"><span class="info-label">K:</span><span class="info-value">${params.K}</span></div>
+                `}
+                <div class="info-item"><span class="info-label">t_exp:</span><span class="info-value">${params.t_exp} s</span></div>
+                <div class="info-item"><span class="info-label">η:</span><span class="info-value">${params.acid_gen_efficiency}</span></div>
+                <div class="info-item"><span class="info-label">EPDL:</span><span class="info-value">${params.diffusion_length}</span></div>
+                <div class="info-item"><span class="info-label">k:</span><span class="info-value">${params.reaction_rate}</span></div>
+                <div class="info-item"><span class="info-label">A:</span><span class="info-value">${params.amplification}</span></div>
+                <div class="info-item"><span class="info-label">γ:</span><span class="info-value">${params.contrast}</span></div>
+            </div>
+        </div>
+        <div class="point-info-section">
+            <h4>🧮 ${LANGS[currentLang].popup_section_formula || '计算公式 (核心)'}</h4>
+            <div class="formula-container">
+                <div class="formula-title">${formulaTitle}</div>
+                <div class="formula-math">${formulaMath}</div>
+                <div class="formula-explanation">${formulaExplanation}</div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * 获取单个点的详细信息
+ * @param {Object} point - 点击的点数据
+ * @param {string} plotType - 图表类型 ('exposure', 'thickness', 'heatmap', 'car_acid_concentration', 'car_deprotection_degree')
+ * @param {Object} paramsOverride - 可选的参数对象，如果提供，则使用这些参数而不是从DOM读取
+ * @returns {Object} 包含详细信息的对象 { html: "..." }
+ */
+function getSinglePointDetailedInfo(point, plotType, paramsOverride = null) {
+    const x = point.x;
+    const y = point.y;
+    const modelSelect = document.getElementById('model-select');
+    const currentModelType = modelSelect ? modelSelect.value : 'dill';
+    let params = paramsOverride;
+    let html = '';
+    const setName = LANGS[currentLang].current_calculation || "当前计算"; // 单一计算，无多参数组名称
+    if (!params) { // 如果没有覆盖参数，则从DOM读取
+        params = {};
+        if (currentModelType === 'dill') {
+            params.sine_type = document.getElementById('dill-sine-type').value;
+            params.I_avg = parseFloat(document.getElementById('I_avg').value);
+            params.V = parseFloat(document.getElementById('V').value);
+            params.t_exp = parseFloat(document.getElementById('t_exp').value);
+            params.C = parseFloat(document.getElementById('C').value);
+            if (params.sine_type === 'multi') {
+                params.Kx = parseFloat(document.getElementById('Kx').value);
+                params.Ky = parseFloat(document.getElementById('Ky').value);
+                params.phi_expr = document.getElementById('phi_expr').value;
+            } else {
+                params.K = parseFloat(document.getElementById('K').value);
+            }
+        } else if (currentModelType === 'enhanced_dill') {
+            params.sine_type = document.getElementById('enhanced-dill-sine-type').value;
+            params.z_h = parseFloat(document.getElementById('z_h').value);
+            params.T = parseFloat(document.getElementById('T').value);
+            params.t_B = parseFloat(document.getElementById('t_B').value);
+            params.I0 = parseFloat(document.getElementById('I0').value);
+            params.M0 = parseFloat(document.getElementById('M0').value);
+            params.t_exp = parseFloat(document.getElementById('t_exp_enhanced').value);
+            if (params.sine_type === 'multi') {
+                params.Kx = parseFloat(document.getElementById('enhanced_Kx').value);
+                params.Ky = parseFloat(document.getElementById('enhanced_Ky').value);
+                params.phi_expr = document.getElementById('enhanced_phi_expr').value;
+            } else {
+                // 增强Dill模型的一维情况可能也需要K，或者由后端处理
+                // 假设它也可能使用ID为K的输入框（如果存在），或默认为一个合理值
+                const kInput = document.getElementById('K'); // 尝试通用K
+                params.K = kInput ? parseFloat(kInput.value) : (params.Kx || 2); // Fallback
+            }
+        } else if (currentModelType === 'car') {
+            params.sine_type = document.getElementById('car-sine-type').value;
+            params.I_avg = parseFloat(document.getElementById('car_I_avg').value);
+            params.V = parseFloat(document.getElementById('car_V').value);
+            params.t_exp = parseFloat(document.getElementById('car_t_exp').value);
+            params.acid_gen_efficiency = parseFloat(document.getElementById('car_acid_gen_efficiency').value);
+            params.diffusion_length = parseFloat(document.getElementById('car_diffusion_length').value);
+            params.reaction_rate = parseFloat(document.getElementById('car_reaction_rate').value);
+            params.amplification = parseFloat(document.getElementById('car_amplification').value);
+            params.contrast = parseFloat(document.getElementById('car_contrast').value);
+            if (params.sine_type === 'multi') {
+                params.Kx = parseFloat(document.getElementById('car_Kx').value);
+                params.Ky = parseFloat(document.getElementById('car_Ky').value);
+                params.phi_expr = document.getElementById('car_phi_expr').value;
+            } else {
+                params.K = parseFloat(document.getElementById('car_K').value);
+            }
+        }
+    }
+    // 根据模型类型调用相应的HTML生成函数
+    if (currentModelType === 'dill') {
+        html = getDillPopupHtmlContent(x, y, setName, params, plotType);
+    } else if (currentModelType === 'enhanced_dill') {
+        html = getEnhancedDillPopupHtmlContent(x, y, setName, params, plotType);
+    } else if (currentModelType === 'car') {
+        html = getCarPopupHtmlContent(x, y, setName, params, plotType);
+    } else {
+        html = `<p>详细信息无法加载，模型类型未知: ${currentModelType}</p>`;
+    }
+    return { html };
+}
+
+// ===== 阈值滑块核心逻辑移植自compare.js，适配单组数据 =====
+function initSingleThresholdControl(controlElement, index, plotType, plotData) {
+    const slider = controlElement.querySelector('.threshold-slider');
+    const valueText = controlElement.querySelector('.threshold-value-text');
+    const toggleBtn = controlElement.querySelector('.toggle-threshold-visibility-btn');
+    // 只对index=0
+    let minValue, maxValue, defaultValue, step, unit;
+    let yData, xData;
+    if (plotType === 'exposure') {
+        yData = plotData.exposure_dose;
+        xData = plotData.x;
+        minValue = Math.max(0, Math.min(...yData) - (Math.max(...yData) - Math.min(...yData)) * 0.1);
+        maxValue = Math.max(...yData) + (Math.max(...yData) - Math.min(...yData)) * 0.1;
+        step = Math.max(0.1, (maxValue - minValue) / 1000);
+        unit = ' mJ/cm²';
+        defaultValue = minValue + (maxValue - minValue) * 0.3;
+    } else {
+        yData = plotData.thickness;
+        xData = plotData.x;
+        minValue = Math.max(0, Math.min(...yData) - (Math.max(...yData) - Math.min(...yData)) * 0.05);
+        maxValue = Math.min(1, Math.max(...yData) + (Math.max(...yData) - Math.min(...yData)) * 0.05);
+        step = Math.max(0.001, (maxValue - minValue) / 1000);
+        unit = '';
+        defaultValue = minValue + (maxValue - minValue) * 0.3;
+    }
+    slider.min = minValue;
+    slider.max = maxValue;
+    slider.step = step;
+    slider.value = defaultValue;
+    valueText.textContent = defaultValue.toFixed(plotType === 'exposure' ? 1 : 3) + unit;
+    // 清除旧事件
+    const newSlider = slider.cloneNode(true);
+    slider.parentNode.replaceChild(newSlider, slider);
+    const newToggleBtn = toggleBtn.cloneNode(true);
+    toggleBtn.parentNode.replaceChild(newToggleBtn, toggleBtn);
+    const finalSlider = controlElement.querySelector('.threshold-slider');
+    const finalToggleBtn = controlElement.querySelector('.toggle-threshold-visibility-btn');
+    const finalValueText = controlElement.querySelector('.threshold-value-text');
+    finalSlider.addEventListener('input', () => {
+        const value = parseFloat(finalSlider.value);
+        finalValueText.textContent = value.toFixed(plotType === 'exposure' ? 1 : 3) + unit;
+        updatePlotWithThreshold(plotType, 0, value, finalToggleBtn.classList.contains('active'), plotData);
+    });
+    finalToggleBtn.addEventListener('click', () => {
+        finalToggleBtn.classList.toggle('active');
+        const isActive = finalToggleBtn.classList.contains('active');
+        finalToggleBtn.textContent = isActive ? '隐藏' : '显示';
+        if (isActive) {
+            controlElement.classList.add('active-threshold');
+        } else {
+            controlElement.classList.remove('active-threshold');
+        }
+        updatePlotWithThreshold(plotType, 0, parseFloat(finalSlider.value), isActive, plotData);
+    });
+    finalToggleBtn.textContent = '显示';
+}
+
+function updatePlotWithThreshold(plotType, thresholdIndex, value, isVisible, plotData) {
+    const plotContainerId = plotType === 'exposure' ? 'exposure-plot-container' : 'thickness-plot-container';
+    const plotDiv = document.getElementById(plotContainerId);
+    let xData, yData, unit;
+    if (plotType === 'exposure') {
+        xData = plotData.x;
+        yData = plotData.exposure_dose;
+        unit = 'mJ/cm²';
+    } else {
+        xData = plotData.x;
+        yData = plotData.thickness;
+        unit = '';
+    }
+    let shapes = plotDiv.layout.shapes || [];
+    let annotations = plotDiv.layout.annotations || [];
+    // 清除本阈值相关的shape和annotation
+    shapes = shapes.filter(s => !s.name || !s.name.startsWith(`threshold_line_${plotType}_${thresholdIndex}`));
+    annotations = annotations.filter(a => !a.name || !a.name.startsWith(`threshold_${plotType}_${thresholdIndex}`));
+    if (isVisible) {
+        // 阈值线
+        const xMin = Math.min(...xData);
+        const xMax = Math.max(...xData);
+        const lineColor = plotType === 'exposure' ? 'rgb(31,119,180)' : 'rgb(214,39,40)';
+        shapes.push({
+            type: 'line',
+            name: `threshold_line_${plotType}_${thresholdIndex}`,
+            x0: xMin, y0: value, x1: xMax, y1: value,
+            line: { color: lineColor, width: 2, dash: 'dashdot' },
+            layer: 'below'
+        });
+        // 交点圆点
+        const analysis = analyzeThresholdIntersection(xData, yData, value, plotType);
+        if (analysis.intersections.length > 0) {
+            analysis.intersections.forEach((intersection, idx) => {
+                shapes.push({
+                    type: 'circle',
+                    name: `threshold_line_${plotType}_${thresholdIndex}_intersection_${idx}`,
+                    x0: intersection.x - 0.05,
+                    y0: intersection.y - (plotType === 'exposure' ? 2 : 0.02),
+                    x1: intersection.x + 0.05,
+                    y1: intersection.y + (plotType === 'exposure' ? 2 : 0.02),
+                    fillcolor: lineColor,
+                    line: { color: lineColor, width: 2 },
+                    layer: 'above'
+                });
+            });
+        }
+        // 注释
+        const analysisText = createThresholdAnalysisText(analysis, value, unit, plotType);
+        const titleText = `阈值: ${value.toFixed(2)}${unit} 交点: ${analysis.intersections.length}个 ▼`;
+        annotations.push({
+            name: `threshold_${plotType}_${thresholdIndex}_title`,
+            text: titleText,
+            x: 0.02, y: 0.98, xref: 'paper', yref: 'paper', xanchor: 'left', yanchor: 'top', showarrow: false,
+            font: { color: lineColor, size: 12, family: 'Arial, sans-serif', weight: 'bold' },
+            bgcolor: 'rgba(255,255,255,0.95)', bordercolor: lineColor, borderwidth: 2, borderpad: 6,
+            clicktoshow: false, captureevents: true
+        });
+        annotations.push({
+            name: `threshold_${plotType}_${thresholdIndex}_details`,
+            text: analysisText,
+            x: 0.02, y: 0.94, xref: 'paper', yref: 'paper', xanchor: 'left', yanchor: 'top', showarrow: false,
+            font: { color: lineColor, size: 10, family: 'monospace' },
+            bgcolor: 'rgba(255,255,255,0.98)', bordercolor: lineColor, borderwidth: 1, borderpad: 10,
+            visible: false, clicktoshow: false, width: 320, align: 'left'
+        });
+    }
+    Plotly.relayout(plotDiv, { shapes, annotations });
+    // 绑定annotation点击展开/收起详细分析
+    if (!plotDiv._thresholdAnnotationClickBound) {
+        plotDiv._thresholdAnnotationClickBound = true;
+        plotDiv.on('plotly_clickannotation', function(event) {
+            const ann = event.annotation;
+            if (ann && ann.name && ann.name.endsWith('_title')) {
+                const detailsName = ann.name.replace('_title', '_details');
+                const currentAnnotations = plotDiv.layout.annotations || [];
+                let detailsAnn = currentAnnotations.find(a => a.name === detailsName);
+                let titleAnn = currentAnnotations.find(a => a.name === ann.name);
+                if (detailsAnn) {
+                    const visible = !detailsAnn.visible;
+                    detailsAnn.visible = visible;
+                    if (titleAnn) {
+                        titleAnn.text = titleAnn.text.replace(/[▼▲]/, visible ? '▲' : '▼');
+                    }
+                    Plotly.relayout(plotDiv, { annotations: currentAnnotations });
+                    // compare风格弹窗
+                    if (visible) {
+                        createThresholdDetailsOverlay(plotDiv, plotType, thresholdIndex, detailsAnn.text);
+                    } else {
+                        removeThresholdDetailsOverlay(plotDiv, plotType, thresholdIndex);
+                    }
+                }
+            }
+        });
+    }
+}
+
+function analyzeThresholdIntersection(xData, yData, threshold, plotType) {
+    const intersections = [];
+    for (let i = 0; i < yData.length - 1; i++) {
+        const y1 = yData[i], y2 = yData[i + 1], x1 = xData[i], x2 = xData[i + 1];
+        if ((y1 <= threshold && y2 >= threshold) || (y1 >= threshold && y2 <= threshold)) {
+            const t = (threshold - y1) / (y2 - y1);
+            const intersectionX = x1 + t * (x2 - x1);
+            intersections.push({ x: intersectionX, y: threshold, index: i });
+        }
+    }
+    let aboveArea = 0, belowArea = 0, aboveLength = 0, belowLength = 0;
+    for (let i = 0; i < yData.length - 1; i++) {
+        const dx = xData[i + 1] - xData[i];
+        const avgY = (yData[i] + yData[i + 1]) / 2;
+        if (avgY > threshold) {
+            aboveArea += (avgY - threshold) * dx;
+            aboveLength += dx;
+        } else {
+            belowArea += (threshold - avgY) * dx;
+            belowLength += dx;
+        }
+    }
+    const maxValue = Math.max(...yData);
+    const minValue = Math.min(...yData);
+    const abovePercentage = (aboveLength / (xData[xData.length - 1] - xData[0])) * 100;
+    const belowPercentage = 100 - abovePercentage;
+    return { intersections, aboveArea, belowArea, aboveLength, belowLength, abovePercentage, belowPercentage, maxValue, minValue, thresholdRatio: threshold / maxValue };
+}
+
+function createThresholdAnalysisText(analysis, threshold, unit, plotType) {
+    const lines = [];
+    lines.push(`阈值: ${threshold.toFixed(2)}${unit}`);
+    if (analysis.intersections.length > 0) {
+        lines.push(`交点: ${analysis.intersections.length}个`);
+        for (let i = 0; i < analysis.intersections.length; i += 3) {
+            const group = analysis.intersections.slice(i, i + 3);
+            const groupText = group.map((intersection, idx) => `#${i + idx + 1}: x=${intersection.x.toFixed(2)}μm`).join('  ');
+            lines.push(`  ${groupText}`);
+        }
+        if (plotType === 'exposure') {
+            if (analysis.intersections.length >= 2) {
+                const firstPair = analysis.intersections.slice(0, 2);
+                const lineWidth = Math.abs(firstPair[1].x - firstPair[0].x);
+                lines.push(`工艺分析:`);
+                lines.push(`  有效线宽: ${lineWidth.toFixed(2)}μm`);
+                lines.push(`  工艺窗口: ${analysis.abovePercentage.toFixed(1)}%`);
+            }
+        } else {
+            lines.push(`工艺分析:`);
+            lines.push(`  厚度达标区域: ${analysis.abovePercentage.toFixed(1)}%`);
+            if (analysis.abovePercentage < 80) {
+                lines.push(`  ⚠️ 覆盖率偏低，建议优化参数`);
+            }
+        }
+    } else {
+        lines.push('交点: 无');
+        if (plotType === 'exposure') {
+            lines.push('⚠️ 无有效曝光区域');
+        } else {
+            lines.push('⚠️ 厚度均不达标');
+        }
+    }
+    if (plotType === 'exposure') {
+        lines.push(`超阈值区域: ${analysis.abovePercentage.toFixed(1)}%`);
+        lines.push(`积分差值: ${analysis.aboveArea.toFixed(1)}${unit}·μm`);
+    } else {
+        lines.push(`超阈值区域: ${analysis.abovePercentage.toFixed(1)}%`);
+        lines.push(`平均超出: ${(analysis.aboveArea / Math.max(analysis.aboveLength, 0.001)).toFixed(3)}`);
+    }
+    const maxRatio = (threshold / analysis.maxValue * 100).toFixed(1);
+    lines.push(`阈值/峰值: ${maxRatio}%`);
+    if (plotType === 'exposure') {
+        if (maxRatio < 50) {
+            lines.push(`💡 建议: 阈值偏低，可提高对比度`);
+        } else if (maxRatio > 90) {
+            lines.push(`💡 建议: 阈值偏高，可能欠曝光`);
+        }
+    } else {
+        if (analysis.abovePercentage > 90) {
+            lines.push(`✅ 厚度分布良好`);
+        } else if (analysis.abovePercentage > 70) {
+            lines.push(`⚠️ 厚度分布一般，可优化`);
+        } else {
+            lines.push(`❌ 厚度分布不佳，需要调整`);
+        }
+    }
+    return lines.join('\n');
+}
+
+// === 阈值详细分析弹窗逻辑（compare移植） ===
+function createThresholdDetailsOverlay(container, plotType, thresholdIndex, content) {
+    const overlayId = `threshold-overlay-${plotType}-${thresholdIndex}`;
+    removeThresholdDetailsOverlay(container, plotType, thresholdIndex);
+    const overlay = document.createElement('div');
+    overlay.id = overlayId;
+    overlay.className = 'threshold-details-overlay';
+    const textContent = content.replace(/<[^>]*>/g, '');
+    overlay.innerHTML = `
+        <div class="threshold-details-content">
+            <div class="threshold-details-header">
+                <span>详细分析</span>
+                <button class="threshold-details-close" onclick="removeThresholdDetailsOverlay(document.getElementById('${container.id}'), '${plotType}', '${thresholdIndex}')">×</button>
+            </div>
+            <div class="threshold-details-body">
+                <pre>${textContent}</pre>
+            </div>
+        </div>
+    `;
+    overlay.style.cssText = `
+        position: absolute;
+        left: 20px;
+        top: ${50 + thresholdIndex * 120}px;
+        width: 350px;
+        max-height: 200px;
+        background: rgba(255, 255, 255, 0.98);
+        border: 2px solid #3498db;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 1000;
+        font-family: monospace;
+        font-size: 11px;
+        line-height: 1.4;
+    `;
+    container.style.position = 'relative';
+    container.appendChild(overlay);
+}
+function removeThresholdDetailsOverlay(container, plotType, thresholdIndex) {
+    const overlayId = `threshold-overlay-${plotType}-${thresholdIndex}`;
+    const existingOverlay = document.getElementById(overlayId);
+    if (existingOverlay) existingOverlay.remove();
+    // 同步箭头
+    const titleName = `threshold_${plotType}_${thresholdIndex}_title`;
+    const currentAnnotations = container.layout.annotations || [];
+    const updatedAnnotations = currentAnnotations.map(a => {
+        if (a.name === titleName) {
+            const newText = a.text.replace(/[▼▲]/, '▼');
+            return { ...a, text: newText };
+        }
+        return a;
+    });
+    Plotly.relayout(container, { annotations: updatedAnnotations });
+}
+window.removeThresholdDetailsOverlay = removeThresholdDetailsOverlay;

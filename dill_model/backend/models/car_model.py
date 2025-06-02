@@ -200,6 +200,7 @@ class CARModel:
         return {
             'x': x,
             'initial_acid': initial_acid.tolist(),
+            'exposure_dose': initial_acid.tolist(),
             'diffused_acid': diffused_acid.tolist(),
             'deprotection': deprotection.tolist(),
             'thickness': thickness.tolist()

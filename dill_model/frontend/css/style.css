@@ -601,10 +601,11 @@ header::before {
 }
 
 .plot-title {
-    font-size: 1.2rem;
-    font-weight: 500;
-    margin-bottom: 1rem;
-    color: var(--dark-color);
+    text-align: center !important;
+    font-size: 1.25rem !important;
+    font-weight: 600 !important;
+    margin: 24px 0 12px 0 !important;
+    color: #223366 !important;
 }
 
 .plot-image {
