@@ -89,14 +89,17 @@
                 </div>
 
                 <div id="model-description-container" class="model-description-container">
-                    <div id="dill-desc" style="display:block;">
-                        <h3 class="model-description-title" data-i18n="dill_formula_title">Dill模型</h3>
+                    <div id="dill-desc" class="model-card" style="display:block;">
+                        <h3 class="model-description-title">
+                            <i class="fas fa-microscope"></i>
+                            <span data-i18n="dill_formula_title">Dill模型</span>
+                        </h3>
                         <div class="model-core-formula" data-i18n="dill_formula_core">核心关系: <code>M(x,z) = exp(-C · D(x,z))</code></div>
                         <p class="formula-notation" data-i18n="dill_formula_note"><em>M: 归一化光敏剂浓度, C: 光敏速率常数, D: 曝光剂量</em></p>
                         <div class="model-math"></div>
                         <div class="model-ref"></div>
                         <button id="dill-toggle-details" class="toggle-details-btn" data-i18n="btn_expand">展开更多 <i class="fas fa-chevron-down"></i></button>
-                        <div id="dill-full-details" class="model-full-details" style="margin-bottom:0;padding-bottom:0;">
+                        <div id="dill-full-details" class="model-full-details">
                             <h4 data-i18n="dill_formula_ode">微分方程</h4>
                             <code style="display:block;margin-bottom:10px;" data-i18n="dill_formula_ode_code">∂M/∂t = -C·I·M</code>
                             <div style="color:#34495e;font-size:0.98rem;margin-bottom:12px;" data-i18n="dill_formula_ref">参考：Dill F H, Neureuther A R, Tuttle J A, et al. IEEE Trans Electron Devices, 1975.</div>
@@ -126,14 +129,17 @@
                             </div>
                         </div>
                     </div>
-                    <div id="enhanced-dill-desc" style="display:none;">
-                        <h3 class="model-description-title" data-i18n="enhanced_formula_title">增强Dill模型（厚胶）</h3>
+                    <div id="enhanced-dill-desc" class="model-card" style="display:none;">
+                        <h3 class="model-description-title">
+                            <i class="fas fa-layer-group"></i>
+                            <span data-i18n="enhanced_formula_title">增强Dill模型（厚胶）</span>
+                        </h3>
                         <div class="model-core-formula" data-i18n="enhanced_formula_core">核心关系: <code>∂I/∂z = -I·[A(z_h,T,t_B)·M+B(z_h,T,t_B)]</code></div>
-                        <p data-i18n="enhanced_formula_core2"><code>∂M/∂t = -I·M·C(z_h,T,t_B)</code></p>
+                        <p data-i18n="enhanced_formula_core2" class="model-core-formula"><code>∂M/∂t = -I·M·C(z_h,T,t_B)</code></p>
                         <div class="model-math"></div>
                         <div class="model-ref"></div>
                         <button id="enhanced-dill-toggle-details" class="toggle-details-btn" data-i18n="btn_expand">展开更多 <i class="fas fa-chevron-down"></i></button>
-                        <div id="enhanced-dill-full-details" class="model-full-details" style="margin-bottom:0;padding-bottom:0;">
+                        <div id="enhanced-dill-full-details" class="model-full-details">
                             <h4 data-i18n="enhanced_formula_ode">微分方程</h4>
                             <code style="display:block;margin-bottom:10px;" data-i18n="enhanced_formula_ode_code">∂I/∂z = -I·[A(z_h,T,t_B)·M+B(z_h,T,t_B)]<br>∂M/∂t = -I·M·C(z_h,T,t_B)</code>
                             <div style="color:#34495e;font-size:0.98rem;margin-bottom:12px;" data-i18n="enhanced_formula_ref">参考：刘世杰等《厚层抗蚀剂曝光模型及其参数测量》, 2005.</div>
@@ -169,14 +175,17 @@
                             </div>
                         </div>
                     </div>
-                    <div id="car-desc" style="display:none;">
-                        <h3 class="model-description-title" data-i18n="car_formula_title">CAR模型（化学放大型光刻胶）</h3>
+                    <div id="car-desc" class="model-card" style="display:none;">
+                        <h3 class="model-description-title">
+                            <i class="fas fa-flask"></i>
+                            <span data-i18n="car_formula_title">CAR模型（化学放大型光刻胶）</span>
+                        </h3>
                         <div class="model-core-formula" data-i18n="car_formula_core">核心过程: 光酸生成 → 扩散 → 催化反应 → 显影</div>
                         <p class="formula-notation" data-i18n="car_formula_note"><em>CAR: 化学放大型光刻胶 (Chemically Amplified Resist)</em></p>
                         <div class="model-math"></div>
                         <div class="model-ref"></div>
                         <button id="car-toggle-details" class="toggle-details-btn" data-i18n="btn_expand">展开更多 <i class="fas fa-chevron-down"></i></button>
-                        <div id="car-full-details" class="model-full-details" style="margin-bottom:0;padding-bottom:0;">
+                        <div id="car-full-details" class="model-full-details">
                             <h4 data-i18n="car_formula_ode">关键方程</h4>
                             <code style="display:block;margin-bottom:10px;" data-i18n="car_formula_ode_code">[H⁺] = η·D(x)<br>D(x,t) = I(x)·t<br>扩散: [H⁺]_diff = G([H⁺], l_diff)<br>脱保护度: M = 1-exp(-k·[H⁺]_diff·A)</code>
                             <div style="color:#34495e;font-size:0.98rem;margin-bottom:12px;" data-i18n="car_formula_ref">参考：Hinsberg et al., "Chemical amplification mechanism", Proc. SPIE, 1994.</div>
@@ -214,85 +223,90 @@
                 <h2 class="section-title">参数设置</h2>
                 
                 <div id="dill-params" class="parameters-grid" style="display:block;">
-                    <!-- 参数1: I_avg -->
-                    <div class="parameter-item slider-fill">
-                        <div class="parameter-label">
-                            <span class="parameter-name">平均入射光强度 (I<sub>avg</sub>)</span>
-                            
-                            <span class="parameter-value">10</span>
+                    <!-- Dill模型基本参数容器 -->
+                    <div class="parameter-group-container" id="dill-basic-params-container" data-title="Dill模型基本参数" data-i18n-title="dill_basic_params">
+                        <!-- 参数1: I_avg -->
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label">
+                                <span class="parameter-name">平均入射光强度 (I<sub>avg</sub>)</span>
+                                
+                                <span class="parameter-value">10</span>
+                            </div>
+                            <div class="parameter-input">
+                                <input type="range" id="I_avg" class="slider" min="1" max="100" step="0.1" value="10">
+                                <input type="number" class="number-input" value="10" min="1" max="100" step="0.1">
+                            </div>
+                            <div class="parameter-description" data-i18n="param_desc_I_avg">平均入射光强度，单位：mW/cm²</div>
                         </div>
-                        <div class="parameter-input">
-                            <input type="range" id="I_avg" class="slider" min="1" max="100" step="0.1" value="10">
-                            <input type="number" class="number-input" value="10" min="1" max="100" step="0.1">
+                        
+                        <!-- 参数2: V -->
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label">
+                                <span class="parameter-name">干涉条纹可见度 (V)</span>
+                                
+                                <span class="parameter-value">0.8</span>
+                            </div>
+                            <div class="parameter-input">
+                                <input type="range" id="V" class="slider" min="0" max="1" step="0.01" value="0.8">
+                                <input type="number" class="number-input" value="0.8" min="0" max="1" step="0.01">
+                            </div>
+                            <div class="parameter-description" data-i18n="param_desc_V">干涉条纹的对比度，范围：0-1</div>
                         </div>
-                        <div class="parameter-description" data-i18n="param_desc_I_avg">平均入射光强度，单位：mW/cm²</div>
-                    </div>
-                    
-                    <!-- 参数2: V -->
-                    <div class="parameter-item slider-fill">
-                        <div class="parameter-label">
-                            <span class="parameter-name">干涉条纹可见度 (V)</span>
-                            
-                            <span class="parameter-value">0.8</span>
+                        
+                        <!-- 参数3: K -->
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label">
+                                <span class="parameter-name">空间频率 (K)</span>
+                                
+                                <span class="parameter-value">2</span>
+                            </div>
+                            <div class="parameter-input">
+                                <input type="range" id="K" class="slider" min="0.1" max="10" step="0.1" value="2">
+                                <input type="number" class="number-input" value="2" min="0.1" max="10" step="0.1">
+                            </div>
+                            <div class="parameter-description" data-i18n="param_desc_K">干涉条纹的空间频率，单位：rad/μm</div>
                         </div>
-                        <div class="parameter-input">
-                            <input type="range" id="V" class="slider" min="0" max="1" step="0.01" value="0.8">
-                            <input type="number" class="number-input" value="0.8" min="0" max="1" step="0.01">
+                        
+                        <!-- 参数4: t_exp -->
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label">
+                                <span class="parameter-name">曝光时间 (t<sub>exp</sub>)</span>
+                                
+                                <span class="parameter-value">5</span>
+                            </div>
+                            <div class="parameter-input">
+                                <input type="range" id="t_exp" class="slider" min="0.1" max="20" step="0.1" value="5">
+                                <input type="number" class="number-input" value="5" min="0.1" max="20" step="0.1">
+                            </div>
+                            <div class="parameter-description" data-i18n="param_desc_t_exp">总曝光时间，单位：秒</div>
                         </div>
-                        <div class="parameter-description" data-i18n="param_desc_V">干涉条纹的对比度，范围：0-1</div>
-                    </div>
-                    
-                    <!-- 参数3: K -->
-                    <div class="parameter-item slider-fill">
-                        <div class="parameter-label">
-                            <span class="parameter-name">空间频率 (K)</span>
-                            
-                            <span class="parameter-value">2</span>
+                        
+                        <!-- 参数5: C -->
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label">
+                                <span class="parameter-name">光敏速率常数 (C)</span>
+                                
+                                <span class="parameter-value">0.02</span>
+                            </div>
+                            <div class="parameter-input">
+                                <input type="range" id="C" class="slider" min="0.001" max="0.1" step="0.001" value="0.02">
+                                <input type="number" class="number-input" value="0.02" min="0.001" max="0.1" step="0.001">
+                            </div>
+                            <div class="parameter-description" data-i18n="param_desc_C">光刻胶的Dill C参数，单位：cm²/mJ</div>
                         </div>
-                        <div class="parameter-input">
-                            <input type="range" id="K" class="slider" min="0.1" max="10" step="0.1" value="2">
-                            <input type="number" class="number-input" value="2" min="0.1" max="10" step="0.1">
-                        </div>
-                        <div class="parameter-description" data-i18n="param_desc_K">干涉条纹的空间频率，单位：rad/μm</div>
-                    </div>
-                    
-                    <!-- 参数4: t_exp -->
-                    <div class="parameter-item slider-fill">
-                        <div class="parameter-label">
-                            <span class="parameter-name">曝光时间 (t<sub>exp</sub>)</span>
-                            
-                            <span class="parameter-value">5</span>
-                        </div>
-                        <div class="parameter-input">
-                            <input type="range" id="t_exp" class="slider" min="0.1" max="20" step="0.1" value="5">
-                            <input type="number" class="number-input" value="5" min="0.1" max="20" step="0.1">
-                        </div>
-                        <div class="parameter-description" data-i18n="param_desc_t_exp">总曝光时间，单位：秒</div>
-                    </div>
-                    
-                    <!-- 参数5: C -->
-                    <div class="parameter-item slider-fill">
-                        <div class="parameter-label">
-                            <span class="parameter-name">光敏速率常数 (C)</span>
-                            
-                            <span class="parameter-value">0.02</span>
-                        </div>
-                        <div class="parameter-input">
-                            <input type="range" id="C" class="slider" min="0.001" max="0.1" step="0.001" value="0.02">
-                            <input type="number" class="number-input" value="0.02" min="0.001" max="0.1" step="0.001">
-                        </div>
-                        <div class="parameter-description" data-i18n="param_desc_C">光刻胶的Dill C参数，单位：cm²/mJ</div>
                     </div>
 
-                    <!-- 在Dill参数区顶部插入正弦波类型选择和多维参数输入区 -->
-                    <div class="parameter-item" id="dill-sine-type-container">
+                    <!-- 修改Dill模型的正弦波类型选择框 -->
+                    <div class="parameter-item sine-wave-type-container" id="dill-sine-type-container" data-title="波形类型" data-i18n-title="sine_wave_type">
                         <label for="dill-sine-type" data-i18n="sine_wave_type_label">正弦波类型：</label>
                         <select id="dill-sine-type" class="model-select">
                             <option value="single" selected data-i18n="sine_wave_type_single">一维正弦波</option>
                             <option value="multi" data-i18n="sine_wave_type_multi">二维正弦波</option>
+                            <option value="3d" data-i18n="sine_wave_type_3d">三维正弦波</option>
                         </select>
                     </div>
-                    <div id="dill-multisine-params" style="display:none;">
+                    <!-- 修改Dill模型的二维波形参数容器 -->
+                    <div id="dill-multisine-params" class="sine-wave-params-container" data-title="二维波形参数" data-i18n-title="twod_sine_wave_params" style="display:none;">
                         <div class="parameter-item slider-fill">
                             <div class="parameter-label"><span class="parameter-name" data-i18n="kx_label">Kx (空间频率x)</span></div>
                             <div class="parameter-input"><input type="number" id="Kx" value="2" min="0.1" max="10" step="0.1"></div>
@@ -307,63 +321,115 @@
                             <div class="parameter-label"><span class="parameter-name" data-i18n="phi_label">φ(t) (相位表达式)</span></div>
                             <div class="parameter-input"><input type="text" id="phi_expr" value="0"></div>
                             <div class="phi-expr-error" style="color:#d00;font-size:0.95em;display:none;"></div>
-                            <button id="phi-expr-preview-btn" style="margin-top:4px;display:none;">预览分布</button>
-                            <div id="phi-expr-preview-plot" style="margin-top:8px;display:none;"></div>
+                            <button id="phi-expr-preview-btn" class="preview-button" style="margin-top:4px;display:none;">预览分布</button>
+                            <div id="phi-expr-preview-plot" class="preview-plot preview-plot-2d" style="margin-top:8px;display:none;"></div>
+                        </div>
+                        <!-- Y范围参数，移到二维波形参数容器内 -->
+                        <div class="parameter-item">
+                            <div class="parameter-label"><span class="parameter-name" data-i18n="y_range_label">y范围 (μm)：</span></div>
+                            <div class="parameter-input">
+                                <input type="number" id="y_min" value="0" min="0" max="100" step="0.1"> ~
+                                <input type="number" id="y_max" value="10" min="0" max="100" step="0.1">
+                                <label data-i18n="y_resolution_label">分辨率：</label>
+                                <input type="number" id="y_points" value="100" min="1" max="200" step="1">
+                            </div>
+                            <div class="parameter-description" data-i18n="y_range_description">二维分布时有效，y_min=y_max表示一维，y范围0~100，分辨率1~200</div>
                         </div>
                     </div>
 
-                    <!-- y范围输入区，插入到参数区合适位置 -->
-                    <div class="parameter-item" id="y-range-container">
-                        <label data-i18n="y_range_label">y范围 (μm)：</label>
-                        <input type="number" id="y_min" value="0" min="0" max="100" step="0.1"> ~
-                        <input type="number" id="y_max" value="10" min="0" max="100" step="0.1">
-                        <label data-i18n="y_resolution_label">分辨率：</label>
-                        <input type="number" id="y_points" value="100" min="1" max="200" step="1">
-                        <span class="parameter-description" data-i18n="y_range_description">二维分布时有效，y_min=y_max表示一维，y范围0~100，分辨率1~200</span>
+                    <!-- 添加三维正弦波参数输入区域 -->
+                    <div id="dill-3dsine-params" class="sine-wave-params-container" data-title="三维波形参数" data-i18n-title="3d_sine_wave_params" style="display:none;">
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label"><span class="parameter-name" data-i18n="kx_label">Kx (空间频率x)</span></div>
+                            <div class="parameter-input"><input type="number" id="Kx_3d" value="2" min="0.1" max="10" step="0.1"></div>
+                            <div class="parameter-description" data-i18n="kx_description">x方向空间频率，单位：rad/μm，范围：0.1~10</div>
+                        </div>
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label"><span class="parameter-name" data-i18n="ky_label">Ky (空间频率y)</span></div>
+                            <div class="parameter-input"><input type="number" id="Ky_3d" value="1" min="0.1" max="10" step="0.1"></div>
+                            <div class="parameter-description" data-i18n="ky_description">y方向空间频率，单位：rad/μm，范围：0.1~10</div>
+                        </div>
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label"><span class="parameter-name" data-i18n="kz_label">Kz (空间频率z)</span></div>
+                            <div class="parameter-input"><input type="number" id="Kz_3d" value="1" min="0.1" max="10" step="0.1"></div>
+                            <div class="parameter-description" data-i18n="kz_description">z方向空间频率，单位：rad/μm，范围：0.1~10</div>
+                        </div>
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label"><span class="parameter-name" data-i18n="phi_label">φ(t) (相位表达式)</span></div>
+                            <div class="parameter-input"><input type="text" id="phi_expr_3d" value="0"></div>
+                            <div class="phi-expr-error" style="color:#d00;font-size:0.95em;display:none;"></div>
+                            <button id="phi-expr-3d-preview-btn" class="preview-button" style="margin-top:4px;display:none;">预览3D分布</button>
+                            <div id="phi-expr-3d-preview-plot" class="preview-plot preview-plot-3d" style="margin-top:8px;display:none;"></div>
+                        </div>
+                        <div class="parameter-item">
+                            <div class="parameter-label"><span class="parameter-name" data-i18n="3d_range_label">三维显示范围</span></div>
+                            <div class="parameter-input">
+                                <div class="range-row">
+                                    <label>X: </label>
+                                    <input type="number" id="x_min_3d" value="0" min="0" max="100" step="0.1"> ~ 
+                                    <input type="number" id="x_max_3d" value="10" min="0" max="100" step="0.1">
+                                </div>
+                                <div class="range-row">
+                                    <label>Y: </label>
+                                    <input type="number" id="y_min_3d" value="0" min="0" max="100" step="0.1"> ~ 
+                                    <input type="number" id="y_max_3d" value="10" min="0" max="100" step="0.1">
+                                </div>
+                                <div class="range-row">
+                                    <label>Z: </label>
+                                    <input type="number" id="z_min_3d" value="0" min="0" max="100" step="0.1"> ~ 
+                                    <input type="number" id="z_max_3d" value="10" min="0" max="100" step="0.1">
+                                </div>
+                            </div>
+                            <div class="parameter-description" data-i18n="3d_range_description">三维分布显示范围，单位：μm</div>
+                        </div>
                     </div>
                 </div>
                 
                 <div id="enhanced-dill-params" class="parameters-grid" style="display:none;">
-                    <div class="parameter-item slider-fill">
-                        <div class="parameter-label"><span class="parameter-name">胶厚 (z_h, μm)</span><span class="parameter-value">10</span></div>
-                        <div class="parameter-input"><input type="range" id="z_h" class="slider" min="1" max="50" step="0.1" value="10"><input type="number" class="number-input" value="10" min="1" max="50" step="0.1"></div>
-                        <div class="parameter-description" data-i18n="param_desc_z_h">光刻胶厚度，单位：μm</div>
-                    </div>
-                    <div class="parameter-item slider-fill">
-                        <div class="parameter-label"><span class="parameter-name">前烘温度 (T, ℃)</span><span class="parameter-value">100</span></div>
-                        <div class="parameter-input"><input type="range" id="T" class="slider" min="60" max="150" step="1" value="100"><input type="number" class="number-input" value="100" min="60" max="150" step="1"></div>
-                        <div class="parameter-description" data-i18n="param_desc_T">前烘温度，单位：℃</div>
-                    </div>
-                    <div class="parameter-item slider-fill">
-                        <div class="parameter-label"><span class="parameter-name">前烘时间 (t_B, min)</span><span class="parameter-value">10</span></div>
-                        <div class="parameter-input"><input type="range" id="t_B" class="slider" min="1" max="60" step="1" value="10"><input type="number" class="number-input" value="10" min="1" max="60" step="1"></div>
-                        <div class="parameter-description" data-i18n="param_desc_t_B">前烘时间，单位：分钟</div>
-                    </div>
-                    <div class="parameter-item slider-fill">
-                        <div class="parameter-label"><span class="parameter-name">初始光强 (I0)</span><span class="parameter-value">1.0</span></div>
-                        <div class="parameter-input"><input type="range" id="I0" class="slider" min="0.1" max="2" step="0.01" value="1.0"><input type="number" class="number-input" value="1.0" min="0.1" max="2" step="0.01"></div>
-                        <div class="parameter-description" data-i18n="param_desc_I0">归一化初始光强</div>
-                    </div>
-                    <div class="parameter-item slider-fill">
-                        <div class="parameter-label"><span class="parameter-name">初始PAC浓度 (M0)</span><span class="parameter-value">1.0</span></div>
-                        <div class="parameter-input"><input type="range" id="M0" class="slider" min="0.1" max="1.0" step="0.01" value="1.0"><input type="number" class="number-input" value="1.0" min="0.1" max="1.0" step="0.01"></div>
-                        <div class="parameter-description" data-i18n="param_desc_M0">归一化初始PAC浓度</div>
-                    </div>
-                    <div class="parameter-item slider-fill">
-                        <div class="parameter-label"><span class="parameter-name">曝光时间 (t_exp, s)</span><span class="parameter-value">5</span></div>
-                        <div class="parameter-input"><input type="range" id="t_exp_enhanced" class="slider" min="0.1" max="60" step="0.1" value="5"><input type="number" class="number-input" value="5" min="0.1" max="60" step="0.1"></div>
-                        <div class="parameter-description" data-i18n="param_desc_t_exp_enhanced">曝光时间，单位：秒</div>
+                    <!-- Enhanced Dill模型基本参数容器 -->
+                    <div class="parameter-group-container" id="enhanced-dill-basic-params-container" data-title="增强Dill模型基本参数" data-i18n-title="enhanced_dill_basic_params">
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label"><span class="parameter-name">胶厚 (z_h, μm)</span><span class="parameter-value">10</span></div>
+                            <div class="parameter-input"><input type="range" id="z_h" class="slider" min="1" max="50" step="0.1" value="10"><input type="number" class="number-input" value="10" min="1" max="50" step="0.1"></div>
+                            <div class="parameter-description" data-i18n="param_desc_z_h">光刻胶厚度，单位：μm</div>
+                        </div>
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label"><span class="parameter-name">前烘温度 (T, ℃)</span><span class="parameter-value">100</span></div>
+                            <div class="parameter-input"><input type="range" id="T" class="slider" min="60" max="150" step="1" value="100"><input type="number" class="number-input" value="100" min="60" max="150" step="1"></div>
+                            <div class="parameter-description" data-i18n="param_desc_T">前烘温度，单位：℃</div>
+                        </div>
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label"><span class="parameter-name">前烘时间 (t_B, min)</span><span class="parameter-value">10</span></div>
+                            <div class="parameter-input"><input type="range" id="t_B" class="slider" min="1" max="60" step="1" value="10"><input type="number" class="number-input" value="10" min="1" max="60" step="1"></div>
+                            <div class="parameter-description" data-i18n="param_desc_t_B">前烘时间，单位：分钟</div>
+                        </div>
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label"><span class="parameter-name">初始光强 (I0)</span><span class="parameter-value">1.0</span></div>
+                            <div class="parameter-input"><input type="range" id="I0" class="slider" min="0.1" max="2" step="0.01" value="1.0"><input type="number" class="number-input" value="1.0" min="0.1" max="2" step="0.01"></div>
+                            <div class="parameter-description" data-i18n="param_desc_I0">归一化初始光强</div>
+                        </div>
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label"><span class="parameter-name">初始PAC浓度 (M0)</span><span class="parameter-value">1.0</span></div>
+                            <div class="parameter-input"><input type="range" id="M0" class="slider" min="0.1" max="1.0" step="0.01" value="1.0"><input type="number" class="number-input" value="1.0" min="0.1" max="1.0" step="0.01"></div>
+                            <div class="parameter-description" data-i18n="param_desc_M0">归一化初始PAC浓度</div>
+                        </div>
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label"><span class="parameter-name">曝光时间 (t_exp, s)</span><span class="parameter-value">5</span></div>
+                            <div class="parameter-input"><input type="range" id="t_exp_enhanced" class="slider" min="0.1" max="60" step="0.1" value="5"><input type="number" class="number-input" value="5" min="0.1" max="60" step="0.1"></div>
+                            <div class="parameter-description" data-i18n="param_desc_t_exp_enhanced">曝光时间，单位：秒</div>
+                        </div>
                     </div>
 
-                    <!-- 在增强Dill参数区顶部插入正弦波类型选择和多维参数输入区 -->
-                    <div class="parameter-item" id="enhanced-dill-sine-type-container">
+                    <!-- 修改Enhanced Dill模型的正弦波类型选择框 -->
+                    <div class="parameter-item sine-wave-type-container" id="enhanced-dill-sine-type-container" data-title="波形类型" data-i18n-title="sine_wave_type">
                         <label for="enhanced-dill-sine-type" data-i18n="sine_wave_type_label">正弦波类型：</label>
                         <select id="enhanced-dill-sine-type" class="model-select">
                             <option value="single" selected data-i18n="sine_wave_type_single">一维正弦波</option>
                             <option value="multi" data-i18n="sine_wave_type_multi">二维正弦波</option>
+                            <option value="3d" data-i18n="sine_wave_type_3d">三维正弦波</option>
                         </select>
                     </div>
-                    <div id="enhanced-dill-multisine-params" style="display:none;">
+                    <div id="enhanced-dill-multisine-params" class="sine-wave-params-container" data-title="二维波形参数" data-i18n-title="twod_sine_wave_params" style="display:none;">
                         <div class="parameter-item slider-fill">
                             <div class="parameter-label"><span class="parameter-name" data-i18n="kx_label">Kx (空间频率x)</span></div>
                             <div class="parameter-input"><input type="number" id="enhanced_Kx" value="2" min="0.1" max="10" step="0.1"></div>
@@ -378,148 +444,210 @@
                             <div class="parameter-label"><span class="parameter-name" data-i18n="phi_label">φ(t) (相位表达式)</span></div>
                             <div class="parameter-input"><input type="text" id="enhanced_phi_expr" value="0"></div>
                             <div class="phi-expr-error" style="color:#d00;font-size:0.95em;display:none;"></div>
-                            <button id="phi-expr-preview-btn" style="margin-top:4px;display:none;">预览分布</button>
-                            <div id="phi-expr-preview-plot" style="margin-top:8px;display:none;"></div>
+                            <button id="enhanced-phi-expr-preview-btn" class="preview-button" style="margin-top:4px;display:none;">预览分布</button>
+                            <div id="enhanced-phi-expr-preview-plot" class="preview-plot preview-plot-2d" style="margin-top:8px;display:none;"></div>
+                        </div>
+                        <!-- Y范围参数，放在容器内部 -->
+                        <div class="parameter-item">
+                            <div class="parameter-label"><span class="parameter-name" data-i18n="y_range_label">y范围 (μm)：</span></div>
+                            <div class="parameter-input">
+                                <input type="number" id="enhanced_y_min" value="0" min="0" max="100" step="0.1"> ~
+                                <input type="number" id="enhanced_y_max" value="10" min="0" max="100" step="0.1">
+                                <label data-i18n="y_resolution_label">分辨率：</label>
+                                <input type="number" id="enhanced_y_points" value="100" min="1" max="200" step="1">
+                            </div>
+                            <div class="parameter-description" data-i18n="y_range_description">二维分布时有效，y_min=y_max表示一维，y范围0~100，分辨率1~200</div>
+                        </div>
+                    </div>
+
+                    <!-- 添加增强Dill模型的三维正弦波参数输入区域 -->
+                    <div id="enhanced-dill-3dsine-params" class="sine-wave-params-container" data-title="三维波形参数" data-i18n-title="3d_sine_wave_params" style="display:none;">
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label"><span class="parameter-name" data-i18n="kx_label">Kx (空间频率x)</span></div>
+                            <div class="parameter-input"><input type="number" id="enhanced_Kx_3d" value="2" min="0.1" max="10" step="0.1"></div>
+                            <div class="parameter-description" data-i18n="kx_description">x方向空间频率，单位：rad/μm，范围：0.1~10</div>
+                        </div>
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label"><span class="parameter-name" data-i18n="ky_label">Ky (空间频率y)</span></div>
+                            <div class="parameter-input"><input type="number" id="enhanced_Ky_3d" value="1" min="0.1" max="10" step="0.1"></div>
+                            <div class="parameter-description" data-i18n="ky_description">y方向空间频率，单位：rad/μm，范围：0.1~10</div>
+                        </div>
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label"><span class="parameter-name" data-i18n="kz_label">Kz (空间频率z)</span></div>
+                            <div class="parameter-input"><input type="number" id="enhanced_Kz_3d" value="1" min="0.1" max="10" step="0.1"></div>
+                            <div class="parameter-description" data-i18n="kz_description">z方向空间频率，单位：rad/μm，范围：0.1~10</div>
+                        </div>
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label"><span class="parameter-name" data-i18n="phi_label">φ(t) (相位表达式)</span></div>
+                            <div class="parameter-input"><input type="text" id="enhanced_phi_expr_3d" value="0"></div>
+                            <div class="phi-expr-error" style="color:#d00;font-size:0.95em;display:none;"></div>
+                            <button id="enhanced-phi-expr-3d-preview-btn" class="preview-button" style="margin-top:4px;display:none;">预览3D分布</button>
+                            <div id="enhanced-phi-expr-3d-preview-plot" class="preview-plot preview-plot-3d" style="margin-top:8px;display:none;"></div>
+                        </div>
+                        <div class="parameter-item">
+                            <div class="parameter-label"><span class="parameter-name" data-i18n="3d_range_label">三维显示范围</span></div>
+                            <div class="parameter-input">
+                                <div class="range-row">
+                                    <label>X: </label>
+                                    <input type="number" id="enhanced_x_min_3d" value="0" min="0" max="100" step="0.1"> ~ 
+                                    <input type="number" id="enhanced_x_max_3d" value="10" min="0" max="100" step="0.1">
+                                </div>
+                                <div class="range-row">
+                                    <label>Y: </label>
+                                    <input type="number" id="enhanced_y_min_3d" value="0" min="0" max="100" step="0.1"> ~ 
+                                    <input type="number" id="enhanced_y_max_3d" value="10" min="0" max="100" step="0.1">
+                                </div>
+                                <div class="range-row">
+                                    <label>Z: </label>
+                                    <input type="number" id="enhanced_z_min_3d" value="0" min="0" max="100" step="0.1"> ~ 
+                                    <input type="number" id="enhanced_z_max_3d" value="10" min="0" max="100" step="0.1">
+                                </div>
+                            </div>
+                            <div class="parameter-description" data-i18n="3d_range_description">三维分布显示范围，单位：μm</div>
                         </div>
                     </div>
                 </div>
                 
                 <div id="car-params" class="car-params parameters-grid" style="display:none;">
-                    <!-- 参数1: I_avg -->
-                    <div class="parameter-item slider-fill">
-                        <div class="parameter-label">
-                            <span class="parameter-name">平均入射光强度 (I<sub>avg</sub>)</span>
-                            
-                            <span class="parameter-value">10</span>
+                    <!-- CAR模型基本参数容器 -->
+                    <div class="parameter-group-container" id="car-basic-params-container" data-title="CAR模型基本参数" data-i18n-title="car_basic_params">
+                        <!-- 参数1: I_avg -->
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label">
+                                <span class="parameter-name">平均入射光强度 (I<sub>avg</sub>)</span>
+                                
+                                <span class="parameter-value">10</span>
+                            </div>
+                            <div class="parameter-input">
+                                <input type="range" id="car_I_avg" class="slider" min="1" max="100" step="0.1" value="10">
+                                <input type="number" class="number-input" value="10" min="1" max="100" step="0.1">
+                            </div>
+                            <div class="parameter-description" data-i18n="param_desc_car_I_avg">平均入射光强度，单位：mW/cm²</div>
                         </div>
-                        <div class="parameter-input">
-                            <input type="range" id="car_I_avg" class="slider" min="1" max="100" step="0.1" value="10">
-                            <input type="number" class="number-input" value="10" min="1" max="100" step="0.1">
+                        
+                        <!-- 参数2: V -->
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label">
+                                <span class="parameter-name">干涉条纹可见度 (V)</span>
+                                
+                                <span class="parameter-value">0.8</span>
+                            </div>
+                            <div class="parameter-input">
+                                <input type="range" id="car_V" class="slider" min="0" max="1" step="0.01" value="0.8">
+                                <input type="number" class="number-input" value="0.8" min="0" max="1" step="0.01">
+                            </div>
+                            <div class="parameter-description" data-i18n="param_desc_car_V">干涉条纹的对比度，范围：0-1</div>
                         </div>
-                        <div class="parameter-description" data-i18n="param_desc_car_I_avg">平均入射光强度，单位：mW/cm²</div>
-                    </div>
-                    
-                    <!-- 参数2: V -->
-                    <div class="parameter-item slider-fill">
-                        <div class="parameter-label">
-                            <span class="parameter-name">干涉条纹可见度 (V)</span>
-                            
-                            <span class="parameter-value">0.8</span>
+                        
+                        <!-- 参数3: K -->
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label">
+                                <span class="parameter-name">空间频率 (K)</span>
+                                
+                                <span class="parameter-value">2</span>
+                            </div>
+                            <div class="parameter-input">
+                                <input type="range" id="car_K" class="slider" min="0.1" max="10" step="0.1" value="2">
+                                <input type="number" class="number-input" value="2" min="0.1" max="10" step="0.1">
+                            </div>
+                            <div class="parameter-description" data-i18n="param_desc_car_K">干涉条纹的空间频率，单位：rad/μm</div>
                         </div>
-                        <div class="parameter-input">
-                            <input type="range" id="car_V" class="slider" min="0" max="1" step="0.01" value="0.8">
-                            <input type="number" class="number-input" value="0.8" min="0" max="1" step="0.01">
+                        
+                        <!-- 参数4: t_exp -->
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label">
+                                <span class="parameter-name">曝光时间 (t<sub>exp</sub>)</span>
+                                
+                                <span class="parameter-value">5</span>
+                            </div>
+                            <div class="parameter-input">
+                                <input type="range" id="car_t_exp" class="slider" min="0.1" max="20" step="0.1" value="5">
+                                <input type="number" class="number-input" value="5" min="0.1" max="20" step="0.1">
+                            </div>
+                            <div class="parameter-description" data-i18n="param_desc_car_t_exp">总曝光时间，单位：秒</div>
                         </div>
-                        <div class="parameter-description" data-i18n="param_desc_car_V">干涉条纹的对比度，范围：0-1</div>
-                    </div>
-                    
-                    <!-- 参数3: K -->
-                    <div class="parameter-item slider-fill">
-                        <div class="parameter-label">
-                            <span class="parameter-name">空间频率 (K)</span>
-                            
-                            <span class="parameter-value">2</span>
+                        
+                        <!-- 参数5: acid_gen_efficiency -->
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label">
+                                <span class="parameter-name">光酸产生效率 (η)</span>
+                                
+                                <span class="parameter-value">0.5</span>
+                            </div>
+                            <div class="parameter-input">
+                                <input type="range" id="car_acid_gen_efficiency" class="slider" min="0.01" max="1" step="0.01" value="0.5">
+                                <input type="number" class="number-input" value="0.5" min="0.01" max="1" step="0.01">
+                            </div>
+                            <div class="parameter-description" data-i18n="param_desc_car_acid_gen">光子到光酸分子的转化效率，范围：0-1</div>
                         </div>
-                        <div class="parameter-input">
-                            <input type="range" id="car_K" class="slider" min="0.1" max="10" step="0.1" value="2">
-                            <input type="number" class="number-input" value="2" min="0.1" max="10" step="0.1">
+                        
+                        <!-- 参数6: diffusion_length -->
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label">
+                                <span class="parameter-name">扩散长度 (EPDL)</span>
+                                
+                                <span class="parameter-value">3</span>
+                            </div>
+                            <div class="parameter-input">
+                                <input type="range" id="car_diffusion_length" class="slider" min="0" max="20" step="0.1" value="3">
+                                <input type="number" class="number-input" value="3" min="0" max="20" step="0.1">
+                            </div>
+                            <div class="parameter-description" data-i18n="param_desc_car_diff">光酸扩散长度，单位：像素</div>
                         </div>
-                        <div class="parameter-description" data-i18n="param_desc_car_K">干涉条纹的空间频率，单位：rad/μm</div>
-                    </div>
-                    
-                    <!-- 参数4: t_exp -->
-                    <div class="parameter-item slider-fill">
-                        <div class="parameter-label">
-                            <span class="parameter-name">曝光时间 (t<sub>exp</sub>)</span>
-                            
-                            <span class="parameter-value">5</span>
+                        
+                        <!-- 参数7: reaction_rate -->
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label">
+                                <span class="parameter-name">反应速率常数 (k)</span>
+                                
+                                <span class="parameter-value">0.3</span>
+                            </div>
+                            <div class="parameter-input">
+                                <input type="range" id="car_reaction_rate" class="slider" min="0.01" max="1" step="0.01" value="0.3">
+                                <input type="number" class="number-input" value="0.3" min="0.01" max="1" step="0.01">
+                            </div>
+                            <div class="parameter-description" data-i18n="param_desc_car_rate">催化反应速率常数</div>
                         </div>
-                        <div class="parameter-input">
-                            <input type="range" id="car_t_exp" class="slider" min="0.1" max="20" step="0.1" value="5">
-                            <input type="number" class="number-input" value="5" min="0.1" max="20" step="0.1">
+                        
+                        <!-- 参数8: amplification -->
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label">
+                                <span class="parameter-name">放大因子 (A)</span>
+                                
+                                <span class="parameter-value">10</span>
+                            </div>
+                            <div class="parameter-input">
+                                <input type="range" id="car_amplification" class="slider" min="1" max="50" step="0.5" value="10">
+                                <input type="number" class="number-input" value="10" min="1" max="50" step="0.5">
+                            </div>
+                            <div class="parameter-description" data-i18n="param_desc_car_amp">每个光酸分子可催化的反应数</div>
                         </div>
-                        <div class="parameter-description" data-i18n="param_desc_car_t_exp">总曝光时间，单位：秒</div>
-                    </div>
-                    
-                    <!-- 参数5: acid_gen_efficiency -->
-                    <div class="parameter-item slider-fill">
-                        <div class="parameter-label">
-                            <span class="parameter-name">光酸产生效率 (η)</span>
-                            
-                            <span class="parameter-value">0.5</span>
+                        
+                        <!-- 参数9: contrast -->
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label">
+                                <span class="parameter-name">对比度因子 (γ)</span>
+                                
+                                <span class="parameter-value">3</span>
+                            </div>
+                            <div class="parameter-input">
+                                <input type="range" id="car_contrast" class="slider" min="0.1" max="10" step="0.1" value="3">
+                                <input type="number" class="number-input" value="3" min="0.1" max="10" step="0.1">
+                            </div>
+                            <div class="parameter-description" data-i18n="param_desc_car_contrast">显影过程的对比度系数</div>
                         </div>
-                        <div class="parameter-input">
-                            <input type="range" id="car_acid_gen_efficiency" class="slider" min="0.01" max="1" step="0.01" value="0.5">
-                            <input type="number" class="number-input" value="0.5" min="0.01" max="1" step="0.01">
-                        </div>
-                        <div class="parameter-description" data-i18n="param_desc_car_acid_gen">光子到光酸分子的转化效率，范围：0-1</div>
-                    </div>
-                    
-                    <!-- 参数6: diffusion_length -->
-                    <div class="parameter-item slider-fill">
-                        <div class="parameter-label">
-                            <span class="parameter-name">扩散长度 (EPDL)</span>
-                            
-                            <span class="parameter-value">3</span>
-                        </div>
-                        <div class="parameter-input">
-                            <input type="range" id="car_diffusion_length" class="slider" min="0" max="20" step="0.1" value="3">
-                            <input type="number" class="number-input" value="3" min="0" max="20" step="0.1">
-                        </div>
-                        <div class="parameter-description" data-i18n="param_desc_car_diff">光酸扩散长度，单位：像素</div>
-                    </div>
-                    
-                    <!-- 参数7: reaction_rate -->
-                    <div class="parameter-item slider-fill">
-                        <div class="parameter-label">
-                            <span class="parameter-name">反应速率常数 (k)</span>
-                            
-                            <span class="parameter-value">0.3</span>
-                        </div>
-                        <div class="parameter-input">
-                            <input type="range" id="car_reaction_rate" class="slider" min="0.01" max="1" step="0.01" value="0.3">
-                            <input type="number" class="number-input" value="0.3" min="0.01" max="1" step="0.01">
-                        </div>
-                        <div class="parameter-description" data-i18n="param_desc_car_rate">催化反应速率常数</div>
-                    </div>
-                    
-                    <!-- 参数8: amplification -->
-                    <div class="parameter-item slider-fill">
-                        <div class="parameter-label">
-                            <span class="parameter-name">放大因子 (A)</span>
-                            
-                            <span class="parameter-value">10</span>
-                        </div>
-                        <div class="parameter-input">
-                            <input type="range" id="car_amplification" class="slider" min="1" max="50" step="0.5" value="10">
-                            <input type="number" class="number-input" value="10" min="1" max="50" step="0.5">
-                        </div>
-                        <div class="parameter-description" data-i18n="param_desc_car_amp">每个光酸分子可催化的反应数</div>
-                    </div>
-                    
-                    <!-- 参数9: contrast -->
-                    <div class="parameter-item slider-fill">
-                        <div class="parameter-label">
-                            <span class="parameter-name">对比度因子 (γ)</span>
-                            
-                            <span class="parameter-value">3</span>
-                        </div>
-                        <div class="parameter-input">
-                            <input type="range" id="car_contrast" class="slider" min="0.1" max="10" step="0.1" value="3">
-                            <input type="number" class="number-input" value="3" min="0.1" max="10" step="0.1">
-                        </div>
-                        <div class="parameter-description" data-i18n="param_desc_car_contrast">显影过程的对比度系数</div>
                     </div>
 
-                    <!-- 在CAR参数区顶部插入正弦波类型选择和多维参数输入区 -->
-                    <div class="parameter-item" id="car-sine-type-container">
+                    <!-- 修改CAR模型的正弦波类型选择框 -->
+                    <div class="parameter-item sine-wave-type-container" id="car-sine-type-container" data-title="波形类型" data-i18n-title="sine_wave_type">
                         <label for="car-sine-type" data-i18n="sine_wave_type_label">正弦波类型：</label>
                         <select id="car-sine-type" class="model-select">
                             <option value="single" selected data-i18n="sine_wave_type_single">一维正弦波</option>
                             <option value="multi" data-i18n="sine_wave_type_multi">二维正弦波</option>
+                            <option value="3d" data-i18n="sine_wave_type_3d">三维正弦波</option>
                         </select>
                     </div>
-                    <div id="car-multisine-params" style="display:none;">
+                    <div id="car-multisine-params" class="sine-wave-params-container" data-title="二维波形参数" data-i18n-title="twod_sine_wave_params" style="display:none;">
                         <div class="parameter-item slider-fill">
                             <div class="parameter-label"><span class="parameter-name" data-i18n="kx_label">Kx (空间频率x)</span></div>
                             <div class="parameter-input"><input type="number" id="car_Kx" value="2" min="0.1" max="10" step="0.1"></div>
@@ -534,8 +662,66 @@
                             <div class="parameter-label"><span class="parameter-name" data-i18n="phi_label">φ(t) (相位表达式)</span></div>
                             <div class="parameter-input"><input type="text" id="car_phi_expr" value="0"></div>
                             <div class="phi-expr-error" style="color:#d00;font-size:0.95em;display:none;"></div>
-                            <button id="phi-expr-preview-btn" style="margin-top:4px;display:none;">预览分布</button>
-                            <div id="phi-expr-preview-plot" style="margin-top:8px;display:none;"></div>
+                            <button id="car-phi-expr-preview-btn" class="preview-button" style="margin-top:4px;display:none;">预览分布</button>
+                            <div id="car-phi-expr-preview-plot" class="preview-plot preview-plot-2d" style="margin-top:8px;display:none;"></div>
+                        </div>
+                        <!-- Y范围参数，放在容器内部 -->
+                        <div class="parameter-item">
+                            <div class="parameter-label"><span class="parameter-name" data-i18n="y_range_label">y范围 (μm)：</span></div>
+                            <div class="parameter-input">
+                                <input type="number" id="car_y_min" value="0" min="0" max="100" step="0.1"> ~
+                                <input type="number" id="car_y_max" value="10" min="0" max="100" step="0.1">
+                                <label data-i18n="y_resolution_label">分辨率：</label>
+                                <input type="number" id="car_y_points" value="100" min="1" max="200" step="1">
+                            </div>
+                            <div class="parameter-description" data-i18n="y_range_description">二维分布时有效，y_min=y_max表示一维，y范围0~100，分辨率1~200</div>
+                        </div>
+                    </div>
+
+                    <!-- 添加CAR模型的三维正弦波参数输入区域 -->
+                    <div id="car-3dsine-params" class="sine-wave-params-container" data-title="三维波形参数" data-i18n-title="3d_sine_wave_params" style="display:none;">
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label"><span class="parameter-name" data-i18n="car_kx_label">Kx (空间频率x)</span></div>
+                            <div class="parameter-input"><input type="number" id="car_Kx_3d" value="2" min="0.1" max="10" step="0.1"></div>
+                            <div class="parameter-description" data-i18n="car_kx_description">x方向空间频率，单位：rad/μm，范围：0.1~10</div>
+                        </div>
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label"><span class="parameter-name" data-i18n="car_ky_label">Ky (空间频率y)</span></div>
+                            <div class="parameter-input"><input type="number" id="car_Ky_3d" value="1" min="0.1" max="10" step="0.1"></div>
+                            <div class="parameter-description" data-i18n="car_ky_description">y方向空间频率，单位：rad/μm，范围：0.1~10</div>
+                        </div>
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label"><span class="parameter-name" data-i18n="car_kz_label">Kz (空间频率z)</span></div>
+                            <div class="parameter-input"><input type="number" id="car_Kz_3d" value="1" min="0.1" max="10" step="0.1"></div>
+                            <div class="parameter-description" data-i18n="car_kz_description">z方向空间频率，单位：rad/μm，范围：0.1~10</div>
+                        </div>
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label"><span class="parameter-name" data-i18n="car_phi_label">φ(t) (相位表达式)</span></div>
+                            <div class="parameter-input"><input type="text" id="car_phi_expr_3d" value="0"></div>
+                            <div class="phi-expr-error" style="color:#d00;font-size:0.95em;display:none;"></div>
+                            <button id="car-phi-expr-3d-preview-btn" class="preview-button" style="margin-top:4px;display:none;">预览3D分布</button>
+                            <div id="car-phi-expr-3d-preview-plot" class="preview-plot preview-plot-3d" style="margin-top:8px;display:none;"></div>
+                        </div>
+                        <div class="parameter-item">
+                            <div class="parameter-label"><span class="parameter-name" data-i18n="car_3d_range_label">三维显示范围</span></div>
+                            <div class="parameter-input">
+                                <div class="range-row">
+                                    <label>X: </label>
+                                    <input type="number" id="car_x_min_3d" value="0" min="0" max="100" step="0.1"> ~ 
+                                    <input type="number" id="car_x_max_3d" value="10" min="0" max="100" step="0.1">
+                                </div>
+                                <div class="range-row">
+                                    <label>Y: </label>
+                                    <input type="number" id="car_y_min_3d" value="0" min="0" max="100" step="0.1"> ~ 
+                                    <input type="number" id="car_y_max_3d" value="10" min="0" max="100" step="0.1">
+                                </div>
+                                <div class="range-row">
+                                    <label>Z: </label>
+                                    <input type="number" id="car_z_min_3d" value="0" min="0" max="100" step="0.1"> ~ 
+                                    <input type="number" id="car_z_max_3d" value="10" min="0" max="100" step="0.1">
+                                </div>
+                            </div>
+                            <div class="parameter-description" data-i18n="car_3d_range_description">三维分布显示范围，单位：μm</div>
                         </div>
                     </div>
                 </div>

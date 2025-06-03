@@ -8,8 +8,16 @@ function initBackToTop() {
     const backToTopBtn = document.createElement('button');
     backToTopBtn.className = 'back-to-top';
     backToTopBtn.innerHTML = '<i class="fas fa-chevron-up"></i>';
-    backToTopBtn.title = LANGS[currentLang].back_to_top;
-    backToTopBtn.setAttribute('aria-label', LANGS[currentLang].back_to_top);
+    
+    // 获取当前语言，使用更安全的方式
+    const currentLang = window.currentLang || localStorage.getItem('lang') || 'zh-CN';
+    // 安全地访问语言对象
+    const langObj = window.LANGS && window.LANGS[currentLang];
+    
+    // 使用默认文本，如果语言包中没有定义back_to_top
+    const backToTopText = (langObj && langObj.back_to_top) ? langObj.back_to_top : '返回顶部';
+    backToTopBtn.title = backToTopText;
+    backToTopBtn.setAttribute('aria-label', backToTopText);
     
     // 添加到页面
     document.body.appendChild(backToTopBtn);

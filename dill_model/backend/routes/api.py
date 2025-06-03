@@ -21,7 +21,7 @@ dill_model = DillModel()
 def calculate():
     """
     计算模型并返回图像
-    新增参数: model_type
+    新增参数: model_type, sine_type (支持'1d', 'multi', '3d')
     """
     try:
         data = request.get_json()
@@ -41,11 +41,47 @@ def calculate():
             t_exp = float(data['t_exp'])
             C = float(data['C'])
             sine_type = data.get('sine_type', '1d')
+            
             if sine_type == 'multi':
                 Kx = float(data.get('Kx', 0))
                 Ky = float(data.get('Ky', 0))
                 phi_expr = data.get('phi_expr', '0')
-                plots = model.generate_plots(I_avg, V, None, t_exp, C, sine_type=sine_type, Kx=Kx, Ky=Ky, phi_expr=phi_expr)
+                # 获取y范围参数
+                y_min = float(data.get('y_min', 0))
+                y_max = float(data.get('y_max', 10))
+                y_points = int(data.get('y_points', 100))
+                
+                # 新增校验: 确保 y_min < y_max 且 y_points > 1
+                if y_min >= y_max:
+                    return jsonify(format_response(False, message_zh="Y轴范围最小值必须小于最大值", message_en="Y-axis range min must be less than max")), 400
+                if y_points <= 1:
+                    return jsonify(format_response(False, message_zh="Y轴点数必须大于1才能进行二维计算", message_en="Number of Y-axis points must be greater than 1 for 2D calculation")), 400
+                
+                # 如果校验通过，则直接计算y_range
+                y_range = np.linspace(y_min, y_max, y_points).tolist()
+                plot_data = model.generate_plots(I_avg, V, None, t_exp, C, sine_type=sine_type, 
+                                               Kx=Kx, Ky=Ky, phi_expr=phi_expr, y_range=y_range)
+            elif sine_type == '3d':
+                # 处理三维正弦波参数
+                Kx = float(data.get('Kx', 0))
+                Ky = float(data.get('Ky', 0))
+                Kz = float(data.get('Kz', 0))
+                phi_expr = data.get('phi_expr', '0')
+                # 获取三维范围参数
+                x_min = float(data.get('x_min', 0))
+                x_max = float(data.get('x_max', 10))
+                y_min = float(data.get('y_min', 0))
+                y_max = float(data.get('y_max', 10))
+                z_min = float(data.get('z_min', 0))
+                z_max = float(data.get('z_max', 10))
+                
+                # 默认使用50个点
+                y_range = np.linspace(y_min, y_max, 50).tolist() if y_min < y_max else None
+                z_range = np.linspace(z_min, z_max, 50).tolist() if z_min < z_max else None
+                
+                plots = model.generate_plots(I_avg, V, None, t_exp, C, sine_type=sine_type,
+                                           Kx=Kx, Ky=Ky, Kz=Kz, phi_expr=phi_expr,
+                                           y_range=y_range, z_range=z_range)
             else:
                 K = float(data['K'])
                 plots = model.generate_plots(I_avg, V, K, t_exp, C, sine_type=sine_type)
@@ -61,12 +97,36 @@ def calculate():
             M0 = float(data.get('M0', 1.0))
             t_exp = float(data['t_exp'])
             sine_type = data.get('sine_type', '1d')
+            
             if sine_type == 'multi':
                 Kx = float(data.get('Kx', 0))
                 Ky = float(data.get('Ky', 0))
                 phi_expr = data.get('phi_expr', '0')
                 V = float(data.get('V', 0))
-                plots = model.generate_plots(z_h, T, t_B, I0, M0, t_exp, sine_type=sine_type, Kx=Kx, Ky=Ky, phi_expr=phi_expr, V=V)
+                plots = model.generate_plots(z_h, T, t_B, I0, M0, t_exp, 
+                                          sine_type=sine_type, Kx=Kx, Ky=Ky, phi_expr=phi_expr, V=V)
+            elif sine_type == '3d':
+                # 处理三维正弦波参数
+                Kx = float(data.get('Kx', 0))
+                Ky = float(data.get('Ky', 0))
+                Kz = float(data.get('Kz', 0))
+                phi_expr = data.get('phi_expr', '0')
+                
+                # 获取三维范围参数
+                x_min = float(data.get('x_min', 0))
+                x_max = float(data.get('x_max', 10))
+                y_min = float(data.get('y_min', 0))
+                y_max = float(data.get('y_max', 10))
+                z_min = float(data.get('z_min', 0))
+                z_max = float(data.get('z_max', 10))
+                
+                # 默认使用50个点
+                y_range = np.linspace(y_min, y_max, 50).tolist() if y_min < y_max else None
+                z_range = np.linspace(z_min, z_max, 50).tolist() if z_min < z_max else None
+                
+                plots = model.generate_plots(z_h, T, t_B, I0, M0, t_exp, 
+                                          sine_type=sine_type, Kx=Kx, Ky=Ky, Kz=Kz,
+                                          phi_expr=phi_expr, V=V, y_range=y_range, z_range=z_range)
             else:
                 plots = model.generate_plots(z_h, T, t_B, I0, M0, t_exp, sine_type=sine_type)
         elif model_type == 'car':
@@ -83,14 +143,74 @@ def calculate():
             amplification = float(data['amplification'])
             contrast = float(data['contrast'])
             sine_type = data.get('sine_type', '1d')
+            
             if sine_type == 'multi':
                 Kx = float(data.get('Kx', 0))
                 Ky = float(data.get('Ky', 0))
                 phi_expr = data.get('phi_expr', '0')
-                plots = model.generate_plots(I_avg, V, None, t_exp, acid_gen_efficiency, diffusion_length, reaction_rate, amplification, contrast, sine_type=sine_type, Kx=Kx, Ky=Ky, phi_expr=phi_expr)
+                # 为CAR模型添加y_range参数处理
+                y_min = float(data.get('y_min', 0))
+                y_max = float(data.get('y_max', 10))
+                y_points = int(data.get('y_points', 100))
+                
+                if y_min >= y_max:
+                    return jsonify(format_response(False, message_zh="Y轴范围最小值必须小于最大值", message_en="Y-axis range min must be less than max")), 400
+                if y_points <= 1:
+                    return jsonify(format_response(False, message_zh="Y轴点数必须大于1才能进行二维计算", message_en="Number of Y-axis points must be greater than 1 for 2D calculation")), 400
+                
+                y_range = np.linspace(y_min, y_max, y_points).tolist()
+                plot_data = model.generate_plots(I_avg, V, None, t_exp, acid_gen_efficiency, 
+                                         diffusion_length, reaction_rate, amplification, contrast, 
+                                         sine_type=sine_type, Kx=Kx, Ky=Ky, phi_expr=phi_expr, y_range=y_range)
+            elif sine_type == '3d':
+                # 处理三维正弦波参数
+                Kx = float(data.get('Kx', 0))
+                Ky = float(data.get('Ky', 0))
+                Kz = float(data.get('Kz', 0))
+                phi_expr = data.get('phi_expr', '0')
+                
+                # 获取三维范围参数
+                x_min = float(data.get('x_min', 0))
+                x_max = float(data.get('x_max', 10))
+                y_min = float(data.get('y_min', 0))
+                y_max = float(data.get('y_max', 10))
+                z_min = float(data.get('z_min', 0))
+                z_max = float(data.get('z_max', 10))
+                
+                # 打印详细参数用于调试
+                print(f"计算3D薄胶模型，参数：Kx={Kx}, Ky={Ky}, Kz={Kz}, phi_expr={phi_expr}")
+                print(f"范围参数：x_min={x_min}, x_max={x_max}, y_min={y_min}, y_max={y_max}, z_min={z_min}, z_max={z_max}")
+                
+                y_range = np.linspace(y_min, y_max, 50).tolist() if y_min < y_max else None
+                z_range = np.linspace(z_min, z_max, 50).tolist() if z_min < z_max else None
+                
+                # 打印生成的范围信息
+                print(f"生成的范围：y_range长度={len(y_range) if y_range else 0}, z_range长度={len(z_range) if z_range else 0}")
+                
+                try:
+                    plots = model.generate_plots(I_avg, V, None, t_exp, acid_gen_efficiency, 
+                                               diffusion_length, reaction_rate, amplification, contrast,
+                                               sine_type=sine_type, Kx=Kx, Ky=Ky, Kz=Kz, phi_expr=phi_expr,
+                                               y_range=y_range, z_range=z_range)
+                    # 打印返回数据的结构
+                    print(f"返回数据字段：{list(plots.keys())}")
+                    if 'exposure_dose' in plots:
+                        if isinstance(plots['exposure_dose'], list):
+                            print(f"exposure_dose是列表，长度={len(plots['exposure_dose'])}")
+                            if len(plots['exposure_dose']) > 0 and isinstance(plots['exposure_dose'][0], list):
+                                print(f"exposure_dose是二维列表，形状=[{len(plots['exposure_dose'])}, {len(plots['exposure_dose'][0]) if len(plots['exposure_dose']) > 0 else 0}]")
+                            else:
+                                print(f"exposure_dose是一维列表")
+                except Exception as e:
+                    print(f"生成3D数据时出错：{str(e)}")
+                    # 记录错误堆栈以便调试
+                    traceback.print_exc()
+                    raise
             else:
                 K = float(data['K'])
-                plots = model.generate_plots(I_avg, V, K, t_exp, acid_gen_efficiency, diffusion_length, reaction_rate, amplification, contrast, sine_type=sine_type)
+                plots = model.generate_plots(I_avg, V, K, t_exp, acid_gen_efficiency, 
+                                         diffusion_length, reaction_rate, amplification, contrast, 
+                                         sine_type=sine_type)
         else:
             return jsonify(format_response(False, message="未知模型类型")), 400
         return jsonify(format_response(True, data=plots)), 200
@@ -108,7 +228,7 @@ def calculate():
 def calculate_data():
     """
     计算模型并返回原始数据（用于交互式图表）
-    新增参数: model_type
+    新增参数: model_type, sine_type (支持'1d', 'multi', '3d')
     """
     try:
         data = request.get_json()
@@ -116,6 +236,8 @@ def calculate_data():
         model_type = data.get('model_type', 'dill')
         model = get_model_by_name(model_type)
         
+        plot_data = None # Initialize plot_data
+
         # 根据模型类型验证参数
         if model_type == 'dill':
             is_valid, message = validate_input(data)
@@ -127,57 +249,133 @@ def calculate_data():
             t_exp = float(data['t_exp'])
             C = float(data['C'])
             sine_type = data.get('sine_type', '1d')
+            
             if sine_type == 'multi':
                 Kx = float(data.get('Kx', 0))
                 Ky = float(data.get('Ky', 0))
                 phi_expr = data.get('phi_expr', '0')
-                plot_data = model.generate_data(I_avg, V, None, t_exp, C, sine_type=sine_type, Kx=Kx, Ky=Ky, phi_expr=phi_expr)
-            else:
+                y_min = float(data.get('y_min', 0))
+                y_max = float(data.get('y_max', 10))
+                y_points = int(data.get('y_points', 100))
+                
+                if y_min >= y_max:
+                    return jsonify(format_response(False, message_zh="Y轴范围最小值必须小于最大值", message_en="Y-axis range min must be less than max")), 400
+                if y_points <= 1:
+                    return jsonify(format_response(False, message_zh="Y轴点数必须大于1才能进行二维计算", message_en="Number of Y-axis points must be greater than 1 for 2D calculation")), 400
+                
+                y_range = np.linspace(y_min, y_max, y_points).tolist()
+                plot_data = model.generate_data(I_avg, V, None, t_exp, C, sine_type=sine_type, 
+                                             Kx=Kx, Ky=Ky, phi_expr=phi_expr, y_range=y_range)
+            elif sine_type == '3d':
+                Kx = float(data.get('Kx', 0))
+                Ky = float(data.get('Ky', 0))
+                Kz = float(data.get('Kz', 0))
+                phi_expr = data.get('phi_expr', '0')
+                x_min = float(data.get('x_min', 0))
+                x_max = float(data.get('x_max', 10))
+                y_min = float(data.get('y_min', 0))
+                y_max = float(data.get('y_max', 10))
+                z_min = float(data.get('z_min', 0))
+                z_max = float(data.get('z_max', 10))
+                
+                # 打印详细参数用于调试
+                print(f"计算3D薄胶模型，参数：Kx={Kx}, Ky={Ky}, Kz={Kz}, phi_expr={phi_expr}")
+                print(f"范围参数：x_min={x_min}, x_max={x_max}, y_min={y_min}, y_max={y_max}, z_min={z_min}, z_max={z_max}")
+                
+                y_range = np.linspace(y_min, y_max, 50).tolist() if y_min < y_max else None
+                z_range = np.linspace(z_min, z_max, 50).tolist() if z_min < z_max else None
+                
+                # 打印生成的范围信息
+                print(f"生成的范围：y_range长度={len(y_range) if y_range else 0}, z_range长度={len(z_range) if z_range else 0}")
+                
+                try:
+                    plot_data = model.generate_data(I_avg, V, None, t_exp, C, sine_type=sine_type,
+                                                 Kx=Kx, Ky=Ky, Kz=Kz, phi_expr=phi_expr,
+                                                 y_range=y_range, z_range=z_range)
+                    # 打印返回数据的结构
+                    print(f"返回数据字段：{list(plot_data.keys())}")
+                    if 'exposure_dose' in plot_data:
+                        if isinstance(plot_data['exposure_dose'], list):
+                            print(f"exposure_dose是列表，长度={len(plot_data['exposure_dose'])}")
+                            if len(plot_data['exposure_dose']) > 0 and isinstance(plot_data['exposure_dose'][0], list):
+                                print(f"exposure_dose是二维列表，形状=[{len(plot_data['exposure_dose'])}, {len(plot_data['exposure_dose'][0]) if len(plot_data['exposure_dose']) > 0 else 0}]")
+                            else:
+                                print(f"exposure_dose是一维列表")
+                except Exception as e:
+                    print(f"生成3D数据时出错：{str(e)}")
+                    # 记录错误堆栈以便调试
+                    traceback.print_exc()
+                    raise
+            else: # 1D Dill
                 K = float(data['K'])
                 plot_data = model.generate_data(I_avg, V, K, t_exp, C, sine_type=sine_type)
+        
         elif model_type == 'enhanced_dill':
             is_valid, message = validate_enhanced_input(data)
-            if not is_valid:
-                print(f"参数校验失败: {message}, 参数: {data}")
-                return jsonify(format_response(False, message=message)), 400
-            z_h = float(data['z_h'])
-            T = float(data['T'])
-            t_B = float(data['t_B'])
-            I0 = float(data.get('I0', 1.0))
-            M0 = float(data.get('M0', 1.0))
-            t_exp = float(data['t_exp'])
+            if not is_valid: return jsonify(format_response(False, message=message)), 400
+            z_h, T, t_B, I0, M0, t_exp_enh = float(data['z_h']), float(data['T']), float(data['t_B']), float(data.get('I0', 1.0)), float(data.get('M0', 1.0)), float(data['t_exp'])
             sine_type = data.get('sine_type', '1d')
             if sine_type == 'multi':
-                Kx = float(data.get('Kx', 0))
-                Ky = float(data.get('Ky', 0))
-                phi_expr = data.get('phi_expr', '0')
-                plot_data = model.generate_data(z_h, T, t_B, I0, M0, t_exp, sine_type=sine_type, Kx=Kx, Ky=Ky, phi_expr=phi_expr)
-            else:
-                plot_data = model.generate_data(z_h, T, t_B, I0, M0, t_exp, sine_type=sine_type)
+                Kx, Ky, phi_expr = float(data.get('Kx',0)), float(data.get('Ky',0)), data.get('phi_expr','0')
+                # 新增：处理y_range参数用于生成2D数据
+                y_min = float(data.get('y_min', 0))
+                y_max = float(data.get('y_max', 10))
+                y_points = int(data.get('y_points', 100))
+                
+                if y_min >= y_max:
+                    return jsonify(format_response(False, message_zh="Y轴范围最小值必须小于最大值", message_en="Y-axis range min must be less than max")), 400
+                if y_points <= 1:
+                    return jsonify(format_response(False, message_zh="Y轴点数必须大于1才能进行二维计算", message_en="Number of Y-axis points must be greater than 1 for 2D calculation")), 400
+                
+                y_range = np.linspace(y_min, y_max, y_points).tolist()
+                plot_data = model.generate_data(z_h, T, t_B, I0, M0, t_exp_enh, sine_type=sine_type, Kx=Kx, Ky=Ky, phi_expr=phi_expr, y_range=y_range)
+            elif sine_type == '3d':
+                Kx, Ky, Kz, phi_expr = float(data.get('Kx',0)), float(data.get('Ky',0)), float(data.get('Kz',0)), data.get('phi_expr','0')
+                y_min = float(data.get('y_min', 0))
+                y_max = float(data.get('y_max', 10))
+                z_min = float(data.get('z_min', 0))
+                z_max = float(data.get('z_max', 10))
+                y_range = np.linspace(y_min, y_max, 50).tolist() if y_min < y_max else None
+                z_range = np.linspace(z_min, z_max, 50).tolist() if z_min < z_max else None
+                plot_data = model.generate_data(z_h, T, t_B, I0, M0, t_exp_enh, sine_type=sine_type, Kx=Kx, Ky=Ky, Kz=Kz, phi_expr=phi_expr, y_range=y_range, z_range=z_range)
+            else: # 1D Enhanced Dill
+                plot_data = model.generate_data(z_h, T, t_B, I0, M0, t_exp_enh, sine_type=sine_type)
+
         elif model_type == 'car':
             is_valid, message = validate_car_input(data)
-            if not is_valid:
-                print(f"参数校验失败: {message}, 参数: {data}")
-                return jsonify(format_response(False, message=message)), 400
-            I_avg = float(data['I_avg'])
-            V = float(data['V'])
-            t_exp = float(data['t_exp'])
-            acid_gen_efficiency = float(data['acid_gen_efficiency'])
-            diffusion_length = float(data['diffusion_length'])
-            reaction_rate = float(data['reaction_rate'])
-            amplification = float(data['amplification'])
-            contrast = float(data['contrast'])
+            if not is_valid: return jsonify(format_response(False, message=message)), 400
+            I_avg, V_car, t_exp_car = float(data['I_avg']), float(data['V']), float(data['t_exp'])
+            acid_gen_eff, diff_len, react_rate, amp, contr = float(data['acid_gen_efficiency']), float(data['diffusion_length']), float(data['reaction_rate']), float(data['amplification']), float(data['contrast'])
             sine_type = data.get('sine_type', '1d')
             if sine_type == 'multi':
-                Kx = float(data.get('Kx', 0))
-                Ky = float(data.get('Ky', 0))
-                phi_expr = data.get('phi_expr', '0')
-                plot_data = model.generate_data(I_avg, V, None, t_exp, acid_gen_efficiency, diffusion_length, reaction_rate, amplification, contrast, sine_type=sine_type, Kx=Kx, Ky=Ky, phi_expr=phi_expr)
-            else:
-                K = float(data['K'])
-                plot_data = model.generate_data(I_avg, V, K, t_exp, acid_gen_efficiency, diffusion_length, reaction_rate, amplification, contrast, sine_type=sine_type)
+                Kx, Ky, phi_expr = float(data.get('Kx',0)), float(data.get('Ky',0)), data.get('phi_expr','0')
+                # 为CAR模型添加y_range参数处理
+                y_min = float(data.get('y_min', 0))
+                y_max = float(data.get('y_max', 10))
+                y_points = int(data.get('y_points', 100))
+                
+                if y_min >= y_max:
+                    return jsonify(format_response(False, message_zh="Y轴范围最小值必须小于最大值", message_en="Y-axis range min must be less than max")), 400
+                if y_points <= 1:
+                    return jsonify(format_response(False, message_zh="Y轴点数必须大于1才能进行二维计算", message_en="Number of Y-axis points must be greater than 1 for 2D calculation")), 400
+                
+                y_range = np.linspace(y_min, y_max, y_points).tolist()
+                plot_data = model.generate_data(I_avg, V_car, None, t_exp_car, acid_gen_eff, diff_len, react_rate, amp, contr, sine_type=sine_type, Kx=Kx, Ky=Ky, phi_expr=phi_expr, y_range=y_range)
+            elif sine_type == '3d':
+                Kx, Ky, Kz, phi_expr = float(data.get('Kx',0)), float(data.get('Ky',0)), float(data.get('Kz',0)), data.get('phi_expr','0')
+                y_min = float(data.get('y_min', 0))
+                y_max = float(data.get('y_max', 10))
+                z_min = float(data.get('z_min', 0))
+                z_max = float(data.get('z_max', 10))
+                y_range = np.linspace(y_min, y_max, 50).tolist() if y_min < y_max else None
+                z_range = np.linspace(z_min, z_max, 50).tolist() if z_min < z_max else None
+                plot_data = model.generate_data(I_avg, V_car, None, t_exp_car, acid_gen_eff, diff_len, react_rate, amp, contr, sine_type=sine_type, Kx=Kx, Ky=Ky, Kz=Kz, phi_expr=phi_expr, y_range=y_range, z_range=z_range)
+            else: # 1D CAR
+                K_car = float(data.get('K', 2.0))
+                plot_data = model.generate_data(I_avg, V_car, K_car, t_exp_car, acid_gen_eff, diff_len, react_rate, amp, contr, sine_type=sine_type)
         else:
             return jsonify(format_response(False, message="未知模型类型")), 400
+        
         return jsonify(format_response(True, data=plot_data)), 200
     except Exception as e:
         # 记录异常参数和错误信息到日志
@@ -269,17 +467,75 @@ def compare_data():
                 car_model = CARModel()
                 I_avg = float(params['I_avg'])
                 V = float(params['V'])
-                K = float(params.get('K', 2.0))
                 t_exp = float(params['t_exp'])
                 acid_gen_efficiency = float(params['acid_gen_efficiency'])
                 diffusion_length = float(params['diffusion_length'])
                 reaction_rate = float(params['reaction_rate'])
                 amplification = float(params['amplification'])
                 contrast = float(params['contrast'])
-                # 这里用真实曝光剂量
-                exposure_dose = car_model.calculate_exposure_dose(np.array(x), I_avg, V, K, t_exp).tolist()
-                car_data = car_model.generate_data(I_avg, V, K, t_exp, acid_gen_efficiency, diffusion_length, reaction_rate, amplification, contrast)
-                thickness = car_data['thickness']
+                sine_type = params.get('sine_type', '1d')
+                
+                # 处理不同的正弦波类型
+                if sine_type == 'multi':
+                    Kx = float(params.get('Kx', 0))
+                    Ky = float(params.get('Ky', 0))
+                    phi_expr = params.get('phi_expr', '0')
+                    car_data = car_model.generate_data(I_avg, V, None, t_exp, acid_gen_efficiency, 
+                                                   diffusion_length, reaction_rate, amplification, contrast,
+                                                   sine_type=sine_type, Kx=Kx, Ky=Ky, phi_expr=phi_expr)
+                    exposure_dose = car_model.calculate_exposure_dose(np.array(x), I_avg, V, None, t_exp, 
+                                                                  sine_type=sine_type, Kx=Kx, Ky=Ky, phi_expr=phi_expr).tolist()
+                elif sine_type == '3d':
+                    # 处理三维正弦波参数
+                    Kx = float(params.get('Kx', 0))
+                    Ky = float(params.get('Ky', 0))
+                    Kz = float(params.get('Kz', 0))
+                    phi_expr = params.get('phi_expr', '0')
+                    
+                    # 获取三维范围参数
+                    x_min = float(params.get('x_min', 0))
+                    x_max = float(params.get('x_max', 10))
+                    y_min = float(params.get('y_min', 0))
+                    y_max = float(params.get('y_max', 10))
+                    z_min = float(params.get('z_min', 0))
+                    z_max = float(params.get('z_max', 10))
+                    
+                    # 打印详细参数用于调试
+                    print(f"计算3D薄胶模型，参数：Kx={Kx}, Ky={Ky}, Kz={Kz}, phi_expr={phi_expr}")
+                    print(f"范围参数：x_min={x_min}, x_max={x_max}, y_min={y_min}, y_max={y_max}, z_min={z_min}, z_max={z_max}")
+                    
+                    y_range = np.linspace(y_min, y_max, 50).tolist() if y_min < y_max else None
+                    z_range = np.linspace(z_min, z_max, 50).tolist() if z_min < z_max else None
+                    
+                    # 打印生成的范围信息
+                    print(f"生成的范围：y_range长度={len(y_range) if y_range else 0}, z_range长度={len(z_range) if z_range else 0}")
+                    
+                    try:
+                        car_data = car_model.generate_data(I_avg, V, None, t_exp, acid_gen_efficiency, 
+                                                       diffusion_length, reaction_rate, amplification, contrast,
+                                                       sine_type=sine_type, Kx=Kx, Ky=Ky, Kz=Kz, phi_expr=phi_expr,
+                                                       y_range=y_range, z_range=z_range)
+                        # 打印返回数据的结构
+                        print(f"返回数据字段：{list(car_data.keys())}")
+                        if 'exposure_dose' in car_data:
+                            if isinstance(car_data['exposure_dose'], list):
+                                print(f"exposure_dose是列表，长度={len(car_data['exposure_dose'])}")
+                                if len(car_data['exposure_dose']) > 0 and isinstance(car_data['exposure_dose'][0], list):
+                                    print(f"exposure_dose是二维列表，形状=[{len(car_data['exposure_dose'])}, {len(car_data['exposure_dose'][0]) if len(car_data['exposure_dose']) > 0 else 0}]")
+                                else:
+                                    print(f"exposure_dose是一维列表")
+                    except Exception as e:
+                        print(f"生成3D数据时出错：{str(e)}")
+                        # 记录错误堆栈以便调试
+                        traceback.print_exc()
+                        raise
+                else:
+                    K = float(params.get('K', 2.0))
+                    car_data = car_model.generate_data(I_avg, V, K, t_exp, acid_gen_efficiency, 
+                                                   diffusion_length, reaction_rate, amplification, contrast, 
+                                                   sine_type=sine_type)
+                    exposure_dose = car_model.calculate_exposure_dose(np.array(x), I_avg, V, K, t_exp).tolist()
+                    thickness = car_data['thickness']
             elif any(k in params for k in ['z_h', 'I0', 'M0']):
                 from backend.models import EnhancedDillModel
                 enhanced_model = EnhancedDillModel()

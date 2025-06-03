@@ -3,10 +3,62 @@
  */
 
 // 文档加载完成后执行
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function() {
+    // 初始化波形类型标题国际化
+    initWaveTypeTitles();
+    
+    // 初始化波形类型选择器
+    initSineWaveTypeSelectors();
+    
     // 初始化应用
     initApp();
 });
+
+// 初始化波形类型标题的国际化支持
+function initWaveTypeTitles() {
+    // 获取当前语言
+    const currentLang = localStorage.getItem('lang') || 'zh-CN';
+    
+    // 设置所有参数组容器的标题
+    const allParamGroupContainers = document.querySelectorAll('.parameter-group-container');
+    allParamGroupContainers.forEach(container => {
+        if (container.dataset.i18nTitle && LANGS[currentLang][container.dataset.i18nTitle]) {
+            container.dataset.title = LANGS[currentLang][container.dataset.i18nTitle];
+        }
+    });
+    
+    // 设置波形类型容器的标题
+    const waveTypeContainers = document.querySelectorAll('.sine-wave-type-container');
+    waveTypeContainers.forEach(container => {
+        if (container.dataset.i18nTitle && LANGS[currentLang][container.dataset.i18nTitle]) {
+            container.dataset.title = LANGS[currentLang][container.dataset.i18nTitle];
+        }
+    });
+    
+    // 设置波形参数容器的标题
+    const waveParamsContainers = document.querySelectorAll('.sine-wave-params-container');
+    waveParamsContainers.forEach(container => {
+        if (container.dataset.i18nTitle && LANGS[currentLang][container.dataset.i18nTitle]) {
+            container.dataset.title = LANGS[currentLang][container.dataset.i18nTitle];
+        }
+    });
+    
+    // 设置预览按钮的样式
+    const previewButtons = document.querySelectorAll('[id$="-preview-btn"]');
+    previewButtons.forEach(button => {
+        if (!button.classList.contains('preview-button')) {
+            button.classList.add('preview-button');
+        }
+    });
+    
+    // 设置预览图表容器的样式
+    const previewPlots = document.querySelectorAll('[id$="-preview-plot"]');
+    previewPlots.forEach(plot => {
+        if (!plot.classList.contains('preview-plot')) {
+            plot.classList.add('preview-plot');
+        }
+    });
+}
 
 /**
  * 初始化应用
@@ -32,7 +84,17 @@ function initApp() {
         loading.classList.add('active');
         // 修复：只修改动画里的文字部分，不覆盖整个动画结构
         const loadingText = loading.querySelector('.loading-text');
-        if (loadingText) loadingText.textContent = LANGS[currentLang].loading;
+        if (loadingText) {
+            // 获取当前语言，使用更安全的方式
+            const currentLang = window.currentLang || localStorage.getItem('lang') || 'zh-CN';
+            // 安全地访问语言对象
+            const langObj = LANGS[currentLang] || LANGS['zh-CN'];
+            if (langObj && langObj.loading) {
+                loadingText.textContent = langObj.loading;
+            } else {
+                loadingText.textContent = '加载中...';
+            }
+        }
         // 隐藏错误消息
         errorMessage.classList.remove('visible');
         // 隐藏结果区域
@@ -92,12 +154,31 @@ function initApp() {
         clearAllCharts();
         const selectedModel = event.target.value;
         console.log('Selected model:', selectedModel);
-        // TODO: 根据 selectedModel 更新模型说明和可能需要的参数界面
-        // 例如，可以有一个函数 updateModelDescription(selectedModel)
-        // 目前只有一个DILL模型，所以暂时不需要复杂逻辑
-        if (selectedModel === 'dill') {
-            // 确保DILL模型相关的说明是可见的 (如果曾被隐藏)
-            // 如果有多个模型的说明块，这里需要做显隐切换
+        
+        // 隐藏所有模型说明
+        document.getElementById('dill-desc').style.display = 'none';
+        document.getElementById('enhanced-dill-desc').style.display = 'none';
+        document.getElementById('car-desc').style.display = 'none';
+        
+        // 隐藏所有模型参数区域
+        document.getElementById('dill-params').style.display = 'none';
+        document.getElementById('enhanced-dill-params').style.display = 'none';
+        document.getElementById('car-params').style.display = 'none';
+        
+        // 根据所选模型显示相应的说明和参数区域
+        switch(selectedModel) {
+            case 'dill':
+                document.getElementById('dill-desc').style.display = 'block';
+                document.getElementById('dill-params').style.display = 'block';
+                break;
+            case 'enhanced_dill':
+                document.getElementById('enhanced-dill-desc').style.display = 'block';
+                document.getElementById('enhanced-dill-params').style.display = 'block';
+                break;
+            case 'car':
+                document.getElementById('car-desc').style.display = 'block';
+                document.getElementById('car-params').style.display = 'block';
+                break;
         }
     });
 
@@ -132,14 +213,17 @@ function initApp() {
     if (dillToggleBtn && dillFullDetails) {
         // 默认收起
         dillFullDetails.classList.remove('details-visible');
+        dillToggleBtn.classList.remove('active');
         dillToggleBtn.innerHTML = '展开更多 <i class="fas fa-chevron-down"></i>';
         dillToggleBtn.addEventListener('click', function() {
             const isHidden = !dillFullDetails.classList.contains('details-visible');
             if (isHidden) {
                 dillFullDetails.classList.add('details-visible');
+                dillToggleBtn.classList.add('active');
                 dillToggleBtn.innerHTML = '收起 <i class="fas fa-chevron-up"></i>';
             } else {
                 dillFullDetails.classList.remove('details-visible');
+                dillToggleBtn.classList.remove('active');
                 dillToggleBtn.innerHTML = '展开更多 <i class="fas fa-chevron-down"></i>';
             }
         });
@@ -150,15 +234,40 @@ function initApp() {
     if (enhancedDillToggleBtn && enhancedDillFullDetails) {
         // 默认收起
         enhancedDillFullDetails.classList.remove('details-visible');
+        enhancedDillToggleBtn.classList.remove('active');
         enhancedDillToggleBtn.innerHTML = '展开更多 <i class="fas fa-chevron-down"></i>';
         enhancedDillToggleBtn.addEventListener('click', function() {
             const isHidden = !enhancedDillFullDetails.classList.contains('details-visible');
             if (isHidden) {
                 enhancedDillFullDetails.classList.add('details-visible');
+                enhancedDillToggleBtn.classList.add('active');
                 enhancedDillToggleBtn.innerHTML = '收起 <i class="fas fa-chevron-up"></i>';
             } else {
                 enhancedDillFullDetails.classList.remove('details-visible');
+                enhancedDillToggleBtn.classList.remove('active');
                 enhancedDillToggleBtn.innerHTML = '展开更多 <i class="fas fa-chevron-down"></i>';
+            }
+        });
+    }
+    
+    // 切换CAR模型详细说明的显示状态
+    const carToggleBtn = document.getElementById('car-toggle-details');
+    const carFullDetails = document.getElementById('car-full-details');
+    if (carToggleBtn && carFullDetails) {
+        // 默认收起
+        carFullDetails.classList.remove('details-visible');
+        carToggleBtn.classList.remove('active');
+        carToggleBtn.innerHTML = '展开更多 <i class="fas fa-chevron-down"></i>';
+        carToggleBtn.addEventListener('click', function() {
+            const isHidden = !carFullDetails.classList.contains('details-visible');
+            if (isHidden) {
+                carFullDetails.classList.add('details-visible');
+                carToggleBtn.classList.add('active');
+                carToggleBtn.innerHTML = '收起 <i class="fas fa-chevron-up"></i>';
+            } else {
+                carFullDetails.classList.remove('details-visible');
+                carToggleBtn.classList.remove('active');
+                carToggleBtn.innerHTML = '展开更多 <i class="fas fa-chevron-down"></i>';
             }
         });
     }
@@ -191,27 +300,32 @@ function initApp() {
     // 正弦波类型切换逻辑（Dill）
     const dillSineType = document.getElementById('dill-sine-type');
     const dillMultisineParams = document.getElementById('dill-multisine-params');
-    const dillK = document.getElementById('K')?.closest('.parameter-item');
-    const dillYRange = document.getElementById('y-range-container');
-    // 新增：关键DOM元素检查和调试输出
-    if (!dillSineType) console.error('找不到dill-sine-type');
-    if (!dillMultisineParams) console.error('找不到dill-multisine-params');
-    if (!dillK) console.error('找不到K参数区');
-    if (!dillYRange) console.error('找不到y-range-container');
+    const dill3DSineParams = document.getElementById('dill-3dsine-params');
+    const dillK = document.getElementById('K') ? document.getElementById('K').closest('.parameter-item') : null;
+    
+    // 改用正确的参数项选择器
+    const dillYRange = dillMultisineParams.querySelector('.parameter-item:last-child');
+    
     function updateDillYRangeDisplay() {
         if (dillSineType.value === 'multi') {
-            dillYRange.style.display = '';
+            if(dillYRange) dillYRange.style.display = '';
         } else {
-            dillYRange.style.display = 'none';
+            if(dillYRange) dillYRange.style.display = 'none';
         }
     }
     dillSineType.addEventListener('change', function() {
         console.log('正弦波类型切换:', this.value);
         if (this.value === 'multi') {
             dillMultisineParams.style.display = 'block';
+            dill3DSineParams.style.display = 'none';
+            if (dillK) dillK.style.display = 'none';
+        } else if (this.value === '3d') {
+            dillMultisineParams.style.display = 'none';
+            dill3DSineParams.style.display = 'block';
             if (dillK) dillK.style.display = 'none';
         } else {
             dillMultisineParams.style.display = 'none';
+            dill3DSineParams.style.display = 'none';
             if (dillK) dillK.style.display = '';
         }
         updateDillYRangeDisplay();
@@ -219,30 +333,46 @@ function initApp() {
     // 新增：页面加载时主动触发一次change，确保初始状态正确
     dillSineType.dispatchEvent(new Event('change'));
     updateDillYRangeDisplay();
+    
     // 正弦波类型切换逻辑（增强Dill）
     const enhancedDillSineType = document.getElementById('enhanced-dill-sine-type');
     const enhancedDillMultisineParams = document.getElementById('enhanced-dill-multisine-params');
+    const enhancedDill3DSineParams = document.getElementById('enhanced-dill-3dsine-params');
     const enhancedK = document.getElementById('enhanced_K');
     const enhancedKItem = document.getElementById('enhanced-dill-params')?.querySelector('#K')?.closest('.parameter-item');
     enhancedDillSineType.addEventListener('change', function() {
         if (this.value === 'multi') {
             enhancedDillMultisineParams.style.display = 'block';
+            enhancedDill3DSineParams.style.display = 'none';
+            if (enhancedKItem) enhancedKItem.style.display = 'none';
+        } else if (this.value === '3d') {
+            enhancedDillMultisineParams.style.display = 'none';
+            enhancedDill3DSineParams.style.display = 'block';
             if (enhancedKItem) enhancedKItem.style.display = 'none';
         } else {
             enhancedDillMultisineParams.style.display = 'none';
+            enhancedDill3DSineParams.style.display = 'none';
             if (enhancedKItem) enhancedKItem.style.display = '';
         }
     });
+    
     // 正弦波类型切换逻辑（CAR）
     const carSineType = document.getElementById('car-sine-type');
     const carMultisineParams = document.getElementById('car-multisine-params');
+    const car3DSineParams = document.getElementById('car-3dsine-params');
     const carK = document.getElementById('car_K').closest('.parameter-item');
     carSineType.addEventListener('change', function() {
         if (this.value === 'multi') {
             carMultisineParams.style.display = 'block';
+            car3DSineParams.style.display = 'none';
+            if (carK) carK.style.display = 'none';
+        } else if (this.value === '3d') {
+            carMultisineParams.style.display = 'none';
+            car3DSineParams.style.display = 'block';
             if (carK) carK.style.display = 'none';
         } else {
             carMultisineParams.style.display = 'none';
+            car3DSineParams.style.display = 'none';
             if (carK) carK.style.display = '';
         }
     });
@@ -360,6 +490,20 @@ function getParameterValues() {
             params.y_min = parseFloat(document.getElementById('y_min').value);
             params.y_max = parseFloat(document.getElementById('y_max').value);
             params.y_points = parseInt(document.getElementById('y_points').value);
+        } else if (sineType === '3d') {
+            params.Kx = parseFloat(document.getElementById('Kx_3d').value);
+            params.Ky = parseFloat(document.getElementById('Ky_3d').value);
+            params.Kz = parseFloat(document.getElementById('Kz_3d').value);
+            params.phi_expr = document.getElementById('phi_expr_3d').value;
+            // 为3D模式添加K参数
+            params.K = params.Kx;
+            // 三维范围参数
+            params.x_min = parseFloat(document.getElementById('x_min_3d').value);
+            params.x_max = parseFloat(document.getElementById('x_max_3d').value);
+            params.y_min = parseFloat(document.getElementById('y_min_3d').value);
+            params.y_max = parseFloat(document.getElementById('y_max_3d').value);
+            params.z_min = parseFloat(document.getElementById('z_min_3d').value);
+            params.z_max = parseFloat(document.getElementById('z_max_3d').value);
         } else {
             params.K = parseFloat(document.getElementById('K').value);
         }
@@ -378,6 +522,24 @@ function getParameterValues() {
             params.Kx = parseFloat(document.getElementById('enhanced_Kx').value);
             params.Ky = parseFloat(document.getElementById('enhanced_Ky').value);
             params.phi_expr = document.getElementById('enhanced_phi_expr').value;
+            // 添加Y轴范围参数
+            params.y_min = parseFloat(document.getElementById('enhanced_y_min').value);
+            params.y_max = parseFloat(document.getElementById('enhanced_y_max').value);
+            params.y_points = parseInt(document.getElementById('enhanced_y_points').value);
+        } else if (sineType === '3d') {
+            params.Kx = parseFloat(document.getElementById('enhanced_Kx_3d').value);
+            params.Ky = parseFloat(document.getElementById('enhanced_Ky_3d').value);
+            params.Kz = parseFloat(document.getElementById('enhanced_Kz_3d').value);
+            params.phi_expr = document.getElementById('enhanced_phi_expr_3d').value;
+            // 为3D模式添加K参数
+            params.K = params.Kx;
+            // 三维范围参数
+            params.x_min = parseFloat(document.getElementById('enhanced_x_min_3d').value);
+            params.x_max = parseFloat(document.getElementById('enhanced_x_max_3d').value);
+            params.y_min = parseFloat(document.getElementById('enhanced_y_min_3d').value);
+            params.y_max = parseFloat(document.getElementById('enhanced_y_max_3d').value);
+            params.z_min = parseFloat(document.getElementById('enhanced_z_min_3d').value);
+            params.z_max = parseFloat(document.getElementById('enhanced_z_max_3d').value);
         }
     } else if (modelType === 'car') {
         const sineType = document.getElementById('car-sine-type').value;
@@ -394,6 +556,24 @@ function getParameterValues() {
             params.Kx = parseFloat(document.getElementById('car_Kx').value);
             params.Ky = parseFloat(document.getElementById('car_Ky').value);
             params.phi_expr = document.getElementById('car_phi_expr').value;
+            // 使用CAR模型自己的Y轴范围参数
+            params.y_min = parseFloat(document.getElementById('car_y_min').value);
+            params.y_max = parseFloat(document.getElementById('car_y_max').value);
+            params.y_points = parseInt(document.getElementById('car_y_points').value);
+        } else if (sineType === '3d') {
+            params.Kx = parseFloat(document.getElementById('car_Kx_3d').value);
+            params.Ky = parseFloat(document.getElementById('car_Ky_3d').value);
+            params.Kz = parseFloat(document.getElementById('car_Kz_3d').value);
+            params.phi_expr = document.getElementById('car_phi_expr_3d').value;
+            // 为3D模式添加K参数
+            params.K = params.Kx;
+            // 三维范围参数
+            params.x_min = parseFloat(document.getElementById('car_x_min_3d').value);
+            params.x_max = parseFloat(document.getElementById('car_x_max_3d').value);
+            params.y_min = parseFloat(document.getElementById('car_y_min_3d').value);
+            params.y_max = parseFloat(document.getElementById('car_y_max_3d').value);
+            params.z_min = parseFloat(document.getElementById('car_z_min_3d').value);
+            params.z_max = parseFloat(document.getElementById('car_z_max_3d').value);
         } else {
             params.K = parseFloat(document.getElementById('car_K').value);
         }
@@ -493,165 +673,518 @@ function displayResults(data) {
 function displayInteractiveResults(data) {
     const modelSelect = document.getElementById('model-select');
     const currentModelType = modelSelect ? modelSelect.value : 'dill';
-    // 调试输出
-    if (currentModelType === 'car') {
-        console.log('CAR主图数据', data.x, data.initial_acid, data.thickness);
-    }
-    // 隐藏静态图像
+
+    // 调试输出，检查数据结构
+    console.log('Received data for display:', data, 'Model type:', currentModelType);
+
     const staticExposurePlot = document.getElementById('exposure-plot');
     const staticThicknessPlot = document.getElementById('thickness-plot');
     if (staticExposurePlot) staticExposurePlot.style.display = 'none';
     if (staticThicknessPlot) staticThicknessPlot.style.display = 'none';
+
     const exposurePlotContainer = document.getElementById('exposure-plot-container');
     const thicknessPlotContainer = document.getElementById('thickness-plot-container');
-    const heatmapPlotItem = document.getElementById('heatmap-plot-item');
-    const heatmapPlotContainer = document.getElementById('heatmap-plot-container');
-    if (!exposurePlotContainer || !thicknessPlotContainer || !heatmapPlotItem || !heatmapPlotContainer) {
+    
+    if (!exposurePlotContainer || !thicknessPlotContainer) {
         console.error("One or more plot containers are missing from the DOM.");
         return;
     }
+
+    // 清空容器，确保旧图被移除
+    exposurePlotContainer.innerHTML = '';
+    thicknessPlotContainer.innerHTML = '';
     exposurePlotContainer.style.display = 'block';
     thicknessPlotContainer.style.display = 'block';
-    if (currentModelType === 'enhanced_dill') {
+
+    // 检查是否有3D数据
+    const has3DData = data.is_3d || (data.intensity_3d && (data.x_coords && data.y_coords && data.z_coords));
+
+    // 检查是否有二维数据
+    const has2DData = data.is_2d || (data.z_exposure_dose && data.z_thickness) || 
+                     (data.x_coords && data.y_coords && (data.z_exposure_dose || data.z_thickness));
+
+    // 新增：CAR模型特殊处理 - 始终使用2D热图
+    if (currentModelType === 'car') {
+        console.log('CAR模型特殊处理：强制2D热图显示');
+        
+        if (has3DData) {
+            // 3D数据使用3D可视化
+            console.log('CAR模型使用3D可视化');
+            createExposure3DPlot(exposurePlotContainer, data);
+            createThickness3DPlot(thicknessPlotContainer, data);
+        } else if (has2DData) {
+            // 已有2D数据格式，直接使用热图
+            console.log('CAR模型渲染2D热图 - 已有2D数据格式');
+            createExposureHeatmap(exposurePlotContainer, data);
+            createThicknessHeatmap(thicknessPlotContainer, data);
+        } else {
+            // 1D数据需要转换为2D格式再渲染热图
+            console.log('CAR模型转换1D到2D格式渲染热图');
+            
+            // 如果是1D数据，创建一个简单的2D网格
+            const convert1Dto2D = (xData, yData) => {
+                if (!Array.isArray(xData) || !Array.isArray(yData) || xData.length === 0 || yData.length === 0) {
+                    console.error('无效的数据格式，无法转换为2D');
+                    return null;
+                }
+                
+                // 使用现有x轴数据作为x_coords
+                const x_coords = xData;
+                
+                // 创建y_coords（只有一行，基本上是1D转2D）
+                const y_coords = [0, 1]; // 两行足够显示为热图
+                
+                // 创建z值矩阵
+                const z_values = [yData, yData]; // 复制相同的数据到两行
+                
+                return {
+                    x_coords: x_coords,
+                    y_coords: y_coords,
+                    z_values: z_values
+                };
+            };
+            
+            // 转换曝光剂量数据并渲染热图
+            if (data.x && data.exposure_dose) {
+                const exposureData2D = convert1Dto2D(data.x, data.exposure_dose);
+                if (exposureData2D) {
+                    const exposureData = {
+                        x_coords: exposureData2D.x_coords,
+                        y_coords: exposureData2D.y_coords,
+                        z_exposure_dose: exposureData2D.z_values
+                    };
+                    createExposureHeatmap(exposurePlotContainer, exposureData);
+                } else {
+                    // 回退到1D线图
+                    createExposurePlot(exposurePlotContainer, data);
+                }
+            } else {
+                console.error('CAR模型缺少曝光剂量数据');
+                exposurePlotContainer.innerHTML = '<div style="color:red;padding:20px;">缺少曝光剂量数据</div>';
+            }
+            
+            // 转换厚度数据并渲染热图
+            if (data.x && data.thickness) {
+                const thicknessData2D = convert1Dto2D(data.x, data.thickness);
+                if (thicknessData2D) {
+                    const thicknessData = {
+                        x_coords: thicknessData2D.x_coords,
+                        y_coords: thicknessData2D.y_coords,
+                        z_thickness: thicknessData2D.z_values
+                    };
+                    createThicknessHeatmap(thicknessPlotContainer, thicknessData);
+                } else {
+                    // 回退到1D线图
+                    createThicknessPlot(thicknessPlotContainer, data);
+                }
+            } else {
+                console.error('CAR模型缺少厚度数据');
+                thicknessPlotContainer.innerHTML = '<div style="color:red;padding:20px;">缺少厚度数据</div>';
+            }
+        }
+    } else if (has3DData) {
+        // 处理3D数据可视化
+        console.log('Displaying 3D visualization for model:', currentModelType);
+        createExposure3DPlot(exposurePlotContainer, data);
+        createThickness3DPlot(thicknessPlotContainer, data);
+    } else if (has2DData) {
+        // 统一处理所有模型的二维数据 - 使用热图
+        console.log('Displaying 2D Heatmap for model:', currentModelType);
+        createExposureHeatmap(exposurePlotContainer, data);
+        createThicknessHeatmap(thicknessPlotContainer, data);
+    } else if (currentModelType === 'enhanced_dill') {
+        // enhanced_dill 总是1D (z vs I, z vs M)
         createExposurePlot(exposurePlotContainer, { x: data.z, exposure_dose: data.I });
         createThicknessPlot(thicknessPlotContainer, { x: data.z, thickness: data.M });
-    } else if (currentModelType === 'car') {
-        // CAR模型主图适配
-        createExposurePlot(exposurePlotContainer, { x: data.x, exposure_dose: data.initial_acid });
-        createThicknessPlot(thicknessPlotContainer, { x: data.x, thickness: data.thickness });
     } else {
+        // 默认1D线图，适用于Dill的1D情况
         createExposurePlot(exposurePlotContainer, data);
         createThicknessPlot(thicknessPlotContainer, data);
     }
+
     animateResults();
-    // 阈值滑块初始化
     setTimeout(() => {
-        initSingleThresholdControl(document.querySelector('#exposure-thresholds-container .threshold-control'), 0, 'exposure', data);
-        initSingleThresholdControl(document.querySelector('#thickness-thresholds-container .threshold-control'), 0, 'thickness', data);
+        // 对于2D/3D热图不显示阈值控制
+        if (!has2DData && !has3DData && currentModelType !== 'car') { // 修改为CAR模型也不显示阈值控制
+            initSingleThresholdControl(document.querySelector('#exposure-thresholds-container .threshold-control'), 0, 'exposure', data);
+            initSingleThresholdControl(document.querySelector('#thickness-thresholds-container .threshold-control'), 0, 'thickness', data);
+        } else {
+            // 隐藏2D/3D热图的阈值控制区域
+            const exposureThresholds = document.querySelector('#exposure-thresholds-container');
+            const thicknessThresholds = document.querySelector('#thickness-thresholds-container');
+            if (exposureThresholds) exposureThresholds.style.display = 'none';
+            if (thicknessThresholds) thicknessThresholds.style.display = 'none';
+        }
     }, 100);
 }
 
-/**
- * 创建曝光剂量图表
- * 
- * @param {HTMLElement} container 容器元素
- * @param {Object} data 数据
- */
+// 修改createExposure3DPlot函数，添加更多调试信息
+function createExposure3DPlot(container, data) {
+    // 添加详细调试信息
+    console.log('DEBUG - 3D Exposure Data:', {
+        has_x_coords: !!data.x_coords,
+        has_y_coords: !!data.y_coords,
+        has_exposure_dose: !!data.exposure_dose,
+        has_z_exposure_dose: !!data.z_exposure_dose,
+        x_coords_type: data.x_coords && typeof data.x_coords,
+        x_coords_length: data.x_coords && data.x_coords.length,
+        y_coords_length: data.y_coords && data.y_coords.length,
+        exposure_dose_type: data.exposure_dose && typeof data.exposure_dose,
+        exposure_dose_length: data.exposure_dose && data.exposure_dose.length,
+        exposure_dose_sample: data.exposure_dose && data.exposure_dose.slice(0, 2),
+        full_data_keys: Object.keys(data)
+    });
+
+    // 首先检查数据是否存在 - 尝试不同的可能字段名
+    let xCoords = data.x_coords;
+    let yCoords = data.y_coords;
+    let zData = data.exposure_dose || data.z_exposure_dose;
+
+    if (!xCoords || !yCoords || !zData ||
+        !Array.isArray(xCoords) || !Array.isArray(yCoords) || !Array.isArray(zData) ||
+        xCoords.length === 0 || yCoords.length === 0 || zData.length === 0) {
+        container.innerHTML = `<div style="color:red;padding:20px;">${LANGS[currentLang].error_no_exposure_data || '无有效3D曝光剂量数据，无法绘图。'}</div>`;
+        return;
+    }
+
+    // 检查是否需要转换数据格式
+    let plotDataZ = zData;
+    
+    // 检查z数据结构
+    console.log('DEBUG - 3D Exposure plotDataZ:', {
+        type: typeof plotDataZ,
+        isArray: Array.isArray(plotDataZ),
+        length: plotDataZ.length,
+        first_item_type: plotDataZ.length > 0 ? typeof plotDataZ[0] : 'unknown', 
+        first_item_isArray: plotDataZ.length > 0 ? Array.isArray(plotDataZ[0]) : false,
+        first_item_length: plotDataZ.length > 0 && Array.isArray(plotDataZ[0]) ? plotDataZ[0].length : 0
+    });
+
+    // 如果z数据不是二维数组，但第一个元素是数组，说明可能已经是需要的格式
+    if (Array.isArray(plotDataZ[0])) {
+        console.log('Z数据已经是二维数组，直接使用');
+    } 
+    // 如果z数据是一维数组，但长度等于x*y，可能需要重塑成二维数组
+    else if (xCoords.length * yCoords.length === plotDataZ.length) {
+        console.log('Z数据是扁平数组，尝试重塑成二维数组');
+        const newZ = [];
+        for (let i = 0; i < yCoords.length; i++) {
+            const row = [];
+            for (let j = 0; j < xCoords.length; j++) {
+                row.push(plotDataZ[i * xCoords.length + j]);
+            }
+            newZ.push(row);
+        }
+        plotDataZ = newZ;
+    } else {
+        console.error('Z数据格式无法识别，尝试直接使用');
+    }
+
+    // 创建3D表面图
+    const trace = {
+        type: 'surface',
+        x: xCoords,
+        y: yCoords,
+        z: plotDataZ,
+        colorscale: 'Viridis',
+        colorbar: { title: LANGS[currentLang].exposure_dose_trace_name || '曝光剂量' },
+        hovertemplate: `X坐标: %{x:.2f} μm<br>Y坐标: %{y:.2f} μm<br>Z坐标: %{z:.2f}<br>${LANGS[currentLang].hover_exposure_value || '曝光剂量值'}: %{z:.2f}<extra></extra>`
+    };
+
+    const layout = {
+        title: LANGS[currentLang].exposure_dist + ' (3D)',
+        scene: {
+            xaxis: { title: 'X (μm)' },
+            yaxis: { title: 'Y (μm)' },
+            zaxis: { title: LANGS[currentLang].exposure_dose_unit || '曝光剂量' }
+        },
+        margin: { l: 20, r: 20, t: 40, b: 20 }
+    };
+
+    try {
+        Plotly.newPlot(container, [trace], layout, { responsive: true });
+        console.log('3D Exposure plot created successfully');
+        
+        // 添加点击事件处理
+        container.on('plotly_click', function(eventData) {
+            if(eventData.points && eventData.points.length > 0) {
+                const point = eventData.points[0];
+                // 对于3D表面图，点击位置包含x、y、z值
+                showSinglePointDetailsPopup({ 
+                    x: point.x, 
+                    y: point.y, 
+                    z: point.z 
+                }, 'exposure', container, eventData);
+            }
+        });
+    } catch (error) {
+        console.error('Error creating 3D Exposure plot:', error);
+        container.innerHTML = `<div style="color:red;padding:20px;">创建3D图表失败: ${error.message}</div>`;
+    }
+}
+
+// 同样修改createThickness3DPlot函数
+function createThickness3DPlot(container, data) {
+    // 添加详细调试信息
+    console.log('DEBUG - 3D Thickness Data:', {
+        has_x_coords: !!data.x_coords,
+        has_y_coords: !!data.y_coords,
+        has_thickness: !!data.thickness,
+        has_z_thickness: !!data.z_thickness,
+        x_coords_type: data.x_coords && typeof data.x_coords,
+        x_coords_length: data.x_coords && data.x_coords.length,
+        y_coords_length: data.y_coords && data.y_coords.length,
+        thickness_type: data.thickness && typeof data.thickness,
+        thickness_length: data.thickness && data.thickness.length,
+        thickness_sample: data.thickness && data.thickness.slice(0, 2),
+        full_data_keys: Object.keys(data)
+    });
+
+    // 首先检查数据是否存在 - 尝试不同的可能字段名
+    let xCoords = data.x_coords;
+    let yCoords = data.y_coords;
+    let zData = data.thickness || data.z_thickness;
+
+    if (!xCoords || !yCoords || !zData ||
+        !Array.isArray(xCoords) || !Array.isArray(yCoords) || !Array.isArray(zData) ||
+        xCoords.length === 0 || yCoords.length === 0 || zData.length === 0) {
+        container.innerHTML = `<div style="color:red;padding:20px;">${LANGS[currentLang].error_no_thickness_data || '无有效3D厚度数据，无法绘图。'}</div>`;
+        return;
+    }
+
+    // 检查是否需要转换数据格式
+    let plotDataZ = zData;
+    
+    // 检查z数据结构
+    console.log('DEBUG - 3D Thickness plotDataZ:', {
+        type: typeof plotDataZ,
+        isArray: Array.isArray(plotDataZ),
+        length: plotDataZ.length,
+        first_item_type: plotDataZ.length > 0 ? typeof plotDataZ[0] : 'unknown',
+        first_item_isArray: plotDataZ.length > 0 ? Array.isArray(plotDataZ[0]) : false,
+        first_item_length: plotDataZ.length > 0 && Array.isArray(plotDataZ[0]) ? plotDataZ[0].length : 0
+    });
+
+    // 如果z数据不是二维数组，但第一个元素是数组，说明可能已经是需要的格式
+    if (Array.isArray(plotDataZ[0])) {
+        console.log('Z数据已经是二维数组，直接使用');
+    } 
+    // 如果z数据是一维数组，但长度等于x*y，可能需要重塑成二维数组
+    else if (xCoords.length * yCoords.length === plotDataZ.length) {
+        console.log('Z数据是扁平数组，尝试重塑成二维数组');
+        const newZ = [];
+        for (let i = 0; i < yCoords.length; i++) {
+            const row = [];
+            for (let j = 0; j < xCoords.length; j++) {
+                row.push(plotDataZ[i * xCoords.length + j]);
+            }
+            newZ.push(row);
+        }
+        plotDataZ = newZ;
+    } else {
+        console.error('Z数据格式无法识别，尝试直接使用');
+    }
+
+    // 创建3D表面图
+    const trace = {
+        type: 'surface',
+        x: xCoords,
+        y: yCoords,
+        z: plotDataZ,
+        colorscale: 'Plasma',
+        colorbar: { title: LANGS[currentLang].thickness_trace_name || '相对厚度' },
+        hovertemplate: `X坐标: %{x:.2f} μm<br>Y坐标: %{y:.2f} μm<br>Z坐标: %{z:.2f}<br>${LANGS[currentLang].hover_thickness_value || '相对厚度值'}: %{z:.2f}<extra></extra>`
+    };
+
+    const layout = {
+        title: LANGS[currentLang].thickness_dist + ' (3D)',
+        scene: {
+            xaxis: { title: 'X (μm)' },
+            yaxis: { title: 'Y (μm)' },
+            zaxis: { title: LANGS[currentLang].relative_thickness_unit || '相对厚度' }
+        },
+        margin: { l: 20, r: 20, t: 40, b: 20 }
+    };
+
+    try {
+        Plotly.newPlot(container, [trace], layout, { responsive: true });
+        console.log('3D Thickness plot created successfully');
+        
+        // 添加点击事件处理
+        container.on('plotly_click', function(eventData) {
+            if(eventData.points && eventData.points.length > 0) {
+                const point = eventData.points[0];
+                // 对于3D表面图，点击位置包含x、y、z值
+                showSinglePointDetailsPopup({ 
+                    x: point.x, 
+                    y: point.y, 
+                    z: point.z 
+                }, 'thickness', container, eventData);
+            }
+        });
+    } catch (error) {
+        console.error('Error creating 3D Thickness plot:', error);
+        container.innerHTML = `<div style="color:red;padding:20px;">创建3D图表失败: ${error.message}</div>`;
+    }
+}
+
+// ... (createExposurePlot and createThicknessPlot remain for 1D)
+// START - Add 1D plot functions back
 function createExposurePlot(container, data) {
-    // 优化：只要 x 和 exposure_dose 都是数组且长度一致且有数值就渲染
-    if (!data || !Array.isArray(data.x) || !Array.isArray(data.exposure_dose) || data.x.length === 0 || data.exposure_dose.length === 0 || data.x.length !== data.exposure_dose.length) {
+    if (!data || !data.x || !data.exposure_dose || 
+        !Array.isArray(data.x) || !Array.isArray(data.exposure_dose) ||
+        data.x.length === 0 || data.exposure_dose.length === 0 ||
+        data.x.length !== data.exposure_dose.length) {
         container.innerHTML = `<div style=\"color:red;padding:20px;\">${LANGS[currentLang].error_no_exposure_data || '无有效曝光剂量数据，无法绘图。'}</div>`;
         return;
     }
+
     const trace = {
         x: data.x,
         y: data.exposure_dose,
-        type: 'scatter',
         mode: 'lines',
-        line: {
-            color: 'rgb(31, 119, 180)',
-            width: 2
-        },
+        type: 'scatter',
         name: LANGS[currentLang].exposure_dose_trace_name || '曝光剂量'
     };
-    
+
     const layout = {
-        title: LANGS[currentLang].exposure_dist,
-        xaxis: {
-            title: LANGS[currentLang].x_position,
-            gridcolor: 'rgb(238, 238, 238)',
-            showgrid: true,
-            zeroline: false
-        },
-        yaxis: {
-            title: LANGS[currentLang].y_exposure,
-            gridcolor: 'rgb(238, 238, 238)',
-            showgrid: true,
-            zeroline: false
-        },
+        title: LANGS[currentLang].exposure_dist || '曝光剂量分布',
+        xaxis: { title: LANGS[currentLang].x_position },
+        yaxis: { title: LANGS[currentLang].exposure_dose_unit || '曝光剂量 (mJ/cm²)' },
         margin: { l: 60, r: 20, t: 60, b: 60 },
-        plot_bgcolor: 'rgb(255, 255, 255)',
-        paper_bgcolor: 'rgb(255, 255, 255)',
-        hovermode: 'closest',
+        shapes: [],
+        annotations: []
     };
-    
-    const config = {
-        responsive: true,
-        displayModeBar: true,
-        displaylogo: false,
-        modeBarButtonsToRemove: ['lasso2d', 'select2d']
-    };
-    
-    Plotly.newPlot(container, [trace], layout, config);
-    
-    // 添加点击事件处理，确保调用 showSinglePointDetailsPopup
+    Plotly.newPlot(container, [trace], layout, {responsive: true});
     container.on('plotly_click', function(eventData) {
-        const pt = eventData.points[0];
-        // 调用通用的弹窗显示函数
-        showSinglePointDetailsPopup(pt, 'exposure', container, eventData);
+        if(eventData.points.length > 0) {
+            const point = eventData.points[0];
+            const params = getParameterValues(); // 获取当前参数
+            showSinglePointDetailsPopup({ x: point.x, y: point.y }, 'exposure', container, eventData);
+        }
     });
+    window.lastPlotData = data; // Store for export
 }
 
-/**
- * 创建光刻胶厚度图表
- * 
- * @param {HTMLElement} container 容器元素
- * @param {Object} data 数据
- */
 function createThicknessPlot(container, data) {
-    // 优化：只要 x 和 thickness 都是数组且长度一致且有数值就渲染
-    if (!data || !Array.isArray(data.x) || !Array.isArray(data.thickness) || data.x.length === 0 || data.thickness.length === 0 || data.x.length !== data.thickness.length) {
+    if (!data || !data.x || !data.thickness || 
+        !Array.isArray(data.x) || !Array.isArray(data.thickness) ||
+        data.x.length === 0 || data.thickness.length === 0 ||
+        data.x.length !== data.thickness.length) {
         container.innerHTML = `<div style=\"color:red;padding:20px;\">${LANGS[currentLang].error_no_thickness_data || '无有效厚度数据，无法绘图。'}</div>`;
         return;
     }
+
     const trace = {
         x: data.x,
         y: data.thickness,
-        type: 'scatter',
         mode: 'lines',
-        line: {
-            color: 'rgb(214, 39, 40)',
-            width: 2
-        },
+        type: 'scatter',
         name: LANGS[currentLang].thickness_trace_name || '相对厚度'
     };
-    
+
     const layout = {
-        title: LANGS[currentLang].thickness_dist,
-        xaxis: {
-            title: LANGS[currentLang].x_position,
-            gridcolor: 'rgb(238, 238, 238)',
-            showgrid: true,
-            zeroline: false
-        },
-        yaxis: {
-            title: LANGS[currentLang].y_thickness,
-            gridcolor: 'rgb(238, 238, 238)',
-            showgrid: true,
-            zeroline: false
-        },
+        title: LANGS[currentLang].thickness_dist || '光刻胶厚度分布',
+        xaxis: { title: LANGS[currentLang].x_position },
+        yaxis: { title: LANGS[currentLang].relative_thickness_unit || '相对厚度 (归一化)' },
         margin: { l: 60, r: 20, t: 60, b: 60 },
-        plot_bgcolor: 'rgb(255, 255, 255)',
-        paper_bgcolor: 'rgb(255, 255, 255)',
-        hovermode: 'closest',
+        shapes: [],
+        annotations: []
     };
-    
-    const config = {
-        responsive: true,
-        displayModeBar: true,
-        displaylogo: false,
-        modeBarButtonsToRemove: ['lasso2d', 'select2d']
-    };
-    
-    Plotly.newPlot(container, [trace], layout, config);
-    
-    // 添加点击事件处理，确保调用 showSinglePointDetailsPopup
+    Plotly.newPlot(container, [trace], layout, {responsive: true});
     container.on('plotly_click', function(eventData) {
-        const pt = eventData.points[0];
-        // 调用通用的弹窗显示函数
-        showSinglePointDetailsPopup(pt, 'thickness', container, eventData);
+        if(eventData.points.length > 0) {
+            const point = eventData.points[0];
+            const params = getParameterValues(); // 获取当前参数
+            showSinglePointDetailsPopup({ x: point.x, y: point.y }, 'thickness', container, eventData);
+        }
+    });
+    window.lastPlotData = data; // Store for export - might overwrite exposure plot data if called sequentially
+}
+// END - Add 1D plot functions back
+
+function createExposureHeatmap(container, data) {
+    if (!data || !data.x_coords || !data.y_coords || !data.z_exposure_dose || 
+        !Array.isArray(data.x_coords) || !Array.isArray(data.y_coords) || !Array.isArray(data.z_exposure_dose) ||
+        data.x_coords.length === 0 || data.y_coords.length === 0 || data.z_exposure_dose.length === 0) {
+        container.innerHTML = `<div style=\\"color:red;padding:20px;\\">${LANGS[currentLang].error_no_exposure_data || '无有效2D曝光剂量数据，无法绘图。'}</div>`;
+        return;
+    }
+
+    const trace = {
+        x: data.x_coords,
+        y: data.y_coords,
+        z: data.z_exposure_dose,
+        type: 'heatmap',
+        colorscale: 'Viridis',
+        colorbar: { title: LANGS[currentLang].exposure_dose_trace_name || '曝光剂量' },
+        hovertemplate: `X: %{x}<br>Y: %{y}<br>${LANGS[currentLang].hover_exposure_value || '曝光剂量值'}: %{z}<extra></extra>`
+    };
+
+    const layout = {
+        title: LANGS[currentLang].exposure_dist + ' (2D)',
+        xaxis: { title: LANGS[currentLang].x_position },
+        yaxis: { title: LANGS[currentLang].y_position },
+        margin: { l: 60, r: 20, t: 60, b: 60 }
+    };
+    Plotly.newPlot(container, [trace], layout, {responsive: true});
+    
+    // 添加点击事件处理
+    container.on('plotly_click', function(eventData) {
+        if(eventData.points.length > 0) {
+            const point = eventData.points[0];
+            // 对于热力图，point.x和point.y是坐标值，point.z是强度值
+            showSinglePointDetailsPopup({ 
+                x: point.x, 
+                y: point.y, 
+                z: point.z 
+            }, 'exposure', container, eventData);
+        }
     });
 }
+
+function createThicknessHeatmap(container, data) {
+    if (!data || !data.x_coords || !data.y_coords || !data.z_thickness || 
+        !Array.isArray(data.x_coords) || !Array.isArray(data.y_coords) || !Array.isArray(data.z_thickness) ||
+        data.x_coords.length === 0 || data.y_coords.length === 0 || data.z_thickness.length === 0) {
+        container.innerHTML = `<div style=\\"color:red;padding:20px;\\">${LANGS[currentLang].error_no_thickness_data || '无有效2D厚度数据，无法绘图。'}</div>`;
+        return;
+    }
+
+    const trace = {
+        x: data.x_coords,
+        y: data.y_coords,
+        z: data.z_thickness,
+        type: 'heatmap',
+        colorscale: 'Plasma',
+        colorbar: { title: LANGS[currentLang].thickness_trace_name || '相对厚度' },
+        hovertemplate: `X: %{x}<br>Y: %{y}<br>${LANGS[currentLang].hover_thickness_value || '相对厚度值'}: %{z}<extra></extra>`
+    };
+
+    const layout = {
+        title: LANGS[currentLang].thickness_dist + ' (2D)',
+        xaxis: { title: LANGS[currentLang].x_position },
+        yaxis: { title: LANGS[currentLang].y_position },
+        margin: { l: 60, r: 20, t: 60, b: 60 }
+    };
+    Plotly.newPlot(container, [trace], layout, {responsive: true});
+    
+    // 添加点击事件处理
+    container.on('plotly_click', function(eventData) {
+        if(eventData.points.length > 0) {
+            const point = eventData.points[0];
+            // 对于热力图，point.x和point.y是坐标值，point.z是强度值
+            showSinglePointDetailsPopup({ 
+                x: point.x, 
+                y: point.y, 
+                z: point.z 
+            }, 'thickness', container, eventData);
+        }
+    });
+}
+
+// Make sure LANGS[currentLang].y_position exists or add it
+// Example: LANGS.zh.y_position = 'Y 位置 (μm)'; LANGS.en.y_position = 'Y Position (μm)';
 
 /**
  * 应用结果动画
@@ -974,13 +1507,75 @@ function generate2DSine(Kx, Ky, V, phi_expr, xRange, yRange) {
     return {x, y, z};
 }
 
+// 工具函数：生成三维正弦分布
+function generate3DSine(Kx, Ky, Kz, V, phi_expr, xRange, yRange, zRange) {
+    // 为了可视化效果，使用较少的点数
+    const xPoints = 20, yPoints = 20, zPoints = 20;
+    const x = Array.from({length: xPoints}, (_, i) => xRange[0] + (xRange[1]-xRange[0])*i/(xPoints-1));
+    const y = Array.from({length: yPoints}, (_, i) => yRange[0] + (yRange[1]-yRange[0])*i/(yPoints-1));
+    const z = Array.from({length: zPoints}, (_, i) => zRange[0] + (zRange[1]-zRange[0])*i/(zPoints-1));
+    
+    const phiFunc = (t) => {
+        try {
+            // eslint-disable-next-line no-new-func
+            return new Function('t', 'return ' + phi_expr.replace(/\b(sin|cos|pi)\b/g, 'Math.$1'))(t);
+        } catch { return 0; }
+    };
+    const phi = phiFunc(0);
+    
+    // 为3D可视化准备数据
+    const values = new Array(xPoints * yPoints * zPoints);
+    let idx = 0;
+    const xGrid = [], yGrid = [], zGrid = [];
+    
+    // 生成三维网格点和值
+    for (let k = 0; k < zPoints; k++) {
+        for (let j = 0; j < yPoints; j++) {
+            for (let i = 0; i < xPoints; i++) {
+                xGrid.push(x[i]);
+                yGrid.push(y[j]);
+                zGrid.push(z[k]);
+                values[idx++] = 1 + V * Math.cos(Kx * x[i] + Ky * y[j] + Kz * z[k] + phi);
+            }
+        }
+    }
+    
+    return {
+        x: xGrid,
+        y: yGrid,
+        z: zGrid,
+        values: values,
+        xGrid: x,
+        yGrid: y,
+        zGrid: z
+    };
+}
+
 // 绑定phi_expr输入区说明、校验、预览功能
 function bindPhiExprUI() {
+    // 二维正弦波参数配置
     const configs = [
         {input: 'phi_expr', kx: 'Kx', ky: 'Ky', v: 'V', btn: 'phi-expr-preview-btn', plot: 'phi-expr-preview-plot', err: 'phi-expr-error'},
-        {input: 'enhanced_phi_expr', kx: 'enhanced_Kx', ky: 'enhanced_Ky', v: 'V', btn: 'phi-expr-preview-btn', plot: 'phi-expr-preview-plot', err: 'phi-expr-error'},
-        {input: 'car_phi_expr', kx: 'car_Kx', ky: 'car_Ky', v: 'car_V', btn: 'phi-expr-preview-btn', plot: 'phi-expr-preview-plot', err: 'phi-expr-error'}
+        {input: 'enhanced_phi_expr', kx: 'enhanced_Kx', ky: 'enhanced_Ky', v: 'V', btn: 'enhanced-phi-expr-preview-btn', plot: 'enhanced-phi-expr-preview-plot', err: 'phi-expr-error'},
+        {input: 'car_phi_expr', kx: 'car_Kx', ky: 'car_Ky', v: 'car_V', btn: 'car-phi-expr-preview-btn', plot: 'car-phi-expr-preview-plot', err: 'phi-expr-error'}
     ];
+    
+    // 三维正弦波参数配置
+    const configs3D = [
+        {input: 'phi_expr_3d', kx: 'Kx_3d', ky: 'Ky_3d', kz: 'Kz_3d', v: 'V', 
+         btn: 'phi-expr-3d-preview-btn', plot: 'phi-expr-3d-preview-plot', err: 'phi-expr-error',
+         xmin: 'x_min_3d', xmax: 'x_max_3d', ymin: 'y_min_3d', ymax: 'y_max_3d', zmin: 'z_min_3d', zmax: 'z_max_3d'},
+        {input: 'enhanced_phi_expr_3d', kx: 'enhanced_Kx_3d', ky: 'enhanced_Ky_3d', kz: 'enhanced_Kz_3d', v: 'V', 
+         btn: 'enhanced-phi-expr-3d-preview-btn', plot: 'enhanced-phi-expr-3d-preview-plot', err: 'phi-expr-error',
+         xmin: 'enhanced_x_min_3d', xmax: 'enhanced_x_max_3d', ymin: 'enhanced_y_min_3d', ymax: 'enhanced_y_max_3d', 
+         zmin: 'enhanced_z_min_3d', zmax: 'enhanced_z_max_3d'},
+        {input: 'car_phi_expr_3d', kx: 'car_Kx_3d', ky: 'car_Ky_3d', kz: 'car_Kz_3d', v: 'car_V', 
+         btn: 'car-phi-expr-3d-preview-btn', plot: 'car-phi-expr-3d-preview-plot', err: 'phi-expr-error',
+         xmin: 'car_x_min_3d', xmax: 'car_x_max_3d', ymin: 'car_y_min_3d', ymax: 'car_y_max_3d', 
+         zmin: 'car_z_min_3d', zmax: 'car_z_max_3d'}
+    ];
+    
+    // 处理二维正弦波预览
     configs.forEach(cfg => {
         const input = document.getElementById(cfg.input);
         const kxInput = document.getElementById(cfg.kx);
@@ -1035,7 +1630,9 @@ function bindPhiExprUI() {
             }
         }
         function updateBtnUI() {
-            btn.innerHTML = isPreviewShown ? '<span class="preview-icon"></span> 收起分布' : '<span class="preview-icon"></span> 预览分布';
+            // 恢复原状：不添加 fas fa-eye 类
+            const text = isPreviewShown ? (LANGS[currentLang]?.btn_collapse_2d_preview || '收起分布') : (LANGS[currentLang]?.btn_preview_2d_distribution || '预览分布');
+            btn.innerHTML = `<span class="preview-icon"></span> ${text}`;
         }
         updateBtnUI();
         btn.addEventListener('click', function() {
@@ -1061,6 +1658,135 @@ function bindPhiExprUI() {
                 // 仅在blur时自动滚动
                 param.addEventListener('blur', function() {
                     if (isPreviewShown) drawPreviewPlot(true);
+                });
+            }
+        });
+    });
+    
+    // 处理三维正弦波预览
+    configs3D.forEach(cfg => {
+        const input = document.getElementById(cfg.input);
+        const kxInput = document.getElementById(cfg.kx);
+        const kyInput = document.getElementById(cfg.ky);
+        const kzInput = document.getElementById(cfg.kz);
+        const vInput = document.getElementById(cfg.v);
+        const btn = document.getElementById(cfg.btn);
+        const plot = document.getElementById(cfg.plot);
+        const errDiv = input?.parentNode?.parentNode?.querySelector('.phi-expr-error');
+        const calcBtn = document.getElementById('calculate-btn');
+        
+        // x,y,z范围输入
+        const xMinInput = document.getElementById(cfg.xmin);
+        const xMaxInput = document.getElementById(cfg.xmax);
+        const yMinInput = document.getElementById(cfg.ymin);
+        const yMaxInput = document.getElementById(cfg.ymax);
+        const zMinInput = document.getElementById(cfg.zmin);
+        const zMaxInput = document.getElementById(cfg.zmax);
+        
+        if (!input || !btn || !plot) return;
+        
+        // 实时校验
+        input.addEventListener('input', function() {
+            const expr = input.value;
+            if (!validatePhiExpr(expr)) {
+                input.style.borderColor = '#d00';
+                if (errDiv) { errDiv.textContent = '表达式格式有误，仅支持sin/cos/pi/t/数字/加减乘除等。'; errDiv.style.display = ''; }
+                calcBtn.disabled = true;
+                btn.disabled = true;
+            } else {
+                input.style.borderColor = '';
+                if (errDiv) { errDiv.textContent = ''; errDiv.style.display = 'none'; }
+                calcBtn.disabled = false;
+                btn.disabled = false;
+            }
+        });
+        
+        // 预览分布
+        btn.style.display = '';
+        let isPreviewShown = false;
+        let lastPlotData = null;
+        
+        function draw3DPreviewPlot(scrollToPlot = false) {
+            let Kx = 2, Ky = 1, Kz = 1, V = 0.8;
+            if (kxInput) Kx = parseFloat(kxInput.value);
+            if (kyInput) Ky = parseFloat(kyInput.value);
+            if (kzInput) Kz = parseFloat(kzInput.value);
+            if (vInput) V = parseFloat(vInput.value);
+            
+            const xRange = [parseFloat(xMinInput.value) || 0, parseFloat(xMaxInput.value) || 10];
+            const yRange = [parseFloat(yMinInput.value) || 0, parseFloat(yMaxInput.value) || 10];
+            const zRange = [parseFloat(zMinInput.value) || 0, parseFloat(zMaxInput.value) || 10];
+            
+            const expr = input.value;
+            if (!validatePhiExpr(expr)) {
+                if (errDiv) { errDiv.textContent = '表达式格式有误，无法预览。'; errDiv.style.display = ''; }
+                return;
+            }
+            
+            lastPlotData = generate3DSine(Kx, Ky, Kz, V, expr, xRange, yRange, zRange);
+            plot.style.display = '';
+            
+            // 创建3D等值面图 - 使用3个不同的等值面
+            const data = [
+                {
+                    type: 'isosurface',
+                    x: lastPlotData.x,
+                    y: lastPlotData.y,
+                    z: lastPlotData.z,
+                    value: lastPlotData.values,
+                    isomin: 0.5,
+                    isomax: 1.5,
+                    surface: { show: true, count: 3, fill: 0.7 },
+                    colorscale: 'Viridis',
+                    caps: { x: { show: false }, y: { show: false }, z: { show: false } }
+                }
+            ];
+            
+            Plotly.newPlot(plot, data, {
+                title: '三维正弦分布预览',
+                scene: {
+                    xaxis: {title: 'X'},
+                    yaxis: {title: 'Y'},
+                    zaxis: {title: 'Z'}
+                },
+                margin: {t:40, l:0, r:0, b:0},
+                height: 350
+            }, {displayModeBar: true});
+            
+            if (scrollToPlot) {
+                setTimeout(()=>{plot.scrollIntoView({behavior:'smooth', block:'center'});}, 200);
+            }
+        }
+        
+        function updateBtnUI() {
+            // 恢复原状：不添加 fas fa-eye 类
+            const text = isPreviewShown ? (LANGS[currentLang]?.btn_collapse_3d_preview || '收起3D分布') : (LANGS[currentLang]?.btn_preview_3d_distribution || '预览3D分布');
+            btn.innerHTML = `<span class="preview-icon"></span> ${text}`;
+        }
+        
+        updateBtnUI();
+        
+        btn.addEventListener('click', function() {
+            if (!isPreviewShown) {
+                draw3DPreviewPlot(true);
+                isPreviewShown = true;
+                updateBtnUI();
+            } else {
+                plot.style.display = 'none';
+                isPreviewShown = false;
+                updateBtnUI();
+            }
+        });
+        
+        // 只要分布图显示，参数变动就自动刷新
+        [input, kxInput, kyInput, kzInput, vInput, xMinInput, xMaxInput, yMinInput, yMaxInput, zMinInput, zMaxInput].forEach(param => {
+            if (param) {
+                param.addEventListener('change', function() {
+                    if (isPreviewShown) draw3DPreviewPlot(false);
+                });
+                // 仅在blur时自动滚动
+                param.addEventListener('blur', function() {
+                    if (isPreviewShown) draw3DPreviewPlot(true);
                 });
             }
         });
@@ -1144,6 +1870,26 @@ function getDillPopupHtmlContent(x, y, setName, params, plotType) {
             <div>• Ky: (${params.Ky || 'N/A'})</div>
             <div>• φ(t): (${params.phi_expr || '0'})</div>
         `;
+    } else if (plotType === 'surface3d') {
+        valueLabel = LANGS[currentLang].popup_3d_value || '值:';
+        valueUnit = '';
+        formulaTitle = LANGS[currentLang].popup_dill_3d_title || 'Dill模型三维分布:';
+        formulaMath = 'D(x,y,z) = I_avg × t_exp × (1 + V × cos(Kx·x + Ky·y + Kz·z + φ(t)))';
+        formulaExplanation = `
+            <div>• I_avg: 平均光强度 (${params.I_avg} mW/cm²)</div>
+            <div>• t_exp: 曝光时间 (${params.t_exp} s)</div>
+            <div>• V: 干涉条纹可见度 (${params.V})</div>
+            <div>• Kx: X方向空间频率 (${params.Kx} rad/μm)</div>
+            <div>• Ky: Y方向空间频率 (${params.Ky} rad/μm)</div>
+            <div>• Kz: Z方向空间频率 (${params.Kz} rad/μm)</div>
+            <div>• φ(t): 相位表达式 (${params.phi_expr || '0'})</div>
+            <div>• C: 光敏速率常数 (${params.C})</div>
+        `;
+
+        if (plotType === 'thickness' || plotType.includes('thickness')) {
+            valueUnit = '(归一化)';
+            formulaMath += '<br>M(x,y,z) = exp(-C × D(x,y,z))';
+        }
     }
 
 
@@ -1169,6 +1915,11 @@ function getDillPopupHtmlContent(x, y, setName, params, plotType) {
                 ${params.sine_type === 'multi' ? `
                 <div class="info-item"><span class="info-label">Kx:</span><span class="info-value">${params.Kx}</span></div>
                 <div class="info-item"><span class="info-label">Ky:</span><span class="info-value">${params.Ky}</span></div>
+                <div class="info-item"><span class="info-label">φ(t):</span><span class="info-value">${params.phi_expr}</span></div>
+                ` : params.sine_type === '3d' ? `
+                <div class="info-item"><span class="info-label">Kx:</span><span class="info-value">${params.Kx}</span></div>
+                <div class="info-item"><span class="info-label">Ky:</span><span class="info-value">${params.Ky}</span></div>
+                <div class="info-item"><span class="info-label">Kz:</span><span class="info-value">${params.Kz}</span></div>
                 <div class="info-item"><span class="info-label">φ(t):</span><span class="info-value">${params.phi_expr}</span></div>
                 ` : `
                 <div class="info-item"><span class="info-label">K:</span><span class="info-value">${params.K}</span></div>
@@ -1224,6 +1975,29 @@ function getEnhancedDillPopupHtmlContent(x, y, setName, params, plotType) {
             <div>• Ky: (${params.Ky || 'N/A'})</div>
             <div>• φ(t): (${params.phi_expr || '0'})</div>
         `;
+    } else if (plotType === 'surface3d') {
+        valueLabel = LANGS[currentLang].popup_3d_value || '值:';
+        valueUnit = '';
+        formulaTitle = LANGS[currentLang].popup_enhanced_3d_title || '增强Dill模型三维分布:';
+        formulaMath = '∂I/∂z = -I·[A(z_h,T,t_B)·M+B(z_h,T,t_B)]<br>∂M/∂t = -I·M·C(z_h,T,t_B)';
+        formulaExplanation = `
+            <div>• z_h: 胶厚 (${params.z_h} µm)</div>
+            <div>• T: 前烘温度 (${params.T} °C)</div>
+            <div>• t_B: 前烘时间 (${params.t_B} min)</div>
+            <div>• I0: 初始光强 (${params.I0})</div>
+            <div>• M0: 初始PAC浓度 (${params.M0})</div>
+            <div>• Kx: X方向空间频率 (${params.Kx} rad/μm)</div>
+            <div>• Ky: Y方向空间频率 (${params.Ky} rad/μm)</div>
+            <div>• Kz: Z方向空间频率 (${params.Kz} rad/μm)</div>
+            <div>• φ(t): 相位表达式 (${params.phi_expr || '0'})</div>
+            <div>• A(z_h,T,t_B): 光敏剂吸收率</div>
+            <div>• B(z_h,T,t_B): 基底吸收率</div>
+            <div>• C(z_h,T,t_B): 光敏速率常数</div>
+        `;
+        
+        if (plotType.includes('thickness')) {
+            valueUnit = '(归一化)';
+        }
     }
     
     return `
@@ -1246,6 +2020,11 @@ function getEnhancedDillPopupHtmlContent(x, y, setName, params, plotType) {
                 ${params.sine_type === 'multi' ? `
                 <div class="info-item"><span class="info-label">Kx:</span><span class="info-value">${params.Kx}</span></div>
                 <div class="info-item"><span class="info-label">Ky:</span><span class="info-value">${params.Ky}</span></div>
+                <div class="info-item"><span class="info-label">φ(t):</span><span class="info-value">${params.phi_expr}</span></div>
+                ` : params.sine_type === '3d' ? `
+                <div class="info-item"><span class="info-label">Kx:</span><span class="info-value">${params.Kx}</span></div>
+                <div class="info-item"><span class="info-label">Ky:</span><span class="info-value">${params.Ky}</span></div>
+                <div class="info-item"><span class="info-label">Kz:</span><span class="info-value">${params.Kz}</span></div>
                 <div class="info-item"><span class="info-label">φ(t):</span><span class="info-value">${params.phi_expr}</span></div>
                 ` : `
                 <div class="info-item"><span class="info-label">K:</span><span class="info-value">${params.K}</span></div>
@@ -1305,8 +2084,26 @@ function getCarPopupHtmlContent(x, y, setName, params, plotType) {
             <div>• Ky: (${params.Ky || 'N/A'})</div>
             <div>• φ(t): (${params.phi_expr || '0'})</div>
         `;
+    } else if (plotType === 'surface3d') { // 三维表面图，展示空间分布
+        valueLabel = LANGS[currentLang].popup_car_value_3d || '值:';
+        valueUnit = '(归一化)';
+        formulaTitle = LANGS[currentLang].popup_car_3d_title || 'CAR模型三维分布:';
+        formulaMath = '[H⁺] = η·D(x,y,z)<br>扩散: [H⁺]_diff = G([H⁺], l_diff)<br>M = 1-exp(-k·[H⁺]_diff·A)';
+        formulaExplanation = `
+            <div>• η: 光酸产生效率 (${params.acid_gen_efficiency})</div>
+            <div>• k: 反应速率 (${params.reaction_rate})</div>
+            <div>• A: 放大因子 (${params.amplification})</div>
+            <div>• EPDL: 光酸扩散长度 (${params.diffusion_length})</div>
+            <div>• γ: 对比度因子 (${params.contrast})</div>
+            <div>• I_avg: 平均光强度 (${params.I_avg} mW/cm²)</div>
+            <div>• t_exp: 曝光时间 (${params.t_exp} s)</div>
+            <div>• V: 干涉条纹可见度 (${params.V})</div>
+            <div>• Kx: X方向空间频率 (${params.Kx} rad/μm)</div>
+            <div>• Ky: Y方向空间频率 (${params.Ky} rad/μm)</div>
+            <div>• Kz: Z方向空间频率 (${params.Kz} rad/μm)</div>
+            <div>• φ(t): 相位表达式 (${params.phi_expr || '0'})</div>
+        `;
     }
-
 
     return `
         <div class="point-info-section">
@@ -1321,19 +2118,19 @@ function getCarPopupHtmlContent(x, y, setName, params, plotType) {
             <div class="info-grid responsive-grid">
                 <div class="info-item"><span class="info-label">I_avg:</span><span class="info-value">${params.I_avg} mW/cm²</span></div>
                 <div class="info-item"><span class="info-label">V:</span><span class="info-value">${params.V}</span></div>
-                 ${params.sine_type === 'multi' ? `
-                <div class="info-item"><span class="info-label">Kx:</span><span class="info-value">${params.Kx}</span></div>
-                <div class="info-item"><span class="info-label">Ky:</span><span class="info-value">${params.Ky}</span></div>
-                <div class="info-item"><span class="info-label">φ(t):</span><span class="info-value">${params.phi_expr}</span></div>
-                ` : `
-                <div class="info-item"><span class="info-label">K:</span><span class="info-value">${params.K}</span></div>
-                `}
                 <div class="info-item"><span class="info-label">t_exp:</span><span class="info-value">${params.t_exp} s</span></div>
                 <div class="info-item"><span class="info-label">η:</span><span class="info-value">${params.acid_gen_efficiency}</span></div>
                 <div class="info-item"><span class="info-label">EPDL:</span><span class="info-value">${params.diffusion_length}</span></div>
                 <div class="info-item"><span class="info-label">k:</span><span class="info-value">${params.reaction_rate}</span></div>
                 <div class="info-item"><span class="info-label">A:</span><span class="info-value">${params.amplification}</span></div>
                 <div class="info-item"><span class="info-label">γ:</span><span class="info-value">${params.contrast}</span></div>
+                ${params.sine_type === 'multi' ? `
+                <div class="info-item"><span class="info-label">Kx:</span><span class="info-value">${params.Kx}</span></div>
+                <div class="info-item"><span class="info-label">Ky:</span><span class="info-value">${params.Ky}</span></div>
+                <div class="info-item"><span class="info-label">φ(t):</span><span class="info-value">${params.phi_expr}</span></div>
+                ` : `
+                <div class="info-item"><span class="info-label">K:</span><span class="info-value">${params.K}</span></div>
+                `}
             </div>
         </div>
         <div class="point-info-section">
@@ -1355,8 +2152,13 @@ function getCarPopupHtmlContent(x, y, setName, params, plotType) {
  * @returns {Object} 包含详细信息的对象 { html: "..." }
  */
 function getSinglePointDetailedInfo(point, plotType, paramsOverride = null) {
+    // 提取点击点的坐标
     const x = point.x;
     const y = point.y;
+    
+    // 处理包含z值的3D点或2D热力图点
+    const z = point.z !== undefined ? point.z : null;
+    
     const modelSelect = document.getElementById('model-select');
     const currentModelType = modelSelect ? modelSelect.value : 'dill';
     let params = paramsOverride;
@@ -1374,6 +2176,18 @@ function getSinglePointDetailedInfo(point, plotType, paramsOverride = null) {
                 params.Kx = parseFloat(document.getElementById('Kx').value);
                 params.Ky = parseFloat(document.getElementById('Ky').value);
                 params.phi_expr = document.getElementById('phi_expr').value;
+            } else if (params.sine_type === '3d') {
+                params.Kx = parseFloat(document.getElementById('Kx_3d').value);
+                params.Ky = parseFloat(document.getElementById('Ky_3d').value);
+                params.Kz = parseFloat(document.getElementById('Kz_3d').value);
+                params.phi_expr = document.getElementById('phi_expr_3d').value;
+                // 三维范围参数
+                params.x_min = parseFloat(document.getElementById('x_min_3d').value);
+                params.x_max = parseFloat(document.getElementById('x_max_3d').value);
+                params.y_min = parseFloat(document.getElementById('y_min_3d').value);
+                params.y_max = parseFloat(document.getElementById('y_max_3d').value);
+                params.z_min = parseFloat(document.getElementById('z_min_3d').value);
+                params.z_max = parseFloat(document.getElementById('z_max_3d').value);
             } else {
                 params.K = parseFloat(document.getElementById('K').value);
             }
@@ -1389,6 +2203,24 @@ function getSinglePointDetailedInfo(point, plotType, paramsOverride = null) {
                 params.Kx = parseFloat(document.getElementById('enhanced_Kx').value);
                 params.Ky = parseFloat(document.getElementById('enhanced_Ky').value);
                 params.phi_expr = document.getElementById('enhanced_phi_expr').value;
+                // 添加Y轴范围参数
+                params.y_min = parseFloat(document.getElementById('enhanced_y_min').value);
+                params.y_max = parseFloat(document.getElementById('enhanced_y_max').value);
+                params.y_points = parseInt(document.getElementById('enhanced_y_points').value);
+            } else if (params.sine_type === '3d') {
+                params.Kx = parseFloat(document.getElementById('enhanced_Kx_3d').value);
+                params.Ky = parseFloat(document.getElementById('enhanced_Ky_3d').value);
+                params.Kz = parseFloat(document.getElementById('enhanced_Kz_3d').value);
+                params.phi_expr = document.getElementById('enhanced_phi_expr_3d').value;
+                // 为3D模式添加K参数
+                params.K = params.Kx;
+                // 三维范围参数
+                params.x_min = parseFloat(document.getElementById('enhanced_x_min_3d').value);
+                params.x_max = parseFloat(document.getElementById('enhanced_x_max_3d').value);
+                params.y_min = parseFloat(document.getElementById('enhanced_y_min_3d').value);
+                params.y_max = parseFloat(document.getElementById('enhanced_y_max_3d').value);
+                params.z_min = parseFloat(document.getElementById('enhanced_z_min_3d').value);
+                params.z_max = parseFloat(document.getElementById('enhanced_z_max_3d').value);
             } else {
                 // 增强Dill模型的一维情况可能也需要K，或者由后端处理
                 // 假设它也可能使用ID为K的输入框（如果存在），或默认为一个合理值
@@ -1409,21 +2241,81 @@ function getSinglePointDetailedInfo(point, plotType, paramsOverride = null) {
                 params.Kx = parseFloat(document.getElementById('car_Kx').value);
                 params.Ky = parseFloat(document.getElementById('car_Ky').value);
                 params.phi_expr = document.getElementById('car_phi_expr').value;
+                // 使用CAR模型自己的Y轴范围参数
+                params.y_min = parseFloat(document.getElementById('car_y_min').value);
+                params.y_max = parseFloat(document.getElementById('car_y_max').value);
+                params.y_points = parseInt(document.getElementById('car_y_points').value);
+            } else if (params.sine_type === '3d') {
+                params.Kx = parseFloat(document.getElementById('car_Kx_3d').value);
+                params.Ky = parseFloat(document.getElementById('car_Ky_3d').value);
+                params.Kz = parseFloat(document.getElementById('car_Kz_3d').value);
+                params.phi_expr = document.getElementById('car_phi_expr_3d').value;
+                // 为3D模式添加K参数
+                params.K = params.Kx;
+                // 三维范围参数
+                params.x_min = parseFloat(document.getElementById('car_x_min_3d').value);
+                params.x_max = parseFloat(document.getElementById('car_x_max_3d').value);
+                params.y_min = parseFloat(document.getElementById('car_y_min_3d').value);
+                params.y_max = parseFloat(document.getElementById('car_y_max_3d').value);
+                params.z_min = parseFloat(document.getElementById('car_z_min_3d').value);
+                params.z_max = parseFloat(document.getElementById('car_z_max_3d').value);
             } else {
                 params.K = parseFloat(document.getElementById('car_K').value);
             }
         }
     }
+    
+    // 检测是否是2D或3D点，并调整类型
+    let effectivePlotType = plotType;
+    if (z !== null) {
+        // 如果有z值，则认为是2D热力图或3D表面图
+        if (params.sine_type === '3d') {
+            effectivePlotType = 'surface3d'; // 如果是3D模式，则认为是3D表面图
+        } else if (params.sine_type === 'multi') {
+            effectivePlotType = 'heatmap'; // 如果是2D模式，则认为是热力图
+        }
+    }
+    
     // 根据模型类型调用相应的HTML生成函数
     if (currentModelType === 'dill') {
-        html = getDillPopupHtmlContent(x, y, setName, params, plotType);
+        html = getDillPopupHtmlContent(x, z !== null ? y : y, setName, params, effectivePlotType);
     } else if (currentModelType === 'enhanced_dill') {
-        html = getEnhancedDillPopupHtmlContent(x, y, setName, params, plotType);
+        html = getEnhancedDillPopupHtmlContent(x, z !== null ? y : y, setName, params, effectivePlotType);
     } else if (currentModelType === 'car') {
-        html = getCarPopupHtmlContent(x, y, setName, params, plotType);
+        html = getCarPopupHtmlContent(x, z !== null ? y : y, setName, params, effectivePlotType);
     } else {
         html = `<p>详细信息无法加载，模型类型未知: ${currentModelType}</p>`;
     }
+    
+    // 如果是3D表面图或2D热力图，添加额外的z坐标信息
+    if (z !== null) {
+        // 获取弹窗HTML代码开始部分
+        const startHtml = html.split('<div class="point-info-section">')[0];
+        
+        // 添加z坐标信息，插入到第一个section的info-grid中
+        const locationSection = html.split('<div class="point-info-section">')[1].split('</div>')[0];
+        const updatedLocationSection = locationSection.replace(
+            '<div class="info-grid">',
+            `<div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">X:</span>
+                    <span class="info-value">${x.toFixed(3)} µm</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Y:</span>
+                    <span class="info-value">${y.toFixed(3)} µm</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Z:</span>
+                    <span class="info-value">${z.toFixed(3)}</span>
+                </div>`
+        );
+        
+        // 重新组装HTML
+        const restOfHtml = html.split('</div>').slice(1).join('</div>');
+        html = startHtml + '<div class="point-info-section">' + updatedLocationSection + '</div>' + restOfHtml;
+    }
+    
     return { html };
 }
 
@@ -1435,17 +2327,35 @@ function initSingleThresholdControl(controlElement, index, plotType, plotData) {
     // 只对index=0
     let minValue, maxValue, defaultValue, step, unit;
     let yData, xData;
+    
+    // 处理可能是2D数据的情况
     if (plotType === 'exposure') {
-        yData = plotData.exposure_dose;
+        if (plotData.is_2d) {
+            console.log('跳过2D数据的阈值控制初始化');
+            return; // 对于2D数据直接返回，不初始化阈值控制
+        }
+        yData = plotData.exposure_dose || plotData.initial_acid;
         xData = plotData.x;
+        if (!Array.isArray(yData) || yData.length === 0) {
+            console.error('无效的曝光剂量数据', yData);
+            return; // 数据无效，不初始化阈值控制
+        }
         minValue = Math.max(0, Math.min(...yData) - (Math.max(...yData) - Math.min(...yData)) * 0.1);
         maxValue = Math.max(...yData) + (Math.max(...yData) - Math.min(...yData)) * 0.1;
         step = Math.max(0.1, (maxValue - minValue) / 1000);
         unit = ' mJ/cm²';
         defaultValue = minValue + (maxValue - minValue) * 0.3;
     } else {
+        if (plotData.is_2d) {
+            console.log('跳过2D数据的阈值控制初始化');
+            return; // 对于2D数据直接返回，不初始化阈值控制
+        }
         yData = plotData.thickness;
         xData = plotData.x;
+        if (!Array.isArray(yData) || yData.length === 0) {
+            console.error('无效的厚度数据', yData);
+            return; // 数据无效，不初始化阈值控制
+        }
         minValue = Math.max(0, Math.min(...yData) - (Math.max(...yData) - Math.min(...yData)) * 0.05);
         maxValue = Math.min(1, Math.max(...yData) + (Math.max(...yData) - Math.min(...yData)) * 0.05);
         step = Math.max(0.001, (maxValue - minValue) / 1000);
@@ -1724,3 +2634,71 @@ function removeThresholdDetailsOverlay(container, plotType, thresholdIndex) {
     Plotly.relayout(container, { annotations: updatedAnnotations });
 }
 window.removeThresholdDetailsOverlay = removeThresholdDetailsOverlay;
+
+// 初始化波形类型选择器
+function initSineWaveTypeSelectors() {
+    // Dill模型波形类型选择
+    const dillSineType = document.getElementById('dill-sine-type');
+    const dillMultiSineParams = document.getElementById('dill-multisine-params');
+    const dill3dSineParams = document.getElementById('dill-3dsine-params');
+    
+    if (dillSineType && dillMultiSineParams && dill3dSineParams) {
+        dillSineType.addEventListener('change', function() {
+            // 隐藏所有参数容器
+            dillMultiSineParams.style.display = 'none';
+            dill3dSineParams.style.display = 'none';
+            
+            // 根据选择显示对应参数容器
+            if (this.value === 'multi') {
+                dillMultiSineParams.style.display = 'block';
+            } else if (this.value === '3d') {
+                dill3dSineParams.style.display = 'block';
+            }
+        });
+    }
+    
+    // Enhanced Dill模型波形类型选择
+    const enhancedDillSineType = document.getElementById('enhanced-dill-sine-type');
+    const enhancedDillMultiSineParams = document.getElementById('enhanced-dill-multisine-params');
+    const enhancedDill3dSineParams = document.getElementById('enhanced-dill-3dsine-params');
+    
+    if (enhancedDillSineType && enhancedDillMultiSineParams && enhancedDill3dSineParams) {
+        enhancedDillSineType.addEventListener('change', function() {
+            // 隐藏所有参数容器
+            enhancedDillMultiSineParams.style.display = 'none';
+            enhancedDill3dSineParams.style.display = 'none';
+            
+            // 根据选择显示对应参数容器
+            if (this.value === 'multi') {
+                enhancedDillMultiSineParams.style.display = 'block';
+            } else if (this.value === '3d') {
+                enhancedDill3dSineParams.style.display = 'block';
+            }
+        });
+    }
+    
+    // CAR模型波形类型选择
+    const carSineType = document.getElementById('car-sine-type');
+    const carMultiSineParams = document.getElementById('car-multisine-params');
+    const car3dSineParams = document.getElementById('car-3dsine-params');
+    
+    if (carSineType && carMultiSineParams && car3dSineParams) {
+        carSineType.addEventListener('change', function() {
+            // 隐藏所有参数容器
+            carMultiSineParams.style.display = 'none';
+            car3dSineParams.style.display = 'none';
+            
+            // 根据选择显示对应参数容器
+            if (this.value === 'multi') {
+                carMultiSineParams.style.display = 'block';
+            } else if (this.value === '3d') {
+                car3dSineParams.style.display = 'block';
+            }
+        });
+    }
+    
+    // 初始化各模型波形类型
+    if (dillSineType) dillSineType.dispatchEvent(new Event('change'));
+    if (enhancedDillSineType) enhancedDillSineType.dispatchEvent(new Event('change'));
+    if (carSineType) carSineType.dispatchEvent(new Event('change'));
+}

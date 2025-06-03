@@ -13,6 +13,10 @@ def validate_input(data):
         for field in ['Kx', 'Ky', 'phi_expr']:
             if field not in data or data[field] in [None, '']:
                 missing_fields.append(field)
+    elif sine_type == '3d':
+        for field in ['Kx', 'Ky', 'Kz', 'phi_expr']:
+            if field not in data or data[field] in [None, '']:
+                missing_fields.append(field)
     else:
         if 'K' not in data or data['K'] in [None, '']:
             missing_fields.append('K')
@@ -24,6 +28,10 @@ def validate_input(data):
         if sine_type == 'multi':
             data['Kx'] = float(data['Kx'])
             data['Ky'] = float(data['Ky'])
+        elif sine_type == '3d':
+            data['Kx'] = float(data['Kx'])
+            data['Ky'] = float(data['Ky'])
+            data['Kz'] = float(data['Kz'])
         else:
             data['K'] = float(data['K'])
     except ValueError:
@@ -38,6 +46,13 @@ def validate_input(data):
             return False, "Kx必须为正且不超过100"
         if not (0 < data['Ky'] <= 100):
             return False, "Ky必须为正且不超过100"
+    elif sine_type == '3d':
+        if not (0 < data['Kx'] <= 100):
+            return False, "Kx必须为正且不超过100"
+        if not (0 < data['Ky'] <= 100):
+            return False, "Ky必须为正且不超过100"
+        if not (0 < data['Kz'] <= 100):
+            return False, "Kz必须为正且不超过100"
     else:
         if not (0 < data['K'] <= 100):
             return False, "空间频率K必须为正且不超过100"
@@ -58,6 +73,10 @@ def validate_enhanced_input(data):
         for field in ['Kx', 'Ky', 'phi_expr']:
             if field not in data or data[field] in [None, '']:
                 missing_fields.append(field)
+    elif sine_type == '3d':
+        for field in ['Kx', 'Ky', 'Kz', 'phi_expr']:
+            if field not in data or data[field] in [None, '']:
+                missing_fields.append(field)
     else:
         if 'K' not in data or data['K'] in [None, '']:
             missing_fields.append('K')
@@ -69,6 +88,10 @@ def validate_enhanced_input(data):
         if sine_type == 'multi':
             data['Kx'] = float(data['Kx'])
             data['Ky'] = float(data['Ky'])
+        elif sine_type == '3d':
+            data['Kx'] = float(data['Kx'])
+            data['Ky'] = float(data['Ky'])
+            data['Kz'] = float(data['Kz'])
         else:
             data['K'] = float(data['K'])
     except ValueError:
@@ -91,6 +114,13 @@ def validate_enhanced_input(data):
             return False, "Kx必须为正且不超过100"
         if not (0 < data['Ky'] <= 100):
             return False, "Ky必须为正且不超过100"
+    elif sine_type == '3d':
+        if not (0 < data['Kx'] <= 100):
+            return False, "Kx必须为正且不超过100"
+        if not (0 < data['Ky'] <= 100):
+            return False, "Ky必须为正且不超过100"
+        if not (0 < data['Kz'] <= 100):
+            return False, "Kz必须为正且不超过100"
     else:
         if not (0 < data['K'] <= 100):
             return False, "空间频率K必须为正且不超过100"
@@ -107,8 +137,14 @@ def validate_car_input(data):
         for field in ['Kx', 'Ky', 'phi_expr']:
             if field not in data or data[field] in [None, '']:
                 missing_fields.append(field)
+    elif sine_type == '3d':
+        for field in ['Kx', 'Ky', 'Kz', 'phi_expr']:
+            if field not in data or data[field] in [None, '']:
+                missing_fields.append(field)
     else:
-        if 'K' not in data or data['K'] in [None, '']:
+        # 对于1D情况，如果没有K参数，路由处理函数将提供默认值
+        if 'K' in data and data['K'] in [None, '']:
+            # 如果K存在但为空，仍然报错
             missing_fields.append('K')
     if missing_fields:
         return False, f"缺少必要参数: {', '.join(missing_fields)}"
@@ -118,7 +154,11 @@ def validate_car_input(data):
         if sine_type == 'multi':
             data['Kx'] = float(data['Kx'])
             data['Ky'] = float(data['Ky'])
-        else:
+        elif sine_type == '3d':
+            data['Kx'] = float(data['Kx'])
+            data['Ky'] = float(data['Ky'])
+            data['Kz'] = float(data['Kz'])
+        elif 'K' in data:  # 只有在K存在时才尝试转换
             data['K'] = float(data['K'])
     except ValueError:
         return False, "所有参数必须是数值类型（phi_expr除外）"
@@ -132,7 +172,14 @@ def validate_car_input(data):
             return False, "Kx必须为正且不超过100"
         if not (0 < data['Ky'] <= 100):
             return False, "Ky必须为正且不超过100"
-    else:
+    elif sine_type == '3d':
+        if not (0 < data['Kx'] <= 100):
+            return False, "Kx必须为正且不超过100"
+        if not (0 < data['Ky'] <= 100):
+            return False, "Ky必须为正且不超过100"
+        if not (0 < data['Kz'] <= 100):
+            return False, "Kz必须为正且不超过100"
+    elif 'K' in data:  # 只有在K存在时才检查
         if not (0 < data['K'] <= 100):
             return False, "空间频率K必须为正且不超过100"
     if not (0 < data['t_exp'] <= 10000):

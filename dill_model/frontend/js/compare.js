@@ -2638,7 +2638,7 @@ function getDillPopupHtml(x, y, setName, params, plotType) {
             <h4>🎯 位置信息</h4>
             <div class="info-grid">
                 <div class="info-item">
-                    <span class="info-label">X坐标:</span>
+                    <span class="info-label">X:</span>
                     <span class="info-value">${x.toFixed(3)} μm</span>
                 </div>
                 <div class="info-item">
@@ -2701,7 +2701,7 @@ function getEnhancedDillPopupHtml(x, y, setName, params, plotType) {
         <div class="point-info-section">
             <h4>🎯 位置信息</h4>
             <div class="info-grid">
-                <div class="info-item"><span class="info-label">X坐标:</span><span class="info-value">${x.toFixed(3)} μm</span></div>
+                <div class="info-item"><span class="info-label">X:</span><span class="info-value">${x.toFixed(3)} μm</span></div>
                 <div class="info-item"><span class="info-label">${valueLabel}</span><span class="info-value">${y.toFixed(3)} ${valueUnit}</span></div>
             </div>
         </div>
@@ -2761,7 +2761,7 @@ function getCarPopupHtml(x, y, setName, params, plotType) {
         <div class="point-info-section">
             <h4>🎯 位置信息</h4>
             <div class="info-grid">
-                <div class="info-item"><span class="info-label">X坐标:</span><span class="info-value">${x.toFixed(3)} μm</span></div>
+                <div class="info-item"><span class="info-label">X:</span><span class="info-value">${x.toFixed(3)} μm</span></div>
                 <div class="info-item"><span class="info-label">${valueLabel}</span><span class="info-value">${y.toFixed(3)} ${valueUnit}</span></div>
             </div>
         </div>
