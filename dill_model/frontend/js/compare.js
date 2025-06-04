@@ -2613,11 +2613,11 @@ function getDillPopupHtml(x, y, setName, params, plotType) {
 
     if (plotType === 'exposure') {
         valueLabel = '曝光剂量:';
-        valueUnit = 'mJ/cm²';
+        valueUnit = 'mJ<span class="fraction"><span class="numerator">1</span><span class="denominator">cm²</span></span>';
         formulaTitle = 'Dill模型曝光剂量计算：';
         formulaMath = 'D(x) = I_avg × t_exp × (1 + V × cos(2πKx))'; // 简化公式示例
         formulaExplanation = `
-            <div>• I_avg: 平均光强度 (${params.I_avg} mW/cm²)</div>
+            <div>• I_avg: 平均光强度 (${params.I_avg} mW<span class="fraction"><span class="numerator">1</span><span class="denominator">cm²</span></span>)</div>
             <div>• t_exp: 曝光时间 (${params.t_exp} s)</div>
             <div>• V: 干涉条纹可见度 (${params.V})</div>
             <div>• K: 空间频率 (${params.K})</div>
@@ -2626,10 +2626,10 @@ function getDillPopupHtml(x, y, setName, params, plotType) {
         valueLabel = '光刻胶厚度:';
         valueUnit = 'μm (归一化)'; // 假设是归一化厚度
         formulaTitle = 'Dill模型光刻胶厚度计算：';
-        formulaMath = 'M(x) = exp(-C × D(x))';
+        formulaMath = 'M(x) = e<sup>-C × D(x)</sup>';
         formulaExplanation = `
             <div>• C: 光敏速率常数 (${params.C})</div>
-            <div>• D(x): 该点曝光剂量 (${y.toFixed(2)} mJ/cm² - 若适用)</div>
+            <div>• D(x): 该点曝光剂量 (${y.toFixed(2)} mJ<span class="fraction"><span class="numerator">1</span><span class="denominator">cm²</span></span> - 若适用)</div>
         `;
     }
 
@@ -2650,10 +2650,10 @@ function getDillPopupHtml(x, y, setName, params, plotType) {
         <div class="point-info-section">
             <h4>📋 参数组: ${setName} (Dill模型)</h4>
             <div class="info-grid responsive-grid">
-                <div class="info-item"><span class="info-label">I_avg:</span><span class="info-value">${params.I_avg} mW/cm²</span></div>
+                <div class="info-item"><span class="info-label">I<sub>avg</sub>:</span><span class="info-value">${params.I_avg} mW/cm²</span></div>
                 <div class="info-item"><span class="info-label">V:</span><span class="info-value">${params.V}</span></div>
                 <div class="info-item"><span class="info-label">K:</span><span class="info-value">${params.K}</span></div>
-                <div class="info-item"><span class="info-label">t_exp:</span><span class="info-value">${params.t_exp} s</span></div>
+                <div class="info-item"><span class="info-label">t<sub>exp</sub>:</span><span class="info-value">${params.t_exp} s</span></div>
                 <div class="info-item"><span class="info-label">C:</span><span class="info-value">${params.C}</span></div>
             </div>
         </div>
@@ -2708,12 +2708,12 @@ function getEnhancedDillPopupHtml(x, y, setName, params, plotType) {
         <div class="point-info-section">
             <h4>📋 参数组: ${setName} (增强Dill)</h4>
             <div class="info-grid responsive-grid">
-                <div class="info-item"><span class="info-label">胶厚(z_h):</span><span class="info-value">${params.z_h} μm</span></div>
+                <div class="info-item"><span class="info-label">胶厚(z<sub>h</sub>):</span><span class="info-value">${params.z_h} μm</span></div>
                 <div class="info-item"><span class="info-label">前烘温度(T):</span><span class="info-value">${params.T} °C</span></div>
-                <div class="info-item"><span class="info-label">前烘时间(t_B):</span><span class="info-value">${params.t_B} min</span></div>
-                <div class="info-item"><span class="info-label">初始光强(I0):</span><span class="info-value">${params.I0}</span></div>
-                <div class="info-item"><span class="info-label">初始PAC(M0):</span><span class="info-value">${params.M0}</span></div>
-                <div class="info-item"><span class="info-label">曝光时间(t_exp):</span><span class="info-value">${params.t_exp_enhanced} s</span></div>
+                <div class="info-item"><span class="info-label">前烘时间(t<sub>B</sub>):</span><span class="info-value">${params.t_B} min</span></div>
+                <div class="info-item"><span class="info-label">初始光强(I<sub>0</sub>):</span><span class="info-value">${params.I0}</span></div>
+                <div class="info-item"><span class="info-label">初始PAC(M<sub>0</sub>):</span><span class="info-value">${params.M0}</span></div>
+                <div class="info-item"><span class="info-label">曝光时间(t<sub>exp</sub>):</span><span class="info-value">${params.t_exp_enhanced} s</span></div>
                 <div class="info-item"><span class="info-label">空间频率(K):</span><span class="info-value">${params.K_enhanced}</span></div>
             </div>
         </div>
@@ -2749,7 +2749,7 @@ function getCarPopupHtml(x, y, setName, params, plotType) {
         valueLabel = '显影后厚度/M:';
         valueUnit = ''; // 根据实际输出调整
         formulaTitle = 'CAR模型脱保护度:';
-        formulaMath = 'M = 1-exp(-k·[H⁺]_diff·A)';
+        formulaMath = 'M = 1-e<sup>-k·[H<sup>+</sup>]<sub>diff</sub>·A</sup>';
         formulaExplanation = `
             <div>• k: 反应速率 (${params.car_reaction_rate})</div>
             <div>• A: 放大因子 (${params.car_amplification})</div>
@@ -2768,12 +2768,12 @@ function getCarPopupHtml(x, y, setName, params, plotType) {
         <div class="point-info-section">
             <h4>📋 参数组: ${setName} (CAR模型)</h4>
             <div class="info-grid responsive-grid">
-                <div class="info-item"><span class="info-label">I_avg:</span><span class="info-value">${params.car_I_avg} mW/cm²</span></div>
+                <div class="info-item"><span class="info-label">I<sub>avg</sub>:</span><span class="info-value">${params.car_I_avg} mW/cm²</span></div>
                 <div class="info-item"><span class="info-label">V:</span><span class="info-value">${params.car_V}</span></div>
                 <div class="info-item"><span class="info-label">K:</span><span class="info-value">${params.car_K}</span></div>
-                <div class="info-item"><span class="info-label">t_exp:</span><span class="info-value">${params.car_t_exp} s</span></div>
+                <div class="info-item"><span class="info-label">t<sub>exp</sub>:</span><span class="info-value">${params.car_t_exp} s</span></div>
                 <div class="info-item"><span class="info-label">η:</span><span class="info-value">${params.car_acid_gen_efficiency}</span></div>
-                <div class="info-item"><span class="info-label">EPDL:</span><span class="info-value">${params.car_diffusion_length}</span></div>
+                <div class="info-item"><span class="info-label">l<sub>diff</sub>:</span><span class="info-value">${params.car_diffusion_length}</span></div>
                 <div class="info-item"><span class="info-label">k:</span><span class="info-value">${params.car_reaction_rate}</span></div>
                 <div class="info-item"><span class="info-label">A:</span><span class="info-value">${params.car_amplification}</span></div>
                 <div class="info-item"><span class="info-label">γ:</span><span class="info-value">${params.car_contrast}</span></div>

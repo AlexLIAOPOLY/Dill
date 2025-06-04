@@ -16,13 +16,15 @@ def create_app():
     current_dir = os.path.dirname(os.path.abspath(__file__))
     # 项目根目录
     root_dir = os.path.dirname(current_dir)
-    # 静态文件目录
-    static_dir = os.path.join(root_dir, 'frontend')
+    # frontend静态文件目录
+    frontend_static_dir = os.path.join(root_dir, 'frontend')
+    # matrix_visualization静态文件目录
+    matrix_visualization_static_dir = os.path.join(root_dir, 'matrix_visualization')
     
     # 创建Flask应用
     app = Flask(
         __name__, 
-        static_folder=static_dir,
+        static_folder=frontend_static_dir,  # 主要静态文件夹
         static_url_path=''
     )
     
@@ -40,22 +42,32 @@ def create_app():
     # 首页路由
     @app.route('/')
     def index():
-        return send_from_directory(static_dir, 'index.html')
+        return send_from_directory(frontend_static_dir, 'index.html')
     
     # 单一计算页面路由
     @app.route('/index.html')
     def single_calculation():
-        return send_from_directory(static_dir, 'index.html')
+        return send_from_directory(frontend_static_dir, 'index.html')
     
     # 参数比较页面路由
     @app.route('/compare.html')
     def parameter_comparison():
-        return send_from_directory(static_dir, 'compare.html')
+        return send_from_directory(frontend_static_dir, 'compare.html')
+    
+    # 模型矩阵可视化页面路由
+    @app.route('/matrix_visualization/<path:filename>')
+    def serve_matrix_visualization_files(filename):
+        return send_from_directory(matrix_visualization_static_dir, filename)
+
+    @app.route('/matrix_visualization/')
+    @app.route('/matrix_visualization/index.html')
+    def matrix_visualization_index():
+        return send_from_directory(matrix_visualization_static_dir, 'index.html')
     
     # 404错误处理 - 返回index.html
     @app.errorhandler(404)
     def not_found(e):
-        return send_from_directory(static_dir, 'index.html')
+        return send_from_directory(frontend_static_dir, 'index.html')
     
     return app
 

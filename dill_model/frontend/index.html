@@ -12,6 +12,51 @@
     <link rel="stylesheet" href="css/popup-enhanced.css?v=1.0">
     <link rel="stylesheet" href="css/car-model.css?v=1.0">
     <link rel="stylesheet" href="css/loading-animation.css">
+    <!-- 添加数学公式所需的样式 -->
+    <style>
+        /* 分数样式 */
+        .fraction {
+            display: inline-block;
+            vertical-align: middle;
+            text-align: center;
+            margin: 0 4px;
+            font-size: 1.05em;
+        }
+        
+        .numerator, .denominator {
+            display: block;
+            padding: 0 4px;
+        }
+        
+        .numerator {
+            border-bottom: 1.5px solid black;
+            margin-bottom: 1px;
+            padding-bottom: 1px;
+        }
+        
+        /* 确保数学符号与文本间距适宜 */
+        code sup, code sub {
+            font-size: 75%;
+            line-height: 0;
+            position: relative;
+        }
+        
+        code sup {
+            top: -0.5em;
+        }
+        
+        code sub {
+            bottom: -0.25em;
+        }
+        
+        /* 美化数学公式样式 */
+        code {
+            font-family: "Times New Roman", serif;
+            font-size: 1.05em;
+            white-space: nowrap;
+            letter-spacing: 0.3px;
+        }
+    </style>
     <!-- 引入Plotly.js -->
     <script src="https://cdn.plot.ly/plotly-2.25.2.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -62,6 +107,7 @@
                 <ul>
                     <li class="active"><a href="index.html" data-i18n="nav_single">单一计算</a></li>
                     <li><a href="compare.html" data-i18n="nav_compare">参数比较</a></li>
+                    <li><a href="/matrix_visualization/" data-i18n="nav_matrix">模型矩阵可视化</a></li>
                 </ul>
             </nav>
             <div class="lang-switcher">
@@ -94,14 +140,20 @@
                             <i class="fas fa-microscope"></i>
                             <span data-i18n="dill_formula_title">Dill模型</span>
                         </h3>
-                        <div class="model-core-formula" data-i18n="dill_formula_core">核心关系: <code>M(x,z) = exp(-C · D(x,z))</code></div>
+                        <div class="model-core-formula" data-i18n="dill_formula_core">核心关系: <code>M(x,z) = e<sup>-C · D(x,z)</sup></code></div>
                         <p class="formula-notation" data-i18n="dill_formula_note"><em>M: 归一化光敏剂浓度, C: 光敏速率常数, D: 曝光剂量</em></p>
                         <div class="model-math"></div>
                         <div class="model-ref"></div>
                         <button id="dill-toggle-details" class="toggle-details-btn" data-i18n="btn_expand">展开更多 <i class="fas fa-chevron-down"></i></button>
                         <div id="dill-full-details" class="model-full-details">
                             <h4 data-i18n="dill_formula_ode">微分方程</h4>
-                            <code style="display:block;margin-bottom:10px;" data-i18n="dill_formula_ode_code">∂M/∂t = -C·I·M</code>
+                            <code style="display:block;margin-bottom:10px;" data-i18n="dill_formula_ode_code">
+                                <div class="fraction">
+                                    <span class="numerator">∂M</span>
+                                    <span class="denominator">∂t</span>
+                                </div>
+                                 = -C · I · M
+                            </code>
                             <div style="color:#34495e;font-size:0.98rem;margin-bottom:12px;" data-i18n="dill_formula_ref">参考：Dill F H, Neureuther A R, Tuttle J A, et al. IEEE Trans Electron Devices, 1975.</div>
                             <h4 data-i18n="dill_formula_scope">Dill模型主要适用于薄胶层（< 3μm）的光刻胶曝光过程建模，其中光的穿透性较好，光强分布较为均匀。</h4>
                             <h4 data-i18n="dill_formula_math">完整的Dill模型包括三个关键参数A、B、C：</h4>
@@ -114,7 +166,7 @@
                             <h4 data-i18n="dill_formula_detail">核心公式详解</h4>
                             <div class="formula-details-card inner-formula-card">
                                 <div class="formula-card-body">
-                                    <div class="formula-large" data-i18n="dill_formula_core"><code>M(x,z) = exp(-C · D(x,z))</code></div>
+                                    <div class="formula-large" data-i18n="dill_formula_core"><code>M(x,z) = e<sup>-C · D(x,z)</sup></code></div>
                                     <div class="formula-description">
                                         <div class="formula-param" data-i18n="dill_formula_param_M"><span class="param-name">M(x,z):</span> <span class="param-desc">位置(x,z)处的归一化光敏剂浓度，M=1表示未曝光区域，M=0表示完全曝光区域</span></div>
                                         <div class="formula-param" data-i18n="dill_formula_param_C"><span class="param-name">C:</span> <span class="param-desc">光敏速率常数，表示光刻胶对光的敏感程度，单位: cm²/mJ</span></div>
@@ -134,42 +186,75 @@
                             <i class="fas fa-layer-group"></i>
                             <span data-i18n="enhanced_formula_title">增强Dill模型（厚胶）</span>
                         </h3>
-                        <div class="model-core-formula" data-i18n="enhanced_formula_core">核心关系: <code>∂I/∂z = -I·[A(z_h,T,t_B)·M+B(z_h,T,t_B)]</code></div>
-                        <p data-i18n="enhanced_formula_core2" class="model-core-formula"><code>∂M/∂t = -I·M·C(z_h,T,t_B)</code></p>
+                        <div class="model-core-formula" data-i18n="enhanced_formula_core">核心关系: <code>
+                            <div class="fraction">
+                                <span class="numerator">∂I</span>
+                                <span class="denominator">∂z</span>
+                            </div>
+                            = -I · [A(z<sub>h</sub>,T,t<sub>B</sub>) · M + B(z<sub>h</sub>,T,t<sub>B</sub>)]
+                        </code></div>
+                        <p class="formula-notation" data-i18n="enhanced_formula_note"><em>A: 光敏剂吸收率, B: 基底吸收率, M: 归一化光敏剂浓度</em></p>
                         <div class="model-math"></div>
                         <div class="model-ref"></div>
                         <button id="enhanced-dill-toggle-details" class="toggle-details-btn" data-i18n="btn_expand">展开更多 <i class="fas fa-chevron-down"></i></button>
                         <div id="enhanced-dill-full-details" class="model-full-details">
                             <h4 data-i18n="enhanced_formula_ode">微分方程</h4>
-                            <code style="display:block;margin-bottom:10px;" data-i18n="enhanced_formula_ode_code">∂I/∂z = -I·[A(z_h,T,t_B)·M+B(z_h,T,t_B)]<br>∂M/∂t = -I·M·C(z_h,T,t_B)</code>
+                            <code style="display:block;margin-bottom:10px;" data-i18n="enhanced_formula_ode_code">
+                                <div class="fraction">
+                                    <span class="numerator">∂I</span>
+                                    <span class="denominator">∂z</span>
+                                </div>
+                                = -I · [A(z<sub>h</sub>,T,t<sub>B</sub>) · M + B(z<sub>h</sub>,T,t<sub>B</sub>)]<br>
+                                <div class="fraction">
+                                    <span class="numerator">∂M</span>
+                                    <span class="denominator">∂t</span>
+                                </div>
+                                = -I · M · C(z<sub>h</sub>,T,t<sub>B</sub>)
+                            </code>
                             <div style="color:#34495e;font-size:0.98rem;margin-bottom:12px;" data-i18n="enhanced_formula_ref">参考：刘世杰等《厚层抗蚀剂曝光模型及其参数测量》, 2005.</div>
                             <h4 data-i18n="enhanced_formula_scope">该模型特别适用于厚胶层（> 5μm）光刻胶，其中光的穿透性受到明显影响，光强随深度衰减较为显著。</h4>
                             <h4 data-i18n="enhanced_formula_fit">参数拟合</h4>
                             <p data-i18n="enhanced_formula_fit_math">根据刘世杰等的研究，A/B/C参数可以通过以下形式表示：</p>
                             <ul>
-                                <li data-i18n="enhanced_formula_fit_A">A(z_h,T,t_B) = a₀ + a₁·z_h + a₂·T + a₃·z_h² + a₄·z_h·T + a₅·T²</li>
-                                <li data-i18n="enhanced_formula_fit_B">B(z_h,T,t_B) = b₀ + b₁·z_h + b₂·T</li>
-                                <li data-i18n="enhanced_formula_fit_C">C(z_h,T,t_B) = c₀ + c₁·z_h + c₂·T + c₃·z_h²</li>
+                                <li data-i18n="enhanced_formula_fit_A">A(z<sub>h</sub>,T,t<sub>B</sub>) = a<sub>0</sub> + a<sub>1</sub> · z<sub>h</sub> + a<sub>2</sub> · T + a<sub>3</sub> · z<sub>h</sub><sup>2</sup> + a<sub>4</sub> · z<sub>h</sub> · T + a<sub>5</sub> · T<sup>2</sup></li>
+                                <li data-i18n="enhanced_formula_fit_B">B(z<sub>h</sub>,T,t<sub>B</sub>) = b<sub>0</sub> + b<sub>1</sub> · z<sub>h</sub> + b<sub>2</sub> · T</li>
+                                <li data-i18n="enhanced_formula_fit_C">C(z<sub>h</sub>,T,t<sub>B</sub>) = c<sub>0</sub> + c<sub>1</sub> · z<sub>h</sub> + c<sub>2</sub> · T + c<sub>3</sub> · z<sub>h</sub><sup>2</sup></li>
                             </ul>
                             <p data-i18n="enhanced_formula_fit_note">其中参数a₀~a₅, b₀~b₂, c₀~c₃由实验数据拟合得到。</p>
                             <h4 data-i18n="enhanced_formula_detail">核心公式详解</h4>
                             <div class="formula-details-card inner-formula-card">
                                 <div class="formula-card-body">
-                                    <div class="formula-large" data-i18n="enhanced_formula_core">∂I/∂z = -I·[A(z_h,T,t_B)·M+B(z_h,T,t_B)]</div>
-                                    <div class="formula-large" data-i18n="enhanced_formula_core2"><code>∂M/∂t = -I·M·C(z_h,T,t_B)</code></div>
+                                    <div class="formula-large" data-i18n="enhanced_formula_core">
+                                        <code>
+                                            <div class="fraction">
+                                                <span class="numerator">∂I</span>
+                                                <span class="denominator">∂z</span>
+                                            </div>
+                                            = -I · [A(z<sub>h</sub>,T,t<sub>B</sub>) · M + B(z<sub>h</sub>,T,t<sub>B</sub>)]
+                                        </code>
+                                    </div>
+                                    <div class="formula-large" data-i18n="enhanced_formula_core2">
+                                        <code>
+                                            <div class="fraction">
+                                                <span class="numerator">∂M</span>
+                                                <span class="denominator">∂t</span>
+                                            </div>
+                                            = -I · M · C(z<sub>h</sub>,T,t<sub>B</sub>)
+                                        </code>
+                                    </div>
                                     <div class="formula-description">
                                         <div class="formula-param" data-i18n="enhanced_formula_param_I"><span class="param-name">I:</span> <span class="param-desc">光强度，随深度z变化</span></div>
                                         <div class="formula-param" data-i18n="enhanced_formula_param_M"><span class="param-name">M:</span> <span class="param-desc">归一化光敏剂浓度</span></div>
-                                        <div class="formula-param" data-i18n="enhanced_formula_param_A"><span class="param-name">A(z_h,T,t_B):</span> <span class="param-desc">光敏剂吸收率，与胶厚、前烘温度、前烘时间相关</span></div>
-                                        <div class="formula-param" data-i18n="enhanced_formula_param_B"><span class="param-name">B(z_h,T,t_B):</span> <span class="param-desc">基底吸收率，与胶厚、前烘温度、前烘时间相关</span></div>
-                                        <div class="formula-param" data-i18n="enhanced_formula_param_C"><span class="param-name">C(z_h,T,t_B):</span> <span class="param-desc">光敏速率常数，与胶厚、前烘温度、前烘时间相关</span></div>
+                                        <div class="formula-param" data-i18n="enhanced_formula_param_A"><span class="param-name">A(z<sub>h</sub>,T,t<sub>B</sub>):</span> <span class="param-desc">光敏剂吸收率，与胶厚、前烘温度、前烘时间相关</span></div>
+                                        <div class="formula-param" data-i18n="enhanced_formula_param_B"><span class="param-name">B(z<sub>h</sub>,T,t<sub>B</sub>):</span> <span class="param-desc">基底吸收率，与胶厚、前烘温度、前烘时间相关</span></div>
+                                        <div class="formula-param" data-i18n="enhanced_formula_param_C"><span class="param-name">C(z<sub>h</sub>,T,t<sub>B</sub>):</span> <span class="param-desc">光敏速率常数，与胶厚、前烘温度、前烘时间相关</span></div>
                                     </div>
                                     <div class="formula-derivation">
                                         <h4 data-i18n="enhanced_formula_fit_detail">参数拟合公式</h4>
                                         <p data-i18n="enhanced_formula_fit_desc">A、B、C参数通过多项式函数拟合实验数据：</p>
-                                        <code data-i18n="enhanced_formula_fit_A">A(z_h,T,t_B) = a₀ + a₁·z_h + a₂·T + a₃·z_h² + a₄·z_h·T + a₅·T²</code><br>
-                                        <code data-i18n="enhanced_formula_fit_B">B(z_h,T,t_B) = b₀ + b₁·z_h + b₂·T</code><br>
-                                        <code data-i18n="enhanced_formula_fit_C">C(z_h,T,t_B) = c₀ + c₁·z_h + c₂·T + c₃·z_h²</code>
+                                        <code data-i18n="enhanced_formula_fit_A">A(z<sub>h</sub>,T,t<sub>B</sub>) = a<sub>0</sub> + a<sub>1</sub> · z<sub>h</sub> + a<sub>2</sub> · T + a<sub>3</sub> · z<sub>h</sub><sup>2</sup> + a<sub>4</sub> · z<sub>h</sub> · T + a<sub>5</sub> · T<sup>2</sup></code><br>
+                                        <code data-i18n="enhanced_formula_fit_B">B(z<sub>h</sub>,T,t<sub>B</sub>) = b<sub>0</sub> + b<sub>1</sub> · z<sub>h</sub> + b<sub>2</sub> · T</code><br>
+                                        <code data-i18n="enhanced_formula_fit_C">C(z<sub>h</sub>,T,t<sub>B</sub>) = c<sub>0</sub> + c<sub>1</sub> · z<sub>h</sub> + c<sub>2</sub> · T + c<sub>3</sub> · z<sub>h</sub><sup>2</sup></code>
                                     </div>
                                 </div>
                             </div>
@@ -180,14 +265,14 @@
                             <i class="fas fa-flask"></i>
                             <span data-i18n="car_formula_title">CAR模型（化学放大型光刻胶）</span>
                         </h3>
-                        <div class="model-core-formula" data-i18n="car_formula_core">核心过程: 光酸生成 → 扩散 → 催化反应 → 显影</div>
-                        <p class="formula-notation" data-i18n="car_formula_note"><em>CAR: 化学放大型光刻胶 (Chemically Amplified Resist)</em></p>
+                        <div class="model-core-formula" data-i18n="car_formula_core">核心关系: <code>[H<sup>+</sup>] = η · D(x)</code></div>
+                        <p class="formula-notation" data-i18n="car_formula_note"><em>η: 光酸产生效率, D: 曝光剂量, [H<sup>+</sup>]: 光酸浓度</em></p>
                         <div class="model-math"></div>
                         <div class="model-ref"></div>
                         <button id="car-toggle-details" class="toggle-details-btn" data-i18n="btn_expand">展开更多 <i class="fas fa-chevron-down"></i></button>
                         <div id="car-full-details" class="model-full-details">
                             <h4 data-i18n="car_formula_ode">关键方程</h4>
-                            <code style="display:block;margin-bottom:10px;" data-i18n="car_formula_ode_code">[H⁺] = η·D(x)<br>D(x,t) = I(x)·t<br>扩散: [H⁺]_diff = G([H⁺], l_diff)<br>脱保护度: M = 1-exp(-k·[H⁺]_diff·A)</code>
+                            <code style="display:block;margin-bottom:10px;" data-i18n="car_formula_ode_code">[H<sup>+</sup>] = η · D(x)<br>D(x,t) = I(x) · t<br>扩散: [H<sup>+</sup>]<sub>diff</sub> = G([H<sup>+</sup>], l<sub>diff</sub>)<br>脱保护度: M = 1 - e<sup>-k · [H<sup>+</sup>]<sub>diff</sub> · A</sup></code>
                             <div style="color:#34495e;font-size:0.98rem;margin-bottom:12px;" data-i18n="car_formula_ref">参考：Hinsberg et al., "Chemical amplification mechanism", Proc. SPIE, 1994.</div>
                             <h4 data-i18n="car_formula_scope">该模型特别适用于DUV (深紫外)光刻胶，其中一个光子可以通过光酸催化机制引发多次化学反应。</h4>
                             <h4 data-i18n="car_formula_math">CAR模型的四个关键步骤：</h4>
@@ -201,15 +286,22 @@
                             <h4 data-i18n="car_formula_detail">核心公式详解</h4>
                             <div class="formula-details-card inner-formula-card">
                                 <div class="formula-card-body">
-                                    <div class="formula-large" data-i18n="car_formula_acid"><code>[H⁺] = η·D(x) = η·I(x)·t_exp</code></div>
-                                    <div class="formula-large" data-i18n="car_formula_deprotect"><code>M = 1-exp(-k·[H⁺]_diff·A)</code></div>
+                                    <div class="formula-large" data-i18n="car_formula_acid"><code>[H<sup>+</sup>] = η · D(x) = η · I(x) · t<sub>exp</sub></code></div>
+                                    <div class="formula-large" data-i18n="car_formula_deprotect"><code>M = 1 - e<sup>-k · [H<sup>+</sup>]<sub>diff</sub> · A</sup></code></div>
                                     <div class="formula-description">
-                                        <div class="formula-param" data-i18n="car_formula_param_H"><span class="param-name">[H⁺]:</span> <span class="param-desc">光酸浓度，与曝光剂量成正比</span></div>
+                                        <div class="formula-param" data-i18n="car_formula_param_H"><span class="param-name">[H<sup>+</sup>]:</span> <span class="param-desc">光酸浓度，与曝光剂量成正比</span></div>
                                         <div class="formula-param" data-i18n="car_formula_param_eta"><span class="param-name">η:</span> <span class="param-desc">光酸产生效率，反映光子到光酸分子的转化效率</span></div>
-                                        <div class="formula-param" data-i18n="car_formula_param_diff"><span class="param-name">[H⁺]_diff:</span> <span class="param-desc">经过扩散后的光酸浓度分布</span></div>
+                                        <div class="formula-param" data-i18n="car_formula_param_diff"><span class="param-name">[H<sup>+</sup>]<sub>diff:</span> <span class="param-desc">经过扩散后的光酸浓度分布</span></div>
                                         <div class="formula-param" data-i18n="car_formula_param_k"><span class="param-name">k:</span> <span class="param-desc">反应速率常数，表征催化反应效率</span></div>
                                         <div class="formula-param" data-i18n="car_formula_param_A"><span class="param-name">A:</span> <span class="param-desc">放大因子，表示每个光酸分子可以催化的反应数量</span></div>
                                         <div class="formula-param" data-i18n="car_formula_param_M"><span class="param-name">M:</span> <span class="param-desc">树脂脱保护程度，影响显影后的溶解速率</span></div>
+                                    </div>
+                                    <div class="formula-derivation">
+                                        <h4 data-i18n="car_formula_steps">CAR模型步骤方程</h4>
+                                        <p data-i18n="car_formula_steps_desc">CAR模型的完整反应过程可表示为：</p>
+                                        <code data-i18n="car_formula_steps_1">1. [H<sup>+</sup>] = η · D(x) = η · I(x) · t<sub>exp</sub></code><br>
+                                        <code data-i18n="car_formula_steps_2">2. [H<sup>+</sup>]<sub>diff</sub> = G([H<sup>+</sup>], l<sub>diff</sub>)</code><br>
+                                        <code data-i18n="car_formula_steps_3">3. M = 1 - e<sup>-k · [H<sup>+</sup>]<sub>diff</sub> · A</sup></code>
                                     </div>
                                 </div>
                             </div>
@@ -389,7 +481,7 @@
                     <!-- Enhanced Dill模型基本参数容器 -->
                     <div class="parameter-group-container" id="enhanced-dill-basic-params-container" data-title="增强Dill模型基本参数" data-i18n-title="enhanced_dill_basic_params">
                         <div class="parameter-item slider-fill">
-                            <div class="parameter-label"><span class="parameter-name">胶厚 (z_h, μm)</span><span class="parameter-value">10</span></div>
+                            <div class="parameter-label"><span class="parameter-name">胶厚 (z<sub>h</sub>, μm)</span><span class="parameter-value">10</span></div>
                             <div class="parameter-input"><input type="range" id="z_h" class="slider" min="1" max="50" step="0.1" value="10"><input type="number" class="number-input" value="10" min="1" max="50" step="0.1"></div>
                             <div class="parameter-description" data-i18n="param_desc_z_h">光刻胶厚度，单位：μm</div>
                         </div>
@@ -399,22 +491,22 @@
                             <div class="parameter-description" data-i18n="param_desc_T">前烘温度，单位：℃</div>
                         </div>
                         <div class="parameter-item slider-fill">
-                            <div class="parameter-label"><span class="parameter-name">前烘时间 (t_B, min)</span><span class="parameter-value">10</span></div>
+                            <div class="parameter-label"><span class="parameter-name">前烘时间 (t<sub>B</sub>, min)</span><span class="parameter-value">10</span></div>
                             <div class="parameter-input"><input type="range" id="t_B" class="slider" min="1" max="60" step="1" value="10"><input type="number" class="number-input" value="10" min="1" max="60" step="1"></div>
                             <div class="parameter-description" data-i18n="param_desc_t_B">前烘时间，单位：分钟</div>
                         </div>
                         <div class="parameter-item slider-fill">
-                            <div class="parameter-label"><span class="parameter-name">初始光强 (I0)</span><span class="parameter-value">1.0</span></div>
+                            <div class="parameter-label"><span class="parameter-name">初始光强 (I<sub>0</sub>)</span><span class="parameter-value">1.0</span></div>
                             <div class="parameter-input"><input type="range" id="I0" class="slider" min="0.1" max="2" step="0.01" value="1.0"><input type="number" class="number-input" value="1.0" min="0.1" max="2" step="0.01"></div>
                             <div class="parameter-description" data-i18n="param_desc_I0">归一化初始光强</div>
                         </div>
                         <div class="parameter-item slider-fill">
-                            <div class="parameter-label"><span class="parameter-name">初始PAC浓度 (M0)</span><span class="parameter-value">1.0</span></div>
+                            <div class="parameter-label"><span class="parameter-name">初始PAC浓度 (M<sub>0</sub>)</span><span class="parameter-value">1.0</span></div>
                             <div class="parameter-input"><input type="range" id="M0" class="slider" min="0.1" max="1.0" step="0.01" value="1.0"><input type="number" class="number-input" value="1.0" min="0.1" max="1.0" step="0.01"></div>
                             <div class="parameter-description" data-i18n="param_desc_M0">归一化初始PAC浓度</div>
                         </div>
                         <div class="parameter-item slider-fill">
-                            <div class="parameter-label"><span class="parameter-name">曝光时间 (t_exp, s)</span><span class="parameter-value">5</span></div>
+                            <div class="parameter-label"><span class="parameter-name">曝光时间 (t<sub>exp</sub>, s)</span><span class="parameter-value">5</span></div>
                             <div class="parameter-input"><input type="range" id="t_exp_enhanced" class="slider" min="0.1" max="60" step="0.1" value="5"><input type="number" class="number-input" value="5" min="0.1" max="60" step="0.1"></div>
                             <div class="parameter-description" data-i18n="param_desc_t_exp_enhanced">曝光时间，单位：秒</div>
                         </div>

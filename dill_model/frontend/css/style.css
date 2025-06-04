@@ -3483,3 +3483,28 @@ div[data-i18n="car_formula_ref"] {
     width: 100%;
     height: 100%;
 }
+
+/* 添加分数表示的CSS样式 */
+.fraction {
+    display: inline-block;
+    vertical-align: middle;
+    margin: 0 1px;
+    text-align: center;
+    font-size: 0.9em;
+}
+.fraction .numerator {
+    display: block;
+    border-bottom: 1px solid;
+    padding: 0 3px;
+}
+.fraction .denominator {
+    display: block;
+    padding: 0 3px;
+}
+
+/* 确保公式内的上标正确显示 */
+.formula-math sup {
+    font-size: 0.8em;
+    vertical-align: super;
+    line-height: 0;
+}

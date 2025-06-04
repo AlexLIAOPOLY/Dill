@@ -4,10 +4,10 @@
 
 // 初始CAR模型参数
 const defaultCarParams = {
-    I_avg: 10,
+    "I<sub>avg</sub>": 10,
     V: 0.8,
     K: 2,
-    t_exp: 5,
+    "t<sub>exp</sub>": 5,
     acid_gen_efficiency: 0.5,
     diffusion_length: 3,
     reaction_rate: 0.3,
@@ -20,10 +20,10 @@ let currentCarParams = {...defaultCarParams};
 
 // CAR模型参数范围和步长
 const carParamRanges = {
-    I_avg: { min: 1, max: 100, step: 0.1 },
+    "I<sub>avg</sub>": { min: 1, max: 100, step: 0.1 },
     V: { min: 0, max: 1, step: 0.01 },
     K: { min: 0.1, max: 10, step: 0.1 },
-    t_exp: { min: 0.1, max: 20, step: 0.1 },
+    "t<sub>exp</sub>": { min: 0.1, max: 20, step: 0.1 },
     acid_gen_efficiency: { min: 0.01, max: 1, step: 0.01 },
     diffusion_length: { min: 0, max: 20, step: 0.1 },
     reaction_rate: { min: 0.01, max: 1, step: 0.01 },

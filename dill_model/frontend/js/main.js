@@ -717,69 +717,17 @@ function displayInteractiveResults(data) {
             console.log('CAR模型渲染2D热图 - 已有2D数据格式');
             createExposureHeatmap(exposurePlotContainer, data);
             createThicknessHeatmap(thicknessPlotContainer, data);
-        } else {
-            // 1D数据需要转换为2D格式再渲染热图
-            console.log('CAR模型转换1D到2D格式渲染热图');
-            
-            // 如果是1D数据，创建一个简单的2D网格
-            const convert1Dto2D = (xData, yData) => {
-                if (!Array.isArray(xData) || !Array.isArray(yData) || xData.length === 0 || yData.length === 0) {
-                    console.error('无效的数据格式，无法转换为2D');
-                    return null;
-                }
-                
-                // 使用现有x轴数据作为x_coords
-                const x_coords = xData;
-                
-                // 创建y_coords（只有一行，基本上是1D转2D）
-                const y_coords = [0, 1]; // 两行足够显示为热图
-                
-                // 创建z值矩阵
-                const z_values = [yData, yData]; // 复制相同的数据到两行
-                
-                return {
-                    x_coords: x_coords,
-                    y_coords: y_coords,
-                    z_values: z_values
-                };
-            };
-            
-            // 转换曝光剂量数据并渲染热图
-            if (data.x && data.exposure_dose) {
-                const exposureData2D = convert1Dto2D(data.x, data.exposure_dose);
-                if (exposureData2D) {
-                    const exposureData = {
-                        x_coords: exposureData2D.x_coords,
-                        y_coords: exposureData2D.y_coords,
-                        z_exposure_dose: exposureData2D.z_values
-                    };
-                    createExposureHeatmap(exposurePlotContainer, exposureData);
-                } else {
-                    // 回退到1D线图
-                    createExposurePlot(exposurePlotContainer, data);
-                }
+        } else { // This implies !has3DData && !has2DData, so it should be 1D
+            // 1D CAR数据，使用1D线图
+            console.log('CAR模型渲染1D线图');
+            // Backend for 1D CAR returns data.x, data.exposure_dose, data.thickness etc.
+            if (data.x && (typeof data.exposure_dose !== 'undefined' || typeof data.thickness !== 'undefined')) {
+                 createExposurePlot(exposurePlotContainer, data); 
+                 createThicknessPlot(thicknessPlotContainer, data); 
             } else {
-                console.error('CAR模型缺少曝光剂量数据');
-                exposurePlotContainer.innerHTML = '<div style="color:red;padding:20px;">缺少曝光剂量数据</div>';
-            }
-            
-            // 转换厚度数据并渲染热图
-            if (data.x && data.thickness) {
-                const thicknessData2D = convert1Dto2D(data.x, data.thickness);
-                if (thicknessData2D) {
-                    const thicknessData = {
-                        x_coords: thicknessData2D.x_coords,
-                        y_coords: thicknessData2D.y_coords,
-                        z_thickness: thicknessData2D.z_values
-                    };
-                    createThicknessHeatmap(thicknessPlotContainer, thicknessData);
-                } else {
-                    // 回退到1D线图
-                    createThicknessPlot(thicknessPlotContainer, data);
-                }
-            } else {
-                console.error('CAR模型缺少厚度数据');
-                thicknessPlotContainer.innerHTML = '<div style="color:red;padding:20px;">缺少厚度数据</div>';
+                console.error('CAR模型1D数据不完整或格式错误，无法渲染线图');
+                exposurePlotContainer.innerHTML = '<div style="color:red;padding:20px;">CAR模型1D曝光数据不完整或格式错误</div>';
+                thicknessPlotContainer.innerHTML = '<div style="color:red;padding:20px;">CAR模型1D厚度数据不完整或格式错误</div>';
             }
         }
     } else if (has3DData) {
@@ -1836,63 +1784,38 @@ function getDillPopupHtmlContent(x, y, setName, params, plotType) {
     let formulaTitle = '';
     let formulaMath = '';
     let formulaExplanation = '';
-
+    let additionalInfo = '';
+    
     if (plotType === 'exposure') {
-        valueLabel = LANGS[currentLang].popup_exposure_dose || '曝光剂量:';
-        valueUnit = 'mJ/cm²';
-        formulaTitle = LANGS[currentLang].popup_dill_exposure_title || 'Dill模型曝光剂量计算：';
-        formulaMath = 'D(x) = I_avg × t_exp × (1 + V × cos(2πKx))';
+        valueLabel = '曝光剂量:';
+        valueUnit = 'mJ<span class="fraction"><span class="numerator">1</span><span class="denominator">cm²</span></span>';
+        formulaTitle = 'Dill模型曝光剂量计算：';
+        formulaMath = 'D(x) = I<sub>avg</sub> × t<sub>exp</sub> × (1 + V × cos(K·x))';
         formulaExplanation = `
-            <div>• I_avg: ${LANGS[currentLang].param_I_avg || '平均光强度'} (${params.I_avg} mW/cm²)</div>
-            <div>• t_exp: ${LANGS[currentLang].param_t_exp || '曝光时间'} (${params.t_exp} s)</div>
-            <div>• V: ${LANGS[currentLang].param_V || '干涉条纹可见度'} (${params.V})</div>
-            <div>• K: ${LANGS[currentLang].param_K || '空间频率'} (${params.K})</div>
+            <div>• I<sub>avg</sub>: 平均光强度 (${params.I_avg} mW<span class="fraction"><span class="numerator">1</span><span class="denominator">cm²</span></span>)</div>
+            <div>• t<sub>exp</sub>: 曝光时间 (${params.t_exp} s)</div>
+            <div>• V: 干涉条纹可见度 (${params.V})</div>
+            <div>• K: 空间频率 (${params.K} rad<span class="fraction"><span class="numerator">1</span><span class="denominator">μm</span></span>)</div>
         `;
     } else if (plotType === 'thickness') {
-        valueLabel = LANGS[currentLang].popup_thickness || '光刻胶厚度:';
+        valueLabel = '光刻胶厚度:';
         valueUnit = '(归一化)';
-        formulaTitle = LANGS[currentLang].popup_dill_thickness_title || 'Dill模型光刻胶厚度计算：';
-        formulaMath = 'M(x) = exp(-C × D(x))';
-        formulaExplanation = `
-            <div>• C: ${LANGS[currentLang].param_C || '光敏速率常数'} (${params.C})</div>
-            <div>• D(x): ${LANGS[currentLang].popup_dose_at_point || '该点曝光剂量'} (${y.toFixed(2)} mJ/cm² - 若适用)</div>
-        `;
-    } else if (plotType === 'heatmap') {
-        valueLabel = LANGS[currentLang].popup_exposure_dose || '曝光剂量:';
-        valueUnit = 'mJ/cm²';
-        formulaTitle = LANGS[currentLang].popup_dill_exposure_title || 'Dill模型二维曝光剂量:';
-        formulaMath = 'D(x,y) = I_avg × t_exp × (1 + V × cos(Kx·x + Ky·y + φ(t)))';
-        formulaExplanation = `
-            <div>• I_avg: (${params.I_avg} mW/cm²)</div>
-            <div>• t_exp: (${params.t_exp} s)</div>
-            <div>• V: (${params.V})</div>
-            <div>• Kx: (${params.Kx || params.K})</div>
-            <div>• Ky: (${params.Ky || 'N/A'})</div>
-            <div>• φ(t): (${params.phi_expr || '0'})</div>
-        `;
-    } else if (plotType === 'surface3d') {
-        valueLabel = LANGS[currentLang].popup_3d_value || '值:';
-        valueUnit = '';
-        formulaTitle = LANGS[currentLang].popup_dill_3d_title || 'Dill模型三维分布:';
-        formulaMath = 'D(x,y,z) = I_avg × t_exp × (1 + V × cos(Kx·x + Ky·y + Kz·z + φ(t)))';
-        formulaExplanation = `
-            <div>• I_avg: 平均光强度 (${params.I_avg} mW/cm²)</div>
-            <div>• t_exp: 曝光时间 (${params.t_exp} s)</div>
-            <div>• V: 干涉条纹可见度 (${params.V})</div>
-            <div>• Kx: X方向空间频率 (${params.Kx} rad/μm)</div>
-            <div>• Ky: Y方向空间频率 (${params.Ky} rad/μm)</div>
-            <div>• Kz: Z方向空间频率 (${params.Kz} rad/μm)</div>
-            <div>• φ(t): 相位表达式 (${params.phi_expr || '0'})</div>
-            <div>• C: 光敏速率常数 (${params.C})</div>
-        `;
-
-        if (plotType === 'thickness' || plotType.includes('thickness')) {
-            valueUnit = '(归一化)';
-            formulaMath += '<br>M(x,y,z) = exp(-C × D(x,y,z))';
+        formulaTitle = 'Dill模型光刻胶厚度计算：';
+        formulaMath = 'M(x) = e<sup>-C × D(x)</sup>';
+        
+        // 检查是否有多维数据，确定计算公式
+        if (params.sine_type === 'multi') {
+            formulaMath += '<br>M(x,y) = e<sup>-C × D(x,y)</sup>';
+        } else if (params.sine_type === '3d') {
+            formulaMath += '<br>M(x,y,z) = e<sup>-C × D(x,y,z)</sup>';
         }
+        
+        formulaExplanation = `
+            <div>• C: 光敏速率常数 (${params.C} cm²<span class="fraction"><span class="numerator">1</span><span class="denominator">mJ</span></span>)</div>
+            <div>• D(x): 该点曝光剂量 (${y.toFixed(3)} mJ<span class="fraction"><span class="numerator">1</span><span class="denominator">cm²</span></span>)</div>
+        `;
     }
-
-
+    
     return `
         <div class="point-info-section">
             <h4>🎯 ${LANGS[currentLang].popup_section_location || '位置信息'}</h4>
@@ -1948,27 +1871,27 @@ function getEnhancedDillPopupHtmlContent(x, y, setName, params, plotType) {
     let formulaExplanation = '';
 
     if (plotType === 'exposure') {
-        valueLabel = LANGS[currentLang].popup_exposure_dose || '曝光剂量:';
+        valueLabel = '曝光剂量:';
         valueUnit = 'mJ/cm²';
-        formulaTitle = LANGS[currentLang].popup_enhanced_exposure_title || '增强Dill模型曝光剂量:';
+        formulaTitle = '增强Dill模型曝光剂量:';
         formulaMath = 'D(x,z) = ∫ I(x,z,t) dt';
         formulaExplanation = `
             <div>${LANGS[currentLang].popup_enhanced_desc || '参数涉及胶厚、前烘温度、时间等影响A,B,C的值。'}</div>
             <div>• I(x,z,t): 光强度分布</div>
         `;
     } else if (plotType === 'thickness') {
-        valueLabel = LANGS[currentLang].popup_thickness || '光刻胶厚度:';
+        valueLabel = '光刻胶厚度:';
         valueUnit = '(归一化)';
-        formulaTitle = LANGS[currentLang].popup_enhanced_thickness_title || '增强Dill模型光刻胶厚度:';
+        formulaTitle = '增强Dill模型光刻胶厚度:';
         formulaMath = '∂M/∂t = -I·M·C(z_h,T,t_B)';
         formulaExplanation = `
             <div>• M: ${LANGS[currentLang].popup_param_M_enh || '归一化光敏剂浓度'}</div>
             <div>• C(z_h,T,t_B): ${LANGS[currentLang].popup_param_C_enh || '光敏速率常数'}</div>
         `;
     } else if (plotType === 'heatmap') {
-        valueLabel = LANGS[currentLang].popup_exposure_dose || '曝光剂量:';
+        valueLabel = '曝光剂量:';
         valueUnit = 'mJ/cm²';
-        formulaTitle = LANGS[currentLang].popup_enhanced_exposure_title || '增强Dill模型二维曝光剂量:';
+        formulaTitle = '增强Dill模型二维曝光剂量:';
         formulaMath = 'D(x,y,z) based on A,B,C which depend on z_h, T, t_B';
          formulaExplanation = `
             <div>• Kx: (${params.Kx || params.K})</div>
@@ -1976,9 +1899,9 @@ function getEnhancedDillPopupHtmlContent(x, y, setName, params, plotType) {
             <div>• φ(t): (${params.phi_expr || '0'})</div>
         `;
     } else if (plotType === 'surface3d') {
-        valueLabel = LANGS[currentLang].popup_3d_value || '值:';
+        valueLabel = '值:';
         valueUnit = '';
-        formulaTitle = LANGS[currentLang].popup_enhanced_3d_title || '增强Dill模型三维分布:';
+        formulaTitle = '增强Dill模型三维分布:';
         formulaMath = '∂I/∂z = -I·[A(z_h,T,t_B)·M+B(z_h,T,t_B)]<br>∂M/∂t = -I·M·C(z_h,T,t_B)';
         formulaExplanation = `
             <div>• z_h: 胶厚 (${params.z_h} µm)</div>
@@ -2049,92 +1972,103 @@ function getCarPopupHtmlContent(x, y, setName, params, plotType) {
     let formulaTitle = '';
     let formulaMath = '';
     let formulaExplanation = '';
-
-    // CAR模型的结果图通常是显影后的形貌或脱保护度，而不是直接的曝光剂量。
-    // 我们需要根据 plotType 和 CAR模型的典型输出来调整这些标签和公式。
-    if (plotType === 'exposure' || plotType === 'car_acid_concentration') { // 假设 'exposure' 对于CAR可以代表光酸浓度
-        valueLabel = LANGS[currentLang].popup_car_acid || '光酸浓度:';
+    
+    if (plotType === 'exposure') {
+        valueLabel = '光酸浓度:';
         valueUnit = '(归一化)';
-        formulaTitle = LANGS[currentLang].popup_car_acid_title || 'CAR模型光酸生成:';
-        formulaMath = '[H⁺] = η·D(x) = η·I(x)·t_exp';
-        formulaExplanation = `
-            <div>• η: ${LANGS[currentLang].param_car_acid_gen_efficiency || '光酸产生效率'} (${params.acid_gen_efficiency})</div>
-            <div>• I(x): 光强度</div>
-            <div>• t_exp: ${LANGS[currentLang].param_car_t_exp || '曝光时间'} (${params.t_exp} s)</div>
-        `;
-    } else if (plotType === 'thickness' || plotType === 'car_deprotection_degree') { // 'thickness' 代表脱保护度或最终厚度
-        valueLabel = LANGS[currentLang].popup_car_deprotection || '脱保护度/厚度:';
-        valueUnit = '(归一化)';
-        formulaTitle = LANGS[currentLang].popup_car_deprotection_title || 'CAR模型脱保护度:';
-        formulaMath = 'M = 1-exp(-k·[H⁺]_diff·A)';
-        formulaExplanation = `
-            <div>• k: ${LANGS[currentLang].param_car_reaction_rate || '反应速率'} (${params.reaction_rate})</div>
-            <div>• [H⁺]_diff: ${LANGS[currentLang].popup_param_H_diff_car || '扩散后光酸浓度'}</div>
-            <div>• A: ${LANGS[currentLang].param_car_amplification || '放大因子'} (${params.amplification})</div>
-            <div>• EPDL: ${LANGS[currentLang].param_car_diffusion_length || '扩散长度'} (${params.diffusion_length})</div>
-            <div>• γ: ${LANGS[currentLang].param_car_contrast || '对比度因子'} (${params.contrast})</div>
-        `;
-    } else if (plotType === 'heatmap') { // 二维热力图，通常显示光酸浓度或脱保护度
-        valueLabel = LANGS[currentLang].popup_car_value_heatmap || '值:'; // 通用标签
-        valueUnit = '(归一化)';
-        formulaTitle = LANGS[currentLang].popup_car_heatmap_title || 'CAR模型二维分布:';
-        formulaMath = '依赖于具体参数和阶段';
-        formulaExplanation = `
-            <div>• Kx: (${params.Kx || params.K})</div>
-            <div>• Ky: (${params.Ky || 'N/A'})</div>
-            <div>• φ(t): (${params.phi_expr || '0'})</div>
-        `;
-    } else if (plotType === 'surface3d') { // 三维表面图，展示空间分布
-        valueLabel = LANGS[currentLang].popup_car_value_3d || '值:';
-        valueUnit = '(归一化)';
-        formulaTitle = LANGS[currentLang].popup_car_3d_title || 'CAR模型三维分布:';
-        formulaMath = '[H⁺] = η·D(x,y,z)<br>扩散: [H⁺]_diff = G([H⁺], l_diff)<br>M = 1-exp(-k·[H⁺]_diff·A)';
+        formulaTitle = 'CAR模型光酸生成计算:';
+        formulaMath = '[H<sup>+</sup>] = η × D(x)';
         formulaExplanation = `
             <div>• η: 光酸产生效率 (${params.acid_gen_efficiency})</div>
+            <div>• D(x): 曝光剂量 (mJ<span class="fraction"><span class="numerator">1</span><span class="denominator">cm²</span></span>)</div>
+        `;
+    } else if (plotType === 'thickness') {
+        valueLabel = '光刻胶厚度:';
+        valueUnit = '(归一化)';
+        formulaTitle = 'CAR模型脱保护度计算:';
+        formulaMath = 'M = 1-e<sup>-k·[H⁺]<sub>diff</sub>·A</sup>';
+        formulaExplanation = `
+            <div>• k: 反应速率常数 (${params.reaction_rate})</div>
+            <div>• [H⁺]<sub>diff</sub>: 扩散后光酸浓度</div>
+            <div>• A: 放大因子 (${params.amplification})</div>
+            <div>• 对比度: γ = ${params.contrast}</div>
+        `;
+    } else if (plotType === 'car_acid_concentration') {
+        valueLabel = '光酸浓度:';
+        valueUnit = '(归一化)';
+        formulaTitle = 'CAR模型过程模拟:';
+        formulaMath = '[H⁺] = η·D(x,y,z)<br>扩散: [H⁺]<sub>diff</sub> = G([H⁺], l<sub>diff</sub>)<br>M = 1-e<sup>-k·[H⁺]<sub>diff</sub>·A</sup>';
+        formulaExplanation = `
+            <div>• 扩散长度: ${params.diffusion_length} μm</div>
+            <div>• 光酸产生效率: ${params.acid_gen_efficiency}</div>
+        `;
+    } else if (plotType === 'car_deprotection_degree') {
+        valueLabel = '脱保护度:';
+        valueUnit = '(0-1)';
+        formulaTitle = 'CAR模型脱保护度:';
+        formulaMath = 'M = 1-e<sup>-k·[H⁺]<sub>diff</sub>·A</sup>';
+        formulaExplanation = `
             <div>• k: 反应速率 (${params.reaction_rate})</div>
             <div>• A: 放大因子 (${params.amplification})</div>
-            <div>• EPDL: 光酸扩散长度 (${params.diffusion_length})</div>
+        `;
+    } else if (plotType === 'car_thickness') {
+        valueLabel = '光刻胶厚度:';
+        valueUnit = '(归一化)';
+        formulaTitle = 'CAR模型厚度计算:';
+        formulaMath = '厚度 = f(M, γ) = M<sup>γ</sup>';
+        formulaExplanation = `
+            <div>• M: 脱保护度</div>
             <div>• γ: 对比度因子 (${params.contrast})</div>
-            <div>• I_avg: 平均光强度 (${params.I_avg} mW/cm²)</div>
-            <div>• t_exp: 曝光时间 (${params.t_exp} s)</div>
-            <div>• V: 干涉条纹可见度 (${params.V})</div>
-            <div>• Kx: X方向空间频率 (${params.Kx} rad/μm)</div>
-            <div>• Ky: Y方向空间频率 (${params.Ky} rad/μm)</div>
-            <div>• Kz: Z方向空间频率 (${params.Kz} rad/μm)</div>
-            <div>• φ(t): 相位表达式 (${params.phi_expr || '0'})</div>
+        `;
+    } else if (plotType === 'heatmap') {
+        valueLabel = '值:';
+        valueUnit = '(归一化)';
+        formulaTitle = 'CAR模型二维分布:';
+        formulaMath = '依赖于具体参数和阶段';
+        formulaExplanation = `
+            <div>• I<sub>avg</sub>: 平均光强度 (${params.I_avg} mW<span class="fraction"><span class="numerator">1</span><span class="denominator">cm²</span></span>)</div>
+            <div>• t<sub>exp</sub>: 曝光时间 (${params.t_exp} s)</div>
+            <div>• η: 光酸产生效率 (${params.acid_gen_efficiency})</div>
+            <div>• l<sub>diff</sub>: 扩散长度 (${params.diffusion_length} μm)</div>
+        `;
+    } else if (plotType === 'surface3d') {
+        valueLabel = '值:';
+        valueUnit = '(归一化)';
+        formulaTitle = 'CAR模型三维分布:';
+        formulaMath = '[H⁺] = η·D(x,y,z)<br>扩散: [H⁺]<sub>diff</sub> = G([H⁺], l<sub>diff</sub>)<br>M = 1-e<sup>-k·[H⁺]<sub>diff</sub>·A</sup>';
+        formulaExplanation = `
+            <div>• η: 光酸产生效率 (${params.acid_gen_efficiency})</div>
+            <div>• l<sub>diff</sub>: 扩散长度 (${params.diffusion_length} μm)</div>
+            <div>• k: 反应速率 (${params.reaction_rate})</div>
+            <div>• A: 放大因子 (${params.amplification})</div>
+            <div>• γ: 对比度 (${params.contrast})</div>
         `;
     }
-
+    
     return `
         <div class="point-info-section">
-            <h4>🎯 ${LANGS[currentLang].popup_section_location || '位置信息'}</h4>
+            <h4>🎯 位置信息</h4>
             <div class="info-grid">
-                <div class="info-item"><span class="info-label">X:</span><span class="info-value">${x.toFixed(3)} µm</span></div>
+                <div class="info-item"><span class="info-label">X:</span><span class="info-value">${x.toFixed(3)} μm</span></div>
                 <div class="info-item"><span class="info-label">${valueLabel}</span><span class="info-value">${y.toFixed(3)} ${valueUnit}</span></div>
             </div>
         </div>
         <div class="point-info-section">
-            <h4>📋 ${LANGS[currentLang].popup_section_params_car || '参数组: CAR模型'}</h4>
+            <h4>📋 参数组: ${setName}</h4>
             <div class="info-grid responsive-grid">
-                <div class="info-item"><span class="info-label">I_avg:</span><span class="info-value">${params.I_avg} mW/cm²</span></div>
+                <div class="info-item"><span class="info-label">I<sub>avg</sub>:</span><span class="info-value">${params.I_avg} mW<span class="fraction"><span class="numerator">1</span><span class="denominator">cm²</span></span></span></div>
                 <div class="info-item"><span class="info-label">V:</span><span class="info-value">${params.V}</span></div>
-                <div class="info-item"><span class="info-label">t_exp:</span><span class="info-value">${params.t_exp} s</span></div>
+                <div class="info-item"><span class="info-label">K:</span><span class="info-value">${params.K} rad<span class="fraction"><span class="numerator">1</span><span class="denominator">μm</span></span></span></div>
+                <div class="info-item"><span class="info-label">t<sub>exp</sub>:</span><span class="info-value">${params.t_exp} s</span></div>
                 <div class="info-item"><span class="info-label">η:</span><span class="info-value">${params.acid_gen_efficiency}</span></div>
-                <div class="info-item"><span class="info-label">EPDL:</span><span class="info-value">${params.diffusion_length}</span></div>
+                <div class="info-item"><span class="info-label">l<sub>diff</sub>:</span><span class="info-value">${params.diffusion_length} μm</span></div>
                 <div class="info-item"><span class="info-label">k:</span><span class="info-value">${params.reaction_rate}</span></div>
                 <div class="info-item"><span class="info-label">A:</span><span class="info-value">${params.amplification}</span></div>
                 <div class="info-item"><span class="info-label">γ:</span><span class="info-value">${params.contrast}</span></div>
-                ${params.sine_type === 'multi' ? `
-                <div class="info-item"><span class="info-label">Kx:</span><span class="info-value">${params.Kx}</span></div>
-                <div class="info-item"><span class="info-label">Ky:</span><span class="info-value">${params.Ky}</span></div>
-                <div class="info-item"><span class="info-label">φ(t):</span><span class="info-value">${params.phi_expr}</span></div>
-                ` : `
-                <div class="info-item"><span class="info-label">K:</span><span class="info-value">${params.K}</span></div>
-                `}
             </div>
         </div>
         <div class="point-info-section">
-            <h4>🧮 ${LANGS[currentLang].popup_section_formula || '计算公式 (核心)'}</h4>
+            <h4>🧮 计算公式</h4>
             <div class="formula-container">
                 <div class="formula-title">${formulaTitle}</div>
                 <div class="formula-math">${formulaMath}</div>
@@ -2152,171 +2086,98 @@ function getCarPopupHtmlContent(x, y, setName, params, plotType) {
  * @returns {Object} 包含详细信息的对象 { html: "..." }
  */
 function getSinglePointDetailedInfo(point, plotType, paramsOverride = null) {
-    // 提取点击点的坐标
+    // 安全检查
+    if (!point || (typeof point.x === 'undefined') || (typeof point.y === 'undefined')) {
+        console.error('无效的点数据', point);
+        return {
+            html: `<div class="error-message">无效的点数据</div>`,
+            title: '数据错误'
+        };
+    }
+    
+    // 解析点数据
     const x = point.x;
     const y = point.y;
+    let setName = '';  // 参数组名称
+    let params = {};   // 参数对象
     
-    // 处理包含z值的3D点或2D热力图点
-    const z = point.z !== undefined ? point.z : null;
-    
-    const modelSelect = document.getElementById('model-select');
-    const currentModelType = modelSelect ? modelSelect.value : 'dill';
-    let params = paramsOverride;
-    let html = '';
-    const setName = LANGS[currentLang].current_calculation || "当前计算"; // 单一计算，无多参数组名称
-    if (!params) { // 如果没有覆盖参数，则从DOM读取
-        params = {};
-        if (currentModelType === 'dill') {
-            params.sine_type = document.getElementById('dill-sine-type').value;
-            params.I_avg = parseFloat(document.getElementById('I_avg').value);
-            params.V = parseFloat(document.getElementById('V').value);
-            params.t_exp = parseFloat(document.getElementById('t_exp').value);
-            params.C = parseFloat(document.getElementById('C').value);
-            if (params.sine_type === 'multi') {
-                params.Kx = parseFloat(document.getElementById('Kx').value);
-                params.Ky = parseFloat(document.getElementById('Ky').value);
-                params.phi_expr = document.getElementById('phi_expr').value;
-            } else if (params.sine_type === '3d') {
-                params.Kx = parseFloat(document.getElementById('Kx_3d').value);
-                params.Ky = parseFloat(document.getElementById('Ky_3d').value);
-                params.Kz = parseFloat(document.getElementById('Kz_3d').value);
-                params.phi_expr = document.getElementById('phi_expr_3d').value;
-                // 三维范围参数
-                params.x_min = parseFloat(document.getElementById('x_min_3d').value);
-                params.x_max = parseFloat(document.getElementById('x_max_3d').value);
-                params.y_min = parseFloat(document.getElementById('y_min_3d').value);
-                params.y_max = parseFloat(document.getElementById('y_max_3d').value);
-                params.z_min = parseFloat(document.getElementById('z_min_3d').value);
-                params.z_max = parseFloat(document.getElementById('z_max_3d').value);
-            } else {
-                params.K = parseFloat(document.getElementById('K').value);
-            }
-        } else if (currentModelType === 'enhanced_dill') {
-            params.sine_type = document.getElementById('enhanced-dill-sine-type').value;
-            params.z_h = parseFloat(document.getElementById('z_h').value);
-            params.T = parseFloat(document.getElementById('T').value);
-            params.t_B = parseFloat(document.getElementById('t_B').value);
-            params.I0 = parseFloat(document.getElementById('I0').value);
-            params.M0 = parseFloat(document.getElementById('M0').value);
-            params.t_exp = parseFloat(document.getElementById('t_exp_enhanced').value);
-            if (params.sine_type === 'multi') {
-                params.Kx = parseFloat(document.getElementById('enhanced_Kx').value);
-                params.Ky = parseFloat(document.getElementById('enhanced_Ky').value);
-                params.phi_expr = document.getElementById('enhanced_phi_expr').value;
-                // 添加Y轴范围参数
-                params.y_min = parseFloat(document.getElementById('enhanced_y_min').value);
-                params.y_max = parseFloat(document.getElementById('enhanced_y_max').value);
-                params.y_points = parseInt(document.getElementById('enhanced_y_points').value);
-            } else if (params.sine_type === '3d') {
-                params.Kx = parseFloat(document.getElementById('enhanced_Kx_3d').value);
-                params.Ky = parseFloat(document.getElementById('enhanced_Ky_3d').value);
-                params.Kz = parseFloat(document.getElementById('enhanced_Kz_3d').value);
-                params.phi_expr = document.getElementById('enhanced_phi_expr_3d').value;
-                // 为3D模式添加K参数
-                params.K = params.Kx;
-                // 三维范围参数
-                params.x_min = parseFloat(document.getElementById('enhanced_x_min_3d').value);
-                params.x_max = parseFloat(document.getElementById('enhanced_x_max_3d').value);
-                params.y_min = parseFloat(document.getElementById('enhanced_y_min_3d').value);
-                params.y_max = parseFloat(document.getElementById('enhanced_y_max_3d').value);
-                params.z_min = parseFloat(document.getElementById('enhanced_z_min_3d').value);
-                params.z_max = parseFloat(document.getElementById('enhanced_z_max_3d').value);
-            } else {
-                // 增强Dill模型的一维情况可能也需要K，或者由后端处理
-                // 假设它也可能使用ID为K的输入框（如果存在），或默认为一个合理值
-                const kInput = document.getElementById('K'); // 尝试通用K
-                params.K = kInput ? parseFloat(kInput.value) : (params.Kx || 2); // Fallback
-            }
-        } else if (currentModelType === 'car') {
-            params.sine_type = document.getElementById('car-sine-type').value;
-            params.I_avg = parseFloat(document.getElementById('car_I_avg').value);
-            params.V = parseFloat(document.getElementById('car_V').value);
-            params.t_exp = parseFloat(document.getElementById('car_t_exp').value);
-            params.acid_gen_efficiency = parseFloat(document.getElementById('car_acid_gen_efficiency').value);
-            params.diffusion_length = parseFloat(document.getElementById('car_diffusion_length').value);
-            params.reaction_rate = parseFloat(document.getElementById('car_reaction_rate').value);
-            params.amplification = parseFloat(document.getElementById('car_amplification').value);
-            params.contrast = parseFloat(document.getElementById('car_contrast').value);
-            if (params.sine_type === 'multi') {
-                params.Kx = parseFloat(document.getElementById('car_Kx').value);
-                params.Ky = parseFloat(document.getElementById('car_Ky').value);
-                params.phi_expr = document.getElementById('car_phi_expr').value;
-                // 使用CAR模型自己的Y轴范围参数
-                params.y_min = parseFloat(document.getElementById('car_y_min').value);
-                params.y_max = parseFloat(document.getElementById('car_y_max').value);
-                params.y_points = parseInt(document.getElementById('car_y_points').value);
-            } else if (params.sine_type === '3d') {
-                params.Kx = parseFloat(document.getElementById('car_Kx_3d').value);
-                params.Ky = parseFloat(document.getElementById('car_Ky_3d').value);
-                params.Kz = parseFloat(document.getElementById('car_Kz_3d').value);
-                params.phi_expr = document.getElementById('car_phi_expr_3d').value;
-                // 为3D模式添加K参数
-                params.K = params.Kx;
-                // 三维范围参数
-                params.x_min = parseFloat(document.getElementById('car_x_min_3d').value);
-                params.x_max = parseFloat(document.getElementById('car_x_max_3d').value);
-                params.y_min = parseFloat(document.getElementById('car_y_min_3d').value);
-                params.y_max = parseFloat(document.getElementById('car_y_max_3d').value);
-                params.z_min = parseFloat(document.getElementById('car_z_min_3d').value);
-                params.z_max = parseFloat(document.getElementById('car_z_max_3d').value);
-            } else {
-                params.K = parseFloat(document.getElementById('car_K').value);
-            }
+    // 使用override参数或从点数据中提取
+    if (paramsOverride) {
+        params = paramsOverride;
+        setName = paramsOverride.name || '自定义参数';
+    } else if (point.data && point.data.name) {
+        setName = point.data.name;
+        params = { ...point.data };
+    } else if (point.fullData && point.fullData.name) {
+        setName = point.fullData.name;  // Plotly格式
+        
+        // 从曲线名称中提取参数（格式如 "Set 1: Dill (C=0.04,V=0.8)"）
+        if (setName.includes('Dill') && !setName.includes('Enhanced')) {
+            params = extractDillParamsFromName(setName);
+            params.model = 'dill';
+        } else if (setName.includes('Enhanced Dill')) {
+            params = extractEnhancedDillParamsFromName(setName);
+            params.model = 'enhanced_dill';
+        } else if (setName.includes('CAR')) {
+            params = extractCarParamsFromName(setName);
+            params.model = 'car';
         }
-    }
-    
-    // 检测是否是2D或3D点，并调整类型
-    let effectivePlotType = plotType;
-    if (z !== null) {
-        // 如果有z值，则认为是2D热力图或3D表面图
-        if (params.sine_type === '3d') {
-            effectivePlotType = 'surface3d'; // 如果是3D模式，则认为是3D表面图
-        } else if (params.sine_type === 'multi') {
-            effectivePlotType = 'heatmap'; // 如果是2D模式，则认为是热力图
-        }
-    }
-    
-    // 根据模型类型调用相应的HTML生成函数
-    if (currentModelType === 'dill') {
-        html = getDillPopupHtmlContent(x, z !== null ? y : y, setName, params, effectivePlotType);
-    } else if (currentModelType === 'enhanced_dill') {
-        html = getEnhancedDillPopupHtmlContent(x, z !== null ? y : y, setName, params, effectivePlotType);
-    } else if (currentModelType === 'car') {
-        html = getCarPopupHtmlContent(x, z !== null ? y : y, setName, params, effectivePlotType);
     } else {
-        html = `<p>详细信息无法加载，模型类型未知: ${currentModelType}</p>`;
+        // 无法从点数据中获得参数组信息，尝试使用当前选择的模型参数
+        const modelSelect = document.getElementById('model-select');
+        if (modelSelect) {
+            const modelType = modelSelect.value;
+            if (modelType === 'dill') {
+                params = getDillModelParams();
+                params.model = 'dill';
+                setName = 'Dill模型（当前参数）';
+            } else if (modelType === 'enhanced_dill') {
+                params = getEnhancedDillModelParams();
+                params.model = 'enhanced_dill';
+                setName = '增强Dill模型（当前参数）';
+            } else if (modelType === 'car') {
+                params = getCarModelParams();
+                params.model = 'car';
+                setName = 'CAR模型（当前参数）';
+            }
+        }
+    }
+
+    // 确定模型类型，生成相应的HTML内容
+    let html = '';
+    let title = '';
+    
+    if (params.model === 'dill' || (!params.model && params.C)) {
+        html = getDillPopupHtmlContent(x, y, setName, params, plotType);
+        title = `单点详情 - Dill模型`;
+    } else if (params.model === 'enhanced_dill' || (!params.model && params.z_h)) {
+        html = getEnhancedDillPopupHtmlContent(x, y, setName, params, plotType);
+        title = `单点详情 - 增强Dill模型`;
+    } else if (params.model === 'car' || (!params.model && params.acid_gen_efficiency)) {
+        html = getCarPopupHtmlContent(x, y, setName, params, plotType);
+        title = `单点详情 - CAR模型`;
+    } else {
+        html = `<div class="point-info-section">
+                    <h4>🎯 位置信息</h4>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">X:</span>
+                            <span class="info-value">${x.toFixed(3)} μm</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">值:</span>
+                            <span class="info-value">${y.toFixed(3)}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="point-info-section">
+                    <h4>⚠️ 参数信息缺失</h4>
+                    <p>无法确定此点的详细参数信息。</p>
+                </div>`;
+        title = `单点详情`;
     }
     
-    // 如果是3D表面图或2D热力图，添加额外的z坐标信息
-    if (z !== null) {
-        // 获取弹窗HTML代码开始部分
-        const startHtml = html.split('<div class="point-info-section">')[0];
-        
-        // 添加z坐标信息，插入到第一个section的info-grid中
-        const locationSection = html.split('<div class="point-info-section">')[1].split('</div>')[0];
-        const updatedLocationSection = locationSection.replace(
-            '<div class="info-grid">',
-            `<div class="info-grid">
-                <div class="info-item">
-                    <span class="info-label">X:</span>
-                    <span class="info-value">${x.toFixed(3)} µm</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Y:</span>
-                    <span class="info-value">${y.toFixed(3)} µm</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Z:</span>
-                    <span class="info-value">${z.toFixed(3)}</span>
-                </div>`
-        );
-        
-        // 重新组装HTML
-        const restOfHtml = html.split('</div>').slice(1).join('</div>');
-        html = startHtml + '<div class="point-info-section">' + updatedLocationSection + '</div>' + restOfHtml;
-    }
-    
-    return { html };
+    return { html, title };
 }
 
 // ===== 阈值滑块核心逻辑移植自compare.js，适配单组数据 =====

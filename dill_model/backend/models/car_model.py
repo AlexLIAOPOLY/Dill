@@ -369,76 +369,167 @@ class CARModel:
             包含多个Base64编码图像的字典
         """
         plt.close('all')
-        
-        # 对于一维和二维情况的常规处理
-        # 创建坐标
         x = np.linspace(0, 10, 1000)  # 0到10微米，1000个点
         
-        # 二维正弦波
-        if sine_type == 'multi' and Kx is not None and Ky is not None:
-            if y_range is not None and len(y_range) > 1:
-                y_axis_points = np.array(y_range)
-                X_grid, Y_grid = np.meshgrid(x, y_axis_points)
+        # 优先处理各维度情况，确保逻辑清晰
+        
+        # 情况1: 严格的1D计算和绘图
+        if sine_type == '1d':
+            if K is None:
+                # 如果K未提供，设置一个默认值
+                K = 2.0
+                print("警告: 1D CAR模型未提供K值，使用默认值K=2.0")
                 
-                phi = parse_phi_expr(phi_expr, 0) if phi_expr is not None else 0.0
-                initial_acid_2d = self.calculate_acid_generation(X_grid, I_avg, V, None, t_exp, acid_gen_efficiency, 
-                                                    sine_type, Kx, Ky, None, phi_expr, Y_grid)
-                
-                # 模拟光酸扩散
-                diffused_acid_2d = self.simulate_acid_diffusion(initial_acid_2d, diffusion_length)
-                
-                # 计算脱保护反应
-                deprotection_2d = self.calculate_deprotection(diffused_acid_2d, reaction_rate, amplification)
-                
-                # 计算光刻胶厚度分布
-                thickness_2d = self.calculate_dissolution(deprotection_2d, contrast)
-                
-                # 绘制曝光剂量热图
-                fig1 = plt.figure(figsize=(8, 6))
-                plt.imshow(initial_acid_2d, aspect='auto', origin='lower', 
-                          extent=[min(x), max(x), min(y_axis_points), max(y_axis_points)], cmap='viridis')
-                plt.colorbar(label='曝光剂量 (mJ/cm²)')
-                plt.xlabel('X 位置 (μm)')
-                plt.ylabel('Y 位置 (μm)')
-                plt.title('曝光剂量分布 (2D)')
-                plt.tight_layout()
-                buffer1 = BytesIO()
-                fig1.savefig(buffer1, format='png', dpi=100)
-                buffer1.seek(0)
-                exposure_plot = base64.b64encode(buffer1.getvalue()).decode()
-                plt.close(fig1)
-                
-                # 绘制光刻胶厚度热图
-                fig2 = plt.figure(figsize=(8, 6))
-                plt.imshow(thickness_2d, aspect='auto', origin='lower', 
-                          extent=[min(x), max(x), min(y_axis_points), max(y_axis_points)], cmap='plasma')
-                plt.colorbar(label='相对厚度')
-                plt.xlabel('X 位置 (μm)')
-                plt.ylabel('Y 位置 (μm)')
-                plt.title('光刻胶厚度分布 (2D)')
-                plt.tight_layout()
-                buffer2 = BytesIO()
-                fig2.savefig(buffer2, format='png', dpi=100)
-                buffer2.seek(0)
-                thickness_plot = base64.b64encode(buffer2.getvalue()).decode()
-                plt.close(fig2)
-                
-                # 同时提供其他CAR模型需要的图表键
-                return {
-                    'initial_acid_plot': exposure_plot,
-                    'thickness_plot': thickness_plot,
-                    'exposure_plot': exposure_plot,
-                    'acid_diffusion_plot': exposure_plot,
-                    'deprotection_plot': thickness_plot
-                }
-            else:
-                # 如果没有有效的y_range，回退到一维模式
-                k_for_1d_fallback = K if K is not None else 2.0
-                initial_acid = self.calculate_acid_generation(x, I_avg, V, k_for_1d_fallback, t_exp, acid_gen_efficiency)
-                diffused_acid = self.simulate_acid_diffusion(initial_acid, diffusion_length)
-                deprotection = self.calculate_deprotection(diffused_acid, reaction_rate, amplification)
-                thickness = self.calculate_dissolution(deprotection, contrast)
-        # 三维正弦波
+            # 1D数据计算
+            initial_acid = self.calculate_acid_generation(x, I_avg, V, K, t_exp, acid_gen_efficiency)
+            diffused_acid = self.simulate_acid_diffusion(initial_acid, diffusion_length)
+            deprotection = self.calculate_deprotection(diffused_acid, reaction_rate, amplification)
+            thickness = self.calculate_dissolution(deprotection, contrast)
+            
+            # 检查有效性
+            if (not initial_acid.any() or not diffused_acid.any() or not deprotection.any() or not thickness.any() or
+                np.isnan(initial_acid).all() or np.isnan(diffused_acid).all() or np.isnan(deprotection).all() or np.isnan(thickness).all()):
+                raise ValueError('CAR模型(1D)计算结果无效，可能参数设置不合理或数值溢出。')
+            
+            # 绘制1D线图
+            plots = {}
+            
+            # 1. 初始光酸分布图
+            fig1 = plt.figure(figsize=(10, 6))
+            plt.plot(x, initial_acid, 'g-', linewidth=2)
+            plt.title('Initial Acid Distribution (1D)', fontsize=16)
+            plt.xlabel('Position (μm)', fontsize=14)
+            plt.ylabel('Normalized Acid Concentration', fontsize=14)
+            plt.grid(True, alpha=0.3)
+            plt.tight_layout()
+            
+            buffer1 = BytesIO()
+            fig1.savefig(buffer1, format='png', dpi=100)
+            buffer1.seek(0)
+            plots['initial_acid_plot'] = base64.b64encode(buffer1.getvalue()).decode()
+            plt.close(fig1)
+            
+            # 2. 扩散后光酸分布图
+            fig2 = plt.figure(figsize=(10, 6))
+            plt.plot(x, initial_acid, 'g--', linewidth=1.5, label='Initial')
+            plt.plot(x, diffused_acid, 'b-', linewidth=2, label='After Diffusion')
+            plt.title('Acid Diffusion Comparison (1D)', fontsize=16)
+            plt.xlabel('Position (μm)', fontsize=14)
+            plt.ylabel('Normalized Acid Concentration', fontsize=14)
+            plt.legend()
+            plt.grid(True, alpha=0.3)
+            plt.tight_layout()
+            
+            buffer2 = BytesIO()
+            fig2.savefig(buffer2, format='png', dpi=100)
+            buffer2.seek(0)
+            plots['acid_diffusion_plot'] = base64.b64encode(buffer2.getvalue()).decode()
+            plt.close(fig2)
+            
+            # 3. 脱保护程度分布图
+            fig3 = plt.figure(figsize=(10, 6))
+            plt.plot(x, deprotection, 'r-', linewidth=2)
+            plt.title('Deprotection Degree Distribution (1D)', fontsize=16)
+            plt.xlabel('Position (μm)', fontsize=14)
+            plt.ylabel('Deprotection Degree', fontsize=14)
+            plt.grid(True, alpha=0.3)
+            plt.tight_layout()
+            
+            buffer3 = BytesIO()
+            fig3.savefig(buffer3, format='png', dpi=100)
+            buffer3.seek(0)
+            plots['deprotection_plot'] = base64.b64encode(buffer3.getvalue()).decode()
+            plt.close(fig3)
+            
+            # 4. 光刻胶厚度分布图
+            fig4 = plt.figure(figsize=(10, 6))
+            plt.plot(x, thickness, 'm-', linewidth=2)
+            plt.title('Photoresist Thickness After Development (1D)', fontsize=16)
+            plt.xlabel('Position (μm)', fontsize=14)
+            plt.ylabel('Normalized Thickness', fontsize=14)
+            plt.grid(True, alpha=0.3)
+            plt.tight_layout()
+            
+            buffer4 = BytesIO()
+            fig4.savefig(buffer4, format='png', dpi=100)
+            buffer4.seek(0)
+            plots['thickness_plot'] = base64.b64encode(buffer4.getvalue()).decode()
+            plt.close(fig4)
+            
+            # 确保与前端期望的键名一致
+            plots['exposure_plot'] = plots['acid_diffusion_plot']
+            
+            return plots
+            
+        # 情况2: 严格的2D计算和绘图
+        elif sine_type == 'multi' and Kx is not None and Ky is not None:
+            # 确保有有效的y_range
+            if y_range is None or len(y_range) <= 1:
+                print("警告: 2D CAR模型需要有效的y_range，回退到1D模式")
+                # 回退到1D模式
+                sine_type = '1d'
+                # 递归调用自身，但使用1D模式
+                return self.generate_plots(I_avg, V, K if K is not None else 2.0, t_exp, 
+                                         acid_gen_efficiency, diffusion_length, reaction_rate, 
+                                         amplification, contrast, sine_type='1d')
+            
+            # 有效的2D计算
+            y_axis_points = np.array(y_range)
+            X_grid, Y_grid = np.meshgrid(x, y_axis_points)
+            
+            phi = parse_phi_expr(phi_expr, 0) if phi_expr is not None else 0.0
+            initial_acid_2d = self.calculate_acid_generation(X_grid, I_avg, V, None, t_exp, acid_gen_efficiency, 
+                                                  sine_type, Kx, Ky, None, phi_expr, Y_grid)
+            
+            # 模拟光酸扩散
+            diffused_acid_2d = self.simulate_acid_diffusion(initial_acid_2d, diffusion_length)
+            
+            # 计算脱保护反应
+            deprotection_2d = self.calculate_deprotection(diffused_acid_2d, reaction_rate, amplification)
+            
+            # 计算光刻胶厚度分布
+            thickness_2d = self.calculate_dissolution(deprotection_2d, contrast)
+            
+            # 绘制曝光剂量热图
+            fig1 = plt.figure(figsize=(8, 6))
+            plt.imshow(initial_acid_2d, aspect='auto', origin='lower', 
+                      extent=[min(x), max(x), min(y_axis_points), max(y_axis_points)], cmap='viridis')
+            plt.colorbar(label='曝光剂量 (mJ/cm²)')
+            plt.xlabel('X 位置 (μm)')
+            plt.ylabel('Y 位置 (μm)')
+            plt.title('曝光剂量分布 (2D)')
+            plt.tight_layout()
+            buffer1 = BytesIO()
+            fig1.savefig(buffer1, format='png', dpi=100)
+            buffer1.seek(0)
+            exposure_plot = base64.b64encode(buffer1.getvalue()).decode()
+            plt.close(fig1)
+            
+            # 绘制光刻胶厚度热图
+            fig2 = plt.figure(figsize=(8, 6))
+            plt.imshow(thickness_2d, aspect='auto', origin='lower', 
+                      extent=[min(x), max(x), min(y_axis_points), max(y_axis_points)], cmap='plasma')
+            plt.colorbar(label='相对厚度')
+            plt.xlabel('X 位置 (μm)')
+            plt.ylabel('Y 位置 (μm)')
+            plt.title('光刻胶厚度分布 (2D)')
+            plt.tight_layout()
+            buffer2 = BytesIO()
+            fig2.savefig(buffer2, format='png', dpi=100)
+            buffer2.seek(0)
+            thickness_plot = base64.b64encode(buffer2.getvalue()).decode()
+            plt.close(fig2)
+            
+            # 同时提供其他CAR模型需要的图表键
+            return {
+                'initial_acid_plot': exposure_plot,
+                'thickness_plot': thickness_plot,
+                'exposure_plot': exposure_plot,
+                'acid_diffusion_plot': exposure_plot,
+                'deprotection_plot': thickness_plot
+            }
+            
+        # 情况3: 严格的3D计算和绘图
         elif sine_type == '3d' and Kx is not None and Ky is not None and Kz is not None:
             # 使用与generate_data方法一致的参数和处理方法
             x_points = 50  # x轴点数
@@ -541,91 +632,10 @@ class CARModel:
                 'deprotection_plot': thickness_plot
             }
         
-        elif sine_type == 'multi' and Kx is not None:
-            initial_acid = self.calculate_acid_generation(x, I_avg, V, None, t_exp, acid_gen_efficiency, sine_type, Kx, Ky, None, phi_expr, y=0)
+        # 情况4: 参数不明确，默认回退到1D模式
         else:
-            initial_acid = self.calculate_acid_generation(x, I_avg, V, K, t_exp, acid_gen_efficiency)
-        
-        # 处理一维情况
-        if sine_type != '3d' and (sine_type != 'multi' or (y_range is None or len(y_range) <= 1)):
-            # 模拟光酸扩散
-            diffused_acid = self.simulate_acid_diffusion(initial_acid, diffusion_length)
-            
-            # 计算脱保护反应
-            deprotection = self.calculate_deprotection(diffused_acid, reaction_rate, amplification)
-            
-            # 计算光刻胶厚度分布
-            thickness = self.calculate_dissolution(deprotection, contrast)
-            
-            # 检查有效性
-            if (not initial_acid.any() or not diffused_acid.any() or not deprotection.any() or not thickness.any() or
-                np.isnan(initial_acid).all() or np.isnan(diffused_acid).all() or np.isnan(deprotection).all() or np.isnan(thickness).all()):
-                raise ValueError('CAR模型计算结果无效，可能参数设置不合理或数值溢出。')
-        
-        # 生成图像集
-        plots = {}
-        
-        # 1. 初始光酸分布图
-        fig1 = plt.figure(figsize=(10, 6))
-        plt.plot(x, initial_acid, 'g-', linewidth=2)
-        plt.title('Initial Acid Distribution', fontsize=16)
-        plt.xlabel('Position (μm)', fontsize=14)
-        plt.ylabel('Normalized Acid Concentration', fontsize=14)
-        plt.grid(True, alpha=0.3)
-        plt.tight_layout()
-        
-        buffer1 = BytesIO()
-        fig1.savefig(buffer1, format='png', dpi=100)
-        buffer1.seek(0)
-        plots['initial_acid_plot'] = base64.b64encode(buffer1.getvalue()).decode()
-        plt.close(fig1)
-        
-        # 2. 扩散后光酸分布图
-        fig2 = plt.figure(figsize=(10, 6))
-        plt.plot(x, initial_acid, 'g--', linewidth=1.5, label='Initial')
-        plt.plot(x, diffused_acid, 'b-', linewidth=2, label='After Diffusion')
-        plt.title('Acid Diffusion Comparison', fontsize=16)
-        plt.xlabel('Position (μm)', fontsize=14)
-        plt.ylabel('Normalized Acid Concentration', fontsize=14)
-        plt.legend()
-        plt.grid(True, alpha=0.3)
-        plt.tight_layout()
-        
-        buffer2 = BytesIO()
-        fig2.savefig(buffer2, format='png', dpi=100)
-        buffer2.seek(0)
-        plots['acid_diffusion_plot'] = base64.b64encode(buffer2.getvalue()).decode()
-        plt.close(fig2)
-        
-        # 3. 脱保护程度分布图
-        fig3 = plt.figure(figsize=(10, 6))
-        plt.plot(x, deprotection, 'r-', linewidth=2)
-        plt.title('Deprotection Degree Distribution', fontsize=16)
-        plt.xlabel('Position (μm)', fontsize=14)
-        plt.ylabel('Deprotection Degree', fontsize=14)
-        plt.grid(True, alpha=0.3)
-        plt.tight_layout()
-        
-        buffer3 = BytesIO()
-        fig3.savefig(buffer3, format='png', dpi=100)
-        buffer3.seek(0)
-        plots['deprotection_plot'] = base64.b64encode(buffer3.getvalue()).decode()
-        plt.close(fig3)
-        
-        # 4. 光刻胶厚度分布图
-        fig4 = plt.figure(figsize=(10, 6))
-        plt.plot(x, thickness, 'm-', linewidth=2)
-        plt.title('Photoresist Thickness After Development', fontsize=16)
-        plt.xlabel('Position (μm)', fontsize=14)
-        plt.ylabel('Normalized Thickness', fontsize=14)
-        plt.grid(True, alpha=0.3)
-        plt.tight_layout()
-        
-        buffer4 = BytesIO()
-        fig4.savefig(buffer4, format='png', dpi=100)
-        buffer4.seek(0)
-        plots['thickness_plot'] = base64.b64encode(buffer4.getvalue()).decode()
-        plt.close(fig4)
-        
-        plots['exposure_plot'] = plots['acid_diffusion_plot']
-        return plots 
+            print(f"警告: 未能明确识别模型维度类型 (sine_type={sine_type}), 回退到1D模式")
+            # 递归调用自身，但使用1D模式
+            return self.generate_plots(I_avg, V, K if K is not None else 2.0, t_exp, 
+                                     acid_gen_efficiency, diffusion_length, reaction_rate, 
+                                     amplification, contrast, sine_type='1d') 

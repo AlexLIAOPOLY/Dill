@@ -6,17 +6,18 @@ const LANGS = {
         nav_single: '单一计算',
         nav_compare: '参数比较',
         nav_batch: '批量计算',
+        nav_matrix: '模型矩阵可视化',
         lang_btn: 'English/中文',
         select_model: '选择计算模型:',
         dill_model: 'Dill模型（薄胶）',
         enhanced_dill_model: '增强Dill模型（厚胶）',
         car_model: 'CAR模型（化学放大型光刻胶）',
         dill_formula_title: 'Dill模型',
-        dill_formula_core: '核心关系: <code>M(x,z) = exp(-C · D(x,z))</code>',
+        dill_formula_core: '核心关系: <code>M(x,z) = e<sup>-C · D(x,z)</sup></code>',
         dill_formula_note: '<em>M: 归一化光敏剂浓度, C: 光敏速率常数, D: 曝光剂量</em>',
         enhanced_formula_title: '增强Dill模型（厚胶）',
-        enhanced_formula_core: '核心关系: <code>∂I/∂z = -I·[A(z_h,T,t_B)·M+B(z_h,T,t_B)]</code>',
-        enhanced_formula_core2: '<code>∂M/∂t = -I·M·C(z_h,T,t_B)</code>',
+        enhanced_formula_core: '核心关系: <code>∂I/∂z = -I·[A(z<sub>h</sub>,T,t<sub>B</sub>)·M+B(z<sub>h</sub>,T,t<sub>B</sub>)]</code>',
+        enhanced_formula_core2: '<code>∂M/∂t = -I·M·C(z<sub>h</sub>,T,t<sub>B</sub>)</code>',
         car_formula_title: 'CAR模型（化学放大型光刻胶）',
         car_formula_core: '核心过程: 光酸生成 → 扩散 → 催化反应 → 显影',
         car_formula_note: '<em>CAR: 化学放大型光刻胶 (Chemically Amplified Resist)</em>',
@@ -39,25 +40,25 @@ const LANGS = {
         dill_formula_ode2_code: '∂M/∂t = -C · I · M',
         dill_formula_ode2_note: '其中I为光强度，表示单位时间内的曝光剂量。',
         enhanced_formula_ode: '微分方程',
-        enhanced_formula_ode_code: '∂I/∂z = -I·[A(z_h,T,t_B)·M+B(z_h,T,t_B)]<br>∂M/∂t = -I·M·C(z_h,T,t_B)',
+        enhanced_formula_ode_code: '∂I/∂z = -I·[A(z<sub>h</sub>,T,t<sub>B</sub>)·M+B(z<sub>h</sub>,T,t<sub>B</sub>)]<br>∂M/∂t = -I·M·C(z<sub>h</sub>,T,t<sub>B</sub>)',
         enhanced_formula_ref: '参考：刘世杰等《厚层抗蚀剂曝光模型及其参数测量》, 2005.',
         enhanced_formula_scope: '该模型特别适用于厚胶层（> 5μm）光刻胶，其中光的穿透性受到明显影响，光强随深度衰减较为显著。',
         enhanced_formula_fit: '参数拟合',
         enhanced_formula_fit_math: '根据刘世杰等的研究，A/B/C参数可以通过以下形式表示：',
-        enhanced_formula_fit_A: 'A(z_h,T,t_B) = a₀ + a₁·z_h + a₂·T + a₃·z_h² + a₄·z_h·T + a₅·T²',
-        enhanced_formula_fit_B: 'B(z_h,T,t_B) = b₀ + b₁·z_h + b₂·T',
-        enhanced_formula_fit_C: 'C(z_h,T,t_B) = c₀ + c₁·z_h + c₂·T + c₃·z_h²',
+        enhanced_formula_fit_A: 'A(z<sub>h</sub>,T,t<sub>B</sub>) = a₀ + a₁·z<sub>h</sub> + a₂·T + a₃·z<sub>h</sub>² + a₄·z<sub>h</sub>·T + a₅·T²',
+        enhanced_formula_fit_B: 'B(z<sub>h</sub>,T,t<sub>B</sub>) = b₀ + b₁·z<sub>h</sub> + b₂·T',
+        enhanced_formula_fit_C: 'C(z<sub>h</sub>,T,t<sub>B</sub>) = c₀ + c₁·z<sub>h</sub> + c₂·T + c₃·z<sub>h</sub>²',
         enhanced_formula_fit_note: '其中参数a₀~a₅, b₀~b₂, c₀~c₃由实验数据拟合得到。',
         enhanced_formula_detail: '核心公式详解',
         enhanced_formula_param_I: '<span class="param-name">I:</span> <span class="param-desc">光强度，随深度z变化</span>',
         enhanced_formula_param_M: '<span class="param-name">M:</span> <span class="param-desc">归一化光敏剂浓度</span>',
-        enhanced_formula_param_A: '<span class="param-name">A(z_h,T,t_B):</span> <span class="param-desc">光敏剂吸收率，与胶厚、前烘温度、前烘时间相关</span>',
-        enhanced_formula_param_B: '<span class="param-name">B(z_h,T,t_B):</span> <span class="param-desc">基底吸收率，与胶厚、前烘温度、前烘时间相关</span>',
-        enhanced_formula_param_C: '<span class="param-name">C(z_h,T,t_B):</span> <span class="param-desc">光敏速率常数，与胶厚、前烘温度、前烘时间相关</span>',
+        enhanced_formula_param_A: '<span class="param-name">A(z<sub>h</sub>,T,t<sub>B</sub>):</span> <span class="param-desc">光敏剂吸收率，与胶厚、前烘温度、前烘时间相关</span>',
+        enhanced_formula_param_B: '<span class="param-name">B(z<sub>h</sub>,T,t<sub>B</sub>):</span> <span class="param-desc">基底吸收率，与胶厚、前烘温度、前烘时间相关</span>',
+        enhanced_formula_param_C: '<span class="param-name">C(z<sub>h</sub>,T,t<sub>B</sub>):</span> <span class="param-desc">光敏速率常数，与胶厚、前烘温度、前烘时间相关</span>',
         enhanced_formula_fit_detail: '参数拟合公式',
         enhanced_formula_fit_desc: 'A、B、C参数通过多项式函数拟合实验数据：',
         car_formula_ode: '关键方程',
-        car_formula_ode_code: '[H⁺] = η·D(x)<br>D(x,t) = I(x)·t<br>扩散: [H⁺]_diff = G([H⁺], l_diff)<br>脱保护度: M = 1-exp(-k·[H⁺]_diff·A)',
+        car_formula_ode_code: '[H<sup>+</sup>] = η·D(x)<br>D(x,t) = I(x)·t<br>扩散: [H<sup>+</sup>]<sub>diff</sub> = G([H<sup>+</sup>], l<sub>diff</sub>)<br>脱保护度: M = 1-e<sup>-k·[H<sup>+</sup>]<sub>diff</sub>·A</sup>',
         car_formula_ref: '参考：Hinsberg et al., "Chemical amplification mechanism", Proc. SPIE, 1994.',
         car_formula_scope: '该模型特别适用于DUV (深紫外)光刻胶，其中一个光子可以通过光酸催化机制引发多次化学反应。',
         car_formula_math: 'CAR模型的四个关键步骤：',
@@ -67,19 +68,19 @@ const LANGS = {
         car_formula_math_D: '<b>显影过程</b>：脱保护区域可被显影液溶解，形成图案',
         car_formula_simple: '本模型关注放大效应、对比度和分辨率之间的关系。',
         car_formula_detail: '核心公式详解',
-        car_formula_acid: '<code>[H⁺] = η·D(x) = η·I(x)·t_exp</code>',
-        car_formula_deprotect: '<code>M = 1-exp(-k·[H⁺]_diff·A)</code>',
-        car_formula_param_H: '<span class="param-name">[H⁺]:</span> <span class="param-desc">光酸浓度，与曝光剂量成正比</span>',
+        car_formula_acid: '<code>[H<sup>+</sup>] = η·D(x) = η·I(x)·t<sub>exp</sub></code>',
+        car_formula_deprotect: '<code>M = 1-e<sup>-k·[H<sup>+</sup>]<sub>diff</sub>·A</sup></code>',
+        car_formula_param_H: '<span class="param-name">[H<sup>+</sup>]:</span> <span class="param-desc">光酸浓度，与曝光剂量成正比</span>',
         car_formula_param_eta: '<span class="param-name">η:</span> <span class="param-desc">光酸产生效率，反映光子到光酸分子的转化效率</span>',
-        car_formula_param_diff: '<span class="param-name">[H⁺]_diff:</span> <span class="param-desc">经过扩散后的光酸浓度分布</span>',
+        car_formula_param_diff: '<span class="param-name">[H<sup>+</sup>]<sub>diff</sub>:</span> <span class="param-desc">经过扩散后的光酸浓度分布</span>',
         car_formula_param_k: '<span class="param-name">k:</span> <span class="param-desc">反应速率常数，表征催化反应效率</span>',
         car_formula_param_A: '<span class="param-name">A:</span> <span class="param-desc">放大因子，表示每个光酸分子可以催化的反应数量</span>',
         car_formula_param_M: '<span class="param-name">M:</span> <span class="param-desc">树脂脱保护程度，影响显影后的溶解速率</span>',
-        param_desc_I_avg: '平均入射光强度，单位：mW/cm²',
+        param_desc_I_avg: '平均入射光强度，单位：mW<sup>2</sup>',
         param_desc_V: '干涉条纹的对比度，范围：0-1',
         param_desc_K: '干涉条纹的空间频率，单位：rad/μm',
         param_desc_t_exp: '总曝光时间，单位：秒',
-        param_desc_C: '光刻胶的Dill C参数，单位：cm²/mJ',
+        param_desc_C: '光刻胶的Dill C参数，单位：cm<sup>2</sup><span class="fraction"><span class="numerator">1</span><span class="denominator">mJ</span></span>',
         param_desc_z_h: '光刻胶厚度，单位：μm',
         param_desc_T: '前烘温度，单位：℃',
         param_desc_t_B: '前烘时间，单位：分钟',
@@ -134,7 +135,7 @@ const LANGS = {
         add_set: '新增参数组',
         logo: '<span>多模型</span>计算工具',
         drag_handle_title: '拖拽排序',
-        param_desc_car_I_avg: '平均入射光强度，单位：mW/cm²',
+        param_desc_car_I_avg: '平均入射光强度，单位：mW<sup>2</sup>',
         param_desc_car_V: '干涉条纹的对比度，范围：0-1',
         param_desc_car_K: '干涉条纹的空间频率，单位：rad/μm',
         param_desc_car_t_exp: '总曝光时间，单位：秒',
@@ -144,7 +145,8 @@ const LANGS = {
         param_desc_car_amp: '每个光酸分子可催化的反应数',
         param_desc_car_contrast: '显影过程的对比度系数',
         hover_exposure_value: '曝光剂量值',
-        hover_thickness_value: '相对厚度值'
+        hover_thickness_value: '相对厚度值',
+        compare_set_title: '参数组 {n}'
     },
     // 添加zh映射到zh-CN解决语言匹配问题
     'zh': {
@@ -156,17 +158,18 @@ const LANGS = {
         nav_single: 'Single Calculation',
         nav_compare: 'Parameter Comparison',
         nav_batch: 'Batch Calculation',
+        nav_matrix: 'Model Matrix Visualization',
         lang_btn: 'English/中文',
         select_model: 'Select Calculation Model:',
         dill_model: 'Dill Model (Thin Resist)',
         enhanced_dill_model: 'Enhanced Dill Model (Thick Resist)',
         car_model: 'CAR Model (Chemically Amplified Resist)',
         dill_formula_title: 'Dill Model',
-        dill_formula_core: 'Core Relationship: <code>M(x,z) = exp(-C · D(x,z))</code>',
+        dill_formula_core: 'Core Relationship: <code>M(x,z) = e<sup>-C · D(x,z)</sup></code>',
         dill_formula_note: '<em>M: Normalized PAC concentration, C: Photosensitivity rate constant, D: Exposure dose</em>',
         enhanced_formula_title: 'Enhanced Dill Model (Thick Resist)',
-        enhanced_formula_core: 'Core Relationship: <code>∂I/∂z = -I·[A(z_h,T,t_B)·M+B(z_h,T,t_B)]</code>',
-        enhanced_formula_core2: '<code>∂M/∂t = -I·M·C(z_h,T,t_B)</code>',
+        enhanced_formula_core: 'Core Relationship: <code>∂I/∂z = -I·[A(z<sub>h</sub>,T,t<sub>B</sub>)·M+B(z<sub>h</sub>,T,t<sub>B</sub>)]</code>',
+        enhanced_formula_core2: '<code>∂M/∂t = -I·M·C(z<sub>h</sub>,T,t<sub>B</sub>)</code>',
         car_formula_title: 'CAR Model (Chemically Amplified Resist)',
         car_formula_core: 'Core Process: Acid Generation → Diffusion → Catalytic Reaction → Development',
         car_formula_note: '<em>CAR: Chemically Amplified Resist</em>',
@@ -189,25 +192,25 @@ const LANGS = {
         dill_formula_ode2_code: '∂M/∂t = -C · I · M',
         dill_formula_ode2_note: 'where I is the light intensity, representing exposure dose per unit time.',
         enhanced_formula_ode: 'Differential Equations',
-        enhanced_formula_ode_code: '∂I/∂z = -I·[A(z_h,T,t_B)·M+B(z_h,T,t_B)]<br>∂M/∂t = -I·M·C(z_h,T,t_B)',
+        enhanced_formula_ode_code: '∂I/∂z = -I·[A(z<sub>h</sub>,T,t<sub>B</sub>)·M+B(z<sub>h</sub>,T,t<sub>B</sub>)]<br>∂M/∂t = -I·M·C(z<sub>h</sub>,T,t<sub>B</sub>)',
         enhanced_formula_ref: 'Reference: Liu Shijie et al., "Thick Resist Exposure Model and Its Parameter Measurement", 2005.',
         enhanced_formula_scope: 'This model is particularly suitable for thick resist layers (> 5μm) where light penetration is significantly affected and intensity attenuation with depth is notable.',
         enhanced_formula_fit: 'Parameter Fitting',
         enhanced_formula_fit_math: 'According to Liu Shijie et al., A/B/C parameters can be represented as:',
-        enhanced_formula_fit_A: 'A(z_h,T,t_B) = a₀ + a₁·z_h + a₂·T + a₃·z_h² + a₄·z_h·T + a₅·T²',
-        enhanced_formula_fit_B: 'B(z_h,T,t_B) = b₀ + b₁·z_h + b₂·T',
-        enhanced_formula_fit_C: 'C(z_h,T,t_B) = c₀ + c₁·z_h + c₂·T + c₃·z_h²',
+        enhanced_formula_fit_A: 'A(z<sub>h</sub>,T,t<sub>B</sub>) = a₀ + a₁·z<sub>h</sub> + a₂·T + a₃·z<sub>h</sub>² + a₄·z<sub>h</sub>·T + a₅·T²',
+        enhanced_formula_fit_B: 'B(z<sub>h</sub>,T,t<sub>B</sub>) = b₀ + b₁·z<sub>h</sub> + b₂·T',
+        enhanced_formula_fit_C: 'C(z<sub>h</sub>,T,t<sub>B</sub>) = c₀ + c₁·z<sub>h</sub> + c₂·T + c₃·z<sub>h</sub>²',
         enhanced_formula_fit_note: 'Where parameters a₀~a₅, b₀~b₂, c₀~c₃ are obtained by fitting experimental data.',
         enhanced_formula_detail: 'Core Formula Details',
         enhanced_formula_param_I: '<span class="param-name">I:</span> <span class="param-desc">Light intensity, varying with depth z</span>',
         enhanced_formula_param_M: '<span class="param-name">M:</span> <span class="param-desc">Normalized PAC concentration</span>',
-        enhanced_formula_param_A: '<span class="param-name">A(z_h,T,t_B):</span> <span class="param-desc">Photosensitive agent absorption rate, related to resist thickness, prebake temperature, and prebake time</span>',
-        enhanced_formula_param_B: '<span class="param-name">B(z_h,T,t_B):</span> <span class="param-desc">Substrate absorption rate, related to resist thickness, prebake temperature, and prebake time</span>',
-        enhanced_formula_param_C: '<span class="param-name">C(z_h,T,t_B):</span> <span class="param-desc">Photosensitivity rate constant, related to resist thickness, prebake temperature, and prebake time</span>',
+        enhanced_formula_param_A: '<span class="param-name">A(z<sub>h</sub>,T,t<sub>B</sub>):</span> <span class="param-desc">Photosensitive agent absorption rate, related to resist thickness, prebake temperature, and prebake time</span>',
+        enhanced_formula_param_B: '<span class="param-name">B(z<sub>h</sub>,T,t<sub>B</sub>):</span> <span class="param-desc">Substrate absorption rate, related to resist thickness, prebake temperature, and prebake time</span>',
+        enhanced_formula_param_C: '<span class="param-name">C(z<sub>h</sub>,T,t<sub>B</sub>):</span> <span class="param-desc">Photosensitivity rate constant, related to resist thickness, prebake temperature, and prebake time</span>',
         enhanced_formula_fit_detail: 'Parameter Fitting Formulas',
         enhanced_formula_fit_desc: 'A, B, C parameters are fitted to experimental data using polynomial functions:',
         car_formula_ode: 'Key Equations',
-        car_formula_ode_code: '[H⁺] = η·D(x)<br>D(x,t) = I(x)·t<br>Diffusion: [H⁺]_diff = G([H⁺], l_diff)<br>Deprotection: M = 1-exp(-k·[H⁺]_diff·A)',
+        car_formula_ode_code: '[H<sup>+</sup>] = η·D(x)<br>D(x,t) = I(x)·t<br>Diffusion: [H<sup>+</sup>]<sub>diff</sub> = G([H<sup>+</sup>], l<sub>diff</sub>)<br>Deprotection: M = 1-e<sup>-k·[H<sup>+</sup>]<sub>diff</sub>·A</sup>',
         car_formula_ref: 'Reference: Hinsberg et al., "Chemical amplification mechanism", Proc. SPIE, 1994.',
         car_formula_scope: 'This model is particularly suitable for DUV (Deep Ultraviolet) photoresists, where a single photon can initiate multiple chemical reactions through photoacid catalytic mechanisms.',
         car_formula_math: 'Four key steps in the CAR model:',
@@ -217,19 +220,19 @@ const LANGS = {
         car_formula_math_D: '<b>Development Process</b>: Deprotected areas can be dissolved by developer, forming patterns',
         car_formula_simple: 'This model focuses on the relationship between amplification effect, contrast, and resolution.',
         car_formula_detail: 'Core Formula Details',
-        car_formula_acid: '<code>[H⁺] = η·D(x) = η·I(x)·t_exp</code>',
-        car_formula_deprotect: '<code>M = 1-exp(-k·[H⁺]_diff·A)</code>',
-        car_formula_param_H: '<span class="param-name">[H⁺]:</span> <span class="param-desc">Photoacid concentration, proportional to exposure dose</span>',
+        car_formula_acid: '<code>[H<sup>+</sup>] = η·D(x) = η·I(x)·t<sub>exp</sub></code>',
+        car_formula_deprotect: '<code>M = 1-e<sup>-k·[H<sup>+</sup>]<sub>diff</sub>·A</sup></code>',
+        car_formula_param_H: '<span class="param-name">[H<sup>+</sup>]:</span> <span class="param-desc">Photoacid concentration, proportional to exposure dose</span>',
         car_formula_param_eta: '<span class="param-name">η:</span> <span class="param-desc">Photoacid generation efficiency, reflecting conversion from photons to photoacid molecules</span>',
-        car_formula_param_diff: '<span class="param-name">[H⁺]_diff:</span> <span class="param-desc">Photoacid concentration distribution after diffusion</span>',
+        car_formula_param_diff: '<span class="param-name">[H<sup>+</sup>]<sub>diff</sub>:</span> <span class="param-desc">Acid concentration after diffusion</span>',
         car_formula_param_k: '<span class="param-name">k:</span> <span class="param-desc">Reaction rate constant, characterizing catalytic reaction efficiency</span>',
         car_formula_param_A: '<span class="param-name">A:</span> <span class="param-desc">Amplification factor, representing number of reactions a photoacid molecule can catalyze</span>',
         car_formula_param_M: '<span class="param-name">M:</span> <span class="param-desc">Degree of resin deprotection, affecting dissolution rate after development</span>',
-        param_desc_I_avg: 'Average incident light intensity, unit: mW/cm²',
+        param_desc_I_avg: 'Average incident light intensity, unit: mW<sup>2</sup>',
         param_desc_V: 'Interference fringe visibility, range: 0-1',
         param_desc_K: 'Spatial frequency of interference fringes, unit: rad/μm',
         param_desc_t_exp: 'Total exposure time, unit: seconds',
-        param_desc_C: 'Dill C parameter of photoresist, unit: cm²/mJ',
+        param_desc_C: 'Dill C parameter of the photoresist, unit: cm<sup>2</sup><span class="fraction"><span class="numerator">1</span><span class="denominator">mJ</span></span>',
         param_desc_z_h: 'Photoresist thickness, unit: μm',
         param_desc_T: 'Prebake temperature, unit: ℃',
         param_desc_t_B: 'Prebake time, unit: minutes',
@@ -284,7 +287,7 @@ const LANGS = {
         add_set: 'Add Parameter Set',
         logo: '<span>Multi-Model</span> Calculation Tool',
         drag_handle_title: 'Drag to reorder',
-        param_desc_car_I_avg: 'Average incident light intensity, unit: mW/cm²',
+        param_desc_car_I_avg: 'Average incident light intensity, unit: mW<sup>2</sup>',
         param_desc_car_V: 'Interference fringe visibility, range: 0-1',
         param_desc_car_K: 'Spatial frequency of interference fringes, unit: rad/μm',
         param_desc_car_t_exp: 'Total exposure time, unit: seconds',
@@ -294,19 +297,36 @@ const LANGS = {
         param_desc_car_amp: 'Number of reactions catalyzed by each photoacid molecule',
         param_desc_car_contrast: 'Contrast coefficient of the development process',
         hover_exposure_value: 'Exposure Dose Value',
-        hover_thickness_value: 'Relative Thickness Value'
+        hover_thickness_value: 'Relative Thickness Value',
+        compare_set_title: 'Parameter Set {n}'
     }
 };
 
-// 初始化时直接将zh-CN内容复制给zh
-for (let key in LANGS['zh-CN']) {
-    if (LANGS['zh-CN'].hasOwnProperty(key)) {
-        LANGS['zh'][key] = LANGS['zh-CN'][key];
+// 确保 LANGS['zh'] 包含 LANGS['zh-CN'] 的所有属性
+// 这应该在 LANGS 对象完全定义之后，但在其他函数可能使用它之前执行
+if (LANGS && LANGS['zh-CN'] && LANGS['zh']) {
+    for (const key in LANGS['zh-CN']) {
+        if (Object.prototype.hasOwnProperty.call(LANGS['zh-CN'], key)) {
+            if (!LANGS['zh'][key]) { // 只复制 zh 中尚未定义的属性，以防 zh 有特殊定义
+                LANGS['zh'][key] = LANGS['zh-CN'][key];
+            }
+        }
     }
 }
 
-// Function to get the persisted language or default to 'zh'
+// 全局当前语言变量，从localStorage或浏览器设置初始化
+let currentLang = getInitialLang();
+
+/**
+ * 获取初始语言设置
+ * @returns {string} 初始语言代码
+ */
 function getInitialLang() {
+    let lang = localStorage.getItem('preferredLang');
+    if (lang && LANGS[lang]) {
+        console.log(`从localStorage加载语言: ${lang}`);
+        return lang;
+    }
     try {
         const persistedLang = localStorage.getItem('userLanguage');
         if (persistedLang && (persistedLang === 'zh' || persistedLang === 'en')) {
@@ -317,8 +337,6 @@ function getInitialLang() {
     }
     return 'zh'; // Default language
 }
-
-let currentLang = getInitialLang();
 
 function switchLang() {
     currentLang = (currentLang === 'zh') ? 'en' : 'zh';
