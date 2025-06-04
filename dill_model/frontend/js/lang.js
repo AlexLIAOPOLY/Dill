@@ -146,7 +146,18 @@ const LANGS = {
         param_desc_car_contrast: '显影过程的对比度系数',
         hover_exposure_value: '曝光剂量值',
         hover_thickness_value: '相对厚度值',
-        compare_set_title: '参数组 {n}'
+        compare_set_title: '参数组 {n}',
+        'phi_expr_custom': '自定义输入',
+        'phi_expr_constant': '常量: 0',
+        'phi_expr_linear': '线性变化: 0.5*t',
+        'phi_expr_sin': '正弦变化: sin(t)',
+        'phi_expr_cos': '余弦变化: cos(t)',
+        'phi_expr_sin_2pi': '正弦周期变化: sin(2*PI*t)',
+        'phi_expr_quadratic': '二次变化: 0.2*t*t',
+        'phi_expr_complex1': '复合函数: t*sin(2*PI*t)',
+        'phi_expr_complex2': '衰减正弦: exp(-0.1*t)*sin(t)',
+        'phi_expr_pi4': '固定相位: PI/4',
+        'phi_expr_help': '支持数学函数: sin, cos, tan, exp, abs, sqrt, PI, E',
     },
     // 添加zh映射到zh-CN解决语言匹配问题
     'zh': {
@@ -298,7 +309,18 @@ const LANGS = {
         param_desc_car_contrast: 'Contrast coefficient of the development process',
         hover_exposure_value: 'Exposure Dose Value',
         hover_thickness_value: 'Relative Thickness Value',
-        compare_set_title: 'Parameter Set {n}'
+        compare_set_title: 'Parameter Set {n}',
+        'phi_expr_custom': 'Custom Input',
+        'phi_expr_constant': 'Constant: 0',
+        'phi_expr_linear': 'Linear: 0.5*t',
+        'phi_expr_sin': 'Sine: sin(t)',
+        'phi_expr_cos': 'Cosine: cos(t)',
+        'phi_expr_sin_2pi': 'Periodic Sine: sin(2*PI*t)',
+        'phi_expr_quadratic': 'Quadratic: 0.2*t*t',
+        'phi_expr_complex1': 'Compound: t*sin(2*PI*t)',
+        'phi_expr_complex2': 'Damped Sine: exp(-0.1*t)*sin(t)',
+        'phi_expr_pi4': 'Fixed Phase: PI/4',
+        'phi_expr_help': 'Supported functions: sin, cos, tan, exp, abs, sqrt, PI, E',
     }
 };
 
@@ -433,6 +455,22 @@ function applyLang() {
         clearAllCharts(); // Clear existing plots
         displayInteractiveResults(window.lastPlotData); // Re-display with new language
     }
+
+    // 确保相位表达式下拉菜单中的选项也被翻译
+    document.querySelectorAll('.phi-expr-select option').forEach(option => {
+        const key = option.getAttribute('data-i18n');
+        if (key && LANGS[currentLang][key]) {
+            option.textContent = LANGS[currentLang][key];
+        }
+    });
+
+    // 确保相位表达式的提示信息也被翻译
+    document.querySelectorAll('.phi-expr-tooltip').forEach(tooltip => {
+        const key = tooltip.getAttribute('data-i18n');
+        if (key && LANGS[currentLang][key]) {
+            tooltip.textContent = LANGS[currentLang][key];
+        }
+    });
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -447,4 +485,34 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         console.log('[lang] lang-toggle-btn not found');
     }
-}); 
+});
+
+// 初始化语言设置
+function initLanguage() {
+    // ... existing code ...
+
+    // 应用翻译到页面上
+    function applyTranslation() {
+        // ... existing code ...
+        
+        // 确保相位表达式下拉菜单中的选项也被翻译
+        document.querySelectorAll('.phi-expr-select option').forEach(option => {
+            const key = option.getAttribute('data-i18n');
+            if (key && LANGS[currentLang][key]) {
+                option.textContent = LANGS[currentLang][key];
+            }
+        });
+
+        // 确保相位表达式的提示信息也被翻译
+        document.querySelectorAll('.phi-expr-tooltip').forEach(tooltip => {
+            const key = tooltip.getAttribute('data-i18n');
+            if (key && LANGS[currentLang][key]) {
+                tooltip.textContent = LANGS[currentLang][key];
+            }
+        });
+        
+        // ... existing code ...
+    }
+
+    // ... existing code ...
+} 

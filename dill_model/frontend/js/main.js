@@ -12,6 +12,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 初始化应用
     initApp();
+    
+    // 初始化相位表达式下拉菜单
+    initPhaseExpressionDropdowns();
 });
 
 // 初始化波形类型标题的国际化支持
@@ -64,6 +67,14 @@ function initWaveTypeTitles() {
  * 初始化应用
  */
 function initApp() {
+    // 初始化界面元素
+    initWaveTypeTitles();
+    initSineWaveTypeSelectors();
+    initPhaseExpressionDropdowns();  // 确保初始化相位表达式下拉框
+    bindSliderEvents();
+    bindParamTooltips();
+    bindPhiExprUI();
+    
     // 获取DOM元素
     const calculateBtn = document.getElementById('calculate-btn');
     const resultsSection = document.getElementById('results-section');
@@ -71,9 +82,6 @@ function initApp() {
     const loading = document.getElementById('loading');
     const modelSelect = document.getElementById('model-select'); // 获取模型选择下拉框
     const modelSelectionSection = document.getElementById('model-selection-section'); // 获取模型选择区域
-    
-    // 为所有滑块绑定事件
-    bindSliderEvents();
     
     // 为计算按钮绑定事件
     calculateBtn.addEventListener('click', function() {
@@ -1499,248 +1507,248 @@ function generate3DSine(Kx, Ky, Kz, V, phi_expr, xRange, yRange, zRange) {
     };
 }
 
+// Dill模型二维正弦分布预览绘图函数 (从bindPhiExprUI提取并重命名)
+function dillDrawPreviewPlot(scrollToPlot = false) {
+    const input = document.getElementById('phi_expr');
+    const kxInput = document.getElementById('Kx');
+    const kyInput = document.getElementById('Ky');
+    const vInput = document.getElementById('V'); // Assuming 'V' is the ID for Dill model's V
+    const plot = document.getElementById('phi-expr-preview-plot');
+    const errDiv = input?.closest('.parameter-item')?.querySelector('.phi-expr-error');
+
+    if (!input || !plot) return;
+
+    let Kx = 2, Ky = 0, V_val = 0.8; // Default V_val
+    if (kxInput) Kx = parseFloat(kxInput.value);
+    if (kyInput) Ky = parseFloat(kyInput.value);
+    if (vInput) V_val = parseFloat(vInput.value); // Use V_val to avoid conflict with V variable if any
+
+    const xRange = [0, 10], yRange = [0, 10]; // Default ranges
+    const expr = input.value;
+
+    if (!validatePhaseExpr(expr)) {
+        if (errDiv) { 
+            errDiv.textContent = LANGS[currentLang]?.phi_expr_invalid_preview || '表达式格式有误，无法预览。'; 
+            errDiv.style.display = 'block'; 
+        }
+        return;
+    }
+    if (errDiv) {
+        errDiv.textContent = ''; 
+        errDiv.style.display = 'none'; 
+    }
+
+    const plotData = generate2DSine(Kx, Ky, V_val, expr, xRange, yRange);
+    plot.style.display = 'block';
+    Plotly.newPlot(plot, [{
+        z: plotData.z, x: plotData.x, y: plotData.y, type: 'heatmap', colorscale: 'Viridis',
+        colorbar: {title: 'I(x,y)'}
+    }], {
+        title: LANGS[currentLang]?.preview_2d_title || '二维正弦分布预览', 
+        xaxis: {title: 'x'}, 
+        yaxis: {title: 'y'},
+        margin: {t:40, l:40, r:20, b:10}, height: 260
+    }, {displayModeBar: false});
+
+    if (scrollToPlot) {
+        setTimeout(()=>{plot.scrollIntoView({behavior:'smooth', block:'center'});}, 200);
+    }
+}
+
+// Dill模型三维正弦分布预览绘图函数 (从bindPhiExprUI提取并重命名)
+function dillDraw3DPreviewPlot(scrollToPlot = false) {
+    const input = document.getElementById('phi_expr_3d');
+    const kxInput = document.getElementById('Kx_3d');
+    const kyInput = document.getElementById('Ky_3d');
+    const kzInput = document.getElementById('Kz_3d');
+    const vInput = document.getElementById('V'); // Assuming 'V' is the ID for Dill model's V
+    const plot = document.getElementById('phi-expr-3d-preview-plot');
+    const errDiv = input?.closest('.parameter-item')?.querySelector('.phi-expr-error');
+
+    const xMinInput = document.getElementById('x_min_3d');
+    const xMaxInput = document.getElementById('x_max_3d');
+    const yMinInput = document.getElementById('y_min_3d');
+    const yMaxInput = document.getElementById('y_max_3d');
+    const zMinInput = document.getElementById('z_min_3d');
+    const zMaxInput = document.getElementById('z_max_3d');
+
+    if (!input || !plot || !xMinInput || !xMaxInput || !yMinInput || !yMaxInput || !zMinInput || !zMaxInput) return;
+
+    let Kx = 2, Ky = 1, Kz = 1, V_val = 0.8; // Default V_val
+    if (kxInput) Kx = parseFloat(kxInput.value);
+    if (kyInput) Ky = parseFloat(kyInput.value);
+    if (kzInput) Kz = parseFloat(kzInput.value);
+    if (vInput) V_val = parseFloat(vInput.value);
+
+    const xRange = [parseFloat(xMinInput.value) || 0, parseFloat(xMaxInput.value) || 10];
+    const yRange = [parseFloat(yMinInput.value) || 0, parseFloat(yMaxInput.value) || 10];
+    const zRange = [parseFloat(zMinInput.value) || 0, parseFloat(zMaxInput.value) || 10];
+    const expr = input.value;
+
+    if (!validatePhaseExpr(expr)) {
+        if (errDiv) { 
+            errDiv.textContent = LANGS[currentLang]?.phi_expr_invalid_preview || '表达式格式有误，无法预览。'; 
+            errDiv.style.display = 'block'; 
+        }
+        return;
+    }
+     if (errDiv) {
+        errDiv.textContent = ''; 
+        errDiv.style.display = 'none'; 
+    }
+
+    const plotData = generate3DSine(Kx, Ky, Kz, V_val, expr, xRange, yRange, zRange);
+    plot.style.display = 'block';
+    
+    const data = [{
+        type: 'isosurface',
+        x: plotData.x,
+        y: plotData.y,
+        z: plotData.z,
+        value: plotData.values,
+        isomin: 0.5,
+        isomax: 1.5,
+        surface: { show: true, count: 3, fill: 0.7 },
+        colorscale: 'Viridis',
+        caps: { x: { show: false }, y: { show: false }, z: { show: false } }
+    }];
+    
+    Plotly.newPlot(plot, data, {
+        title: LANGS[currentLang]?.preview_3d_title || '三维正弦分布预览',
+        scene: {
+            xaxis: {title: 'X'},
+            yaxis: {title: 'Y'},
+            zaxis: {title: 'Z'}
+        },
+        margin: {t:40, l:0, r:0, b:0},
+        height: 350
+    }, {displayModeBar: true});
+
+    if (scrollToPlot) {
+        setTimeout(()=>{plot.scrollIntoView({behavior:'smooth', block:'center'});}, 200);
+    }
+}
+
 // 绑定phi_expr输入区说明、校验、预览功能
 function bindPhiExprUI() {
     // 二维正弦波参数配置
     const configs = [
-        {input: 'phi_expr', kx: 'Kx', ky: 'Ky', v: 'V', btn: 'phi-expr-preview-btn', plot: 'phi-expr-preview-plot', err: 'phi-expr-error'},
-        {input: 'enhanced_phi_expr', kx: 'enhanced_Kx', ky: 'enhanced_Ky', v: 'V', btn: 'enhanced-phi-expr-preview-btn', plot: 'enhanced-phi-expr-preview-plot', err: 'phi-expr-error'},
-        {input: 'car_phi_expr', kx: 'car_Kx', ky: 'car_Ky', v: 'car_V', btn: 'car-phi-expr-preview-btn', plot: 'car-phi-expr-preview-plot', err: 'phi-expr-error'}
+        // Dill模型二维配置 - 使用新的dillDrawPreviewPlot
+        {input: 'phi_expr', kx: 'Kx', ky: 'Ky', v: 'V', btn: 'phi-expr-preview-btn', plotElementId: 'phi-expr-preview-plot', drawFunc: dillDrawPreviewPlot},
+        // Enhanced Dill模型二维配置 - 使用enhancedDrawPreviewPlot
+        {input: 'enhanced_phi_expr', kx: 'enhanced_Kx', ky: 'enhanced_Ky', v: 'I0', btn: 'enhanced-phi-expr-preview-btn', plotElementId: 'enhanced-phi-expr-preview-plot', drawFunc: enhancedDrawPreviewPlot}, // Assuming V corresponds to I0 for enhanced
+        // CAR模型二维配置 - 使用carDrawPreviewPlot
+        {input: 'car_phi_expr', kx: 'car_Kx', ky: 'car_Ky', v: 'car_V', btn: 'car-phi-expr-preview-btn', plotElementId: 'car-phi-expr-preview-plot', drawFunc: carDrawPreviewPlot}
     ];
     
     // 三维正弦波参数配置
     const configs3D = [
+        // Dill模型三维配置 - 使用新的dillDraw3DPreviewPlot
         {input: 'phi_expr_3d', kx: 'Kx_3d', ky: 'Ky_3d', kz: 'Kz_3d', v: 'V', 
-         btn: 'phi-expr-3d-preview-btn', plot: 'phi-expr-3d-preview-plot', err: 'phi-expr-error',
-         xmin: 'x_min_3d', xmax: 'x_max_3d', ymin: 'y_min_3d', ymax: 'y_max_3d', zmin: 'z_min_3d', zmax: 'z_max_3d'},
-        {input: 'enhanced_phi_expr_3d', kx: 'enhanced_Kx_3d', ky: 'enhanced_Ky_3d', kz: 'enhanced_Kz_3d', v: 'V', 
-         btn: 'enhanced-phi-expr-3d-preview-btn', plot: 'enhanced-phi-expr-3d-preview-plot', err: 'phi-expr-error',
+         btn: 'phi-expr-3d-preview-btn', plotElementId: 'phi-expr-3d-preview-plot', 
+         xmin: 'x_min_3d', xmax: 'x_max_3d', ymin: 'y_min_3d', ymax: 'y_max_3d', zmin: 'z_min_3d', zmax: 'z_max_3d', drawFunc: dillDraw3DPreviewPlot},
+        // Enhanced Dill模型三维配置 - 使用enhancedDraw3DPreviewPlot
+        {input: 'enhanced_phi_expr_3d', kx: 'enhanced_Kx_3d', ky: 'enhanced_Ky_3d', kz: 'enhanced_Kz_3d', v: 'I0', 
+         btn: 'enhanced-phi-expr-3d-preview-btn', plotElementId: 'enhanced-phi-expr-3d-preview-plot',
          xmin: 'enhanced_x_min_3d', xmax: 'enhanced_x_max_3d', ymin: 'enhanced_y_min_3d', ymax: 'enhanced_y_max_3d', 
-         zmin: 'enhanced_z_min_3d', zmax: 'enhanced_z_max_3d'},
+         zmin: 'enhanced_z_min_3d', zmax: 'enhanced_z_max_3d', drawFunc: enhancedDraw3DPreviewPlot}, // Assuming V corresponds to I0 for enhanced
+        // CAR模型三维配置 - 使用carDraw3DPreviewPlot
         {input: 'car_phi_expr_3d', kx: 'car_Kx_3d', ky: 'car_Ky_3d', kz: 'car_Kz_3d', v: 'car_V', 
-         btn: 'car-phi-expr-3d-preview-btn', plot: 'car-phi-expr-3d-preview-plot', err: 'phi-expr-error',
+         btn: 'car-phi-expr-3d-preview-btn', plotElementId: 'car-phi-expr-3d-preview-plot',
          xmin: 'car_x_min_3d', xmax: 'car_x_max_3d', ymin: 'car_y_min_3d', ymax: 'car_y_max_3d', 
-         zmin: 'car_z_min_3d', zmax: 'car_z_max_3d'}
+         zmin: 'car_z_min_3d', zmax: 'car_z_max_3d', drawFunc: carDraw3DPreviewPlot}
     ];
     
-    // 处理二维正弦波预览
-    configs.forEach(cfg => {
-        const input = document.getElementById(cfg.input);
-        const kxInput = document.getElementById(cfg.kx);
-        const kyInput = document.getElementById(cfg.ky);
-        const vInput = document.getElementById(cfg.v);
-        const btn = document.getElementById(cfg.btn);
-        const plot = document.getElementById(cfg.plot);
-        const errDiv = input?.parentNode?.parentNode?.querySelector('.phi-expr-error');
+    // 统一处理预览逻辑
+    function setupPreview(config, is3D) {
+        const input = document.getElementById(config.input);
+        const btn = document.getElementById(config.btn);
+        const plotElement = document.getElementById(config.plotElementId); // 使用 plotElementId
+        const errDiv = input?.closest('.parameter-item')?.querySelector('.phi-expr-error');
         const calcBtn = document.getElementById('calculate-btn');
-        if (!input || !btn || !plot) return;
+
+        if (!input || !btn || !plotElement) return;
+
         // 实时校验
         input.addEventListener('input', function() {
             const expr = input.value;
-            if (!validatePhiExpr(expr)) {
-                input.style.borderColor = '#d00';
-                if (errDiv) { errDiv.textContent = '表达式格式有误，仅支持sin/cos/pi/t/数字/加减乘除等。'; errDiv.style.display = ''; }
-                calcBtn.disabled = true;
-                btn.disabled = true;
-            } else {
-                input.style.borderColor = '';
-                if (errDiv) { errDiv.textContent = ''; errDiv.style.display = 'none'; }
-                calcBtn.disabled = false;
-                btn.disabled = false;
-            }
-        });
-        // 预览分布
-        btn.style.display = '';
-        let isPreviewShown = false;
-        let lastPlotData = null;
-        function drawPreviewPlot(scrollToPlot = false) {
-            let Kx = 2, Ky = 0, V = 0.8;
-            if (kxInput) Kx = parseFloat(kxInput.value);
-            if (kyInput) Ky = parseFloat(kyInput.value);
-            if (vInput) V = parseFloat(vInput.value);
-            const xRange = [0, 10], yRange = [0, 10];
-            const expr = input.value;
-            if (!validatePhiExpr(expr)) {
-                if (errDiv) { errDiv.textContent = '表达式格式有误，无法预览。'; errDiv.style.display = ''; }
-                return;
-            }
-            lastPlotData = generate2DSine(Kx, Ky, V, expr, xRange, yRange);
-            plot.style.display = '';
-            Plotly.newPlot(plot, [{
-                z: lastPlotData.z, x: lastPlotData.x, y: lastPlotData.y, type: 'heatmap', colorscale: 'Viridis',
-                colorbar: {title: 'I(x,y)'}
-            }], {
-                title: '二维正弦分布预览', xaxis: {title: 'x'}, yaxis: {title: 'y'},
-                margin: {t:40, l:40, r:20, b:10}, height: 260
-            }, {displayModeBar: false});
-            if (scrollToPlot) {
-                setTimeout(()=>{plot.scrollIntoView({behavior:'smooth', block:'center'});}, 200);
-            }
-        }
-        function updateBtnUI() {
-            // 恢复原状：不添加 fas fa-eye 类
-            const text = isPreviewShown ? (LANGS[currentLang]?.btn_collapse_2d_preview || '收起分布') : (LANGS[currentLang]?.btn_preview_2d_distribution || '预览分布');
-            btn.innerHTML = `<span class="preview-icon"></span> ${text}`;
-        }
-        updateBtnUI();
-        btn.addEventListener('click', function() {
-            if (!isPreviewShown) {
-                drawPreviewPlot();
-                isPreviewShown = true;
-                updateBtnUI();
-            } else {
-                plot.style.display = 'none';
-                isPreviewShown = false;
-                updateBtnUI();
-            }
-        });
-        // 只要分布图显示，参数变动就自动刷新（但不自动滚动）
-        [input, kxInput, kyInput, vInput].forEach(param => {
-            if (param) {
-                param.addEventListener('input', function() {
-                    if (isPreviewShown) drawPreviewPlot(false);
-                });
-                param.addEventListener('change', function() {
-                    if (isPreviewShown) drawPreviewPlot(false);
-                });
-                // 仅在blur时自动滚动
-                param.addEventListener('blur', function() {
-                    if (isPreviewShown) drawPreviewPlot(true);
-                });
-            }
-        });
-    });
-    
-    // 处理三维正弦波预览
-    configs3D.forEach(cfg => {
-        const input = document.getElementById(cfg.input);
-        const kxInput = document.getElementById(cfg.kx);
-        const kyInput = document.getElementById(cfg.ky);
-        const kzInput = document.getElementById(cfg.kz);
-        const vInput = document.getElementById(cfg.v);
-        const btn = document.getElementById(cfg.btn);
-        const plot = document.getElementById(cfg.plot);
-        const errDiv = input?.parentNode?.parentNode?.querySelector('.phi-expr-error');
-        const calcBtn = document.getElementById('calculate-btn');
-        
-        // x,y,z范围输入
-        const xMinInput = document.getElementById(cfg.xmin);
-        const xMaxInput = document.getElementById(cfg.xmax);
-        const yMinInput = document.getElementById(cfg.ymin);
-        const yMaxInput = document.getElementById(cfg.ymax);
-        const zMinInput = document.getElementById(cfg.zmin);
-        const zMaxInput = document.getElementById(cfg.zmax);
-        
-        if (!input || !btn || !plot) return;
-        
-        // 实时校验
-        input.addEventListener('input', function() {
-            const expr = input.value;
-            if (!validatePhiExpr(expr)) {
-                input.style.borderColor = '#d00';
-                if (errDiv) { errDiv.textContent = '表达式格式有误，仅支持sin/cos/pi/t/数字/加减乘除等。'; errDiv.style.display = ''; }
-                calcBtn.disabled = true;
-                btn.disabled = true;
-            } else {
-                input.style.borderColor = '';
-                if (errDiv) { errDiv.textContent = ''; errDiv.style.display = 'none'; }
-                calcBtn.disabled = false;
-                btn.disabled = false;
-            }
-        });
-        
-        // 预览分布
-        btn.style.display = '';
-        let isPreviewShown = false;
-        let lastPlotData = null;
-        
-        function draw3DPreviewPlot(scrollToPlot = false) {
-            let Kx = 2, Ky = 1, Kz = 1, V = 0.8;
-            if (kxInput) Kx = parseFloat(kxInput.value);
-            if (kyInput) Ky = parseFloat(kyInput.value);
-            if (kzInput) Kz = parseFloat(kzInput.value);
-            if (vInput) V = parseFloat(vInput.value);
-            
-            const xRange = [parseFloat(xMinInput.value) || 0, parseFloat(xMaxInput.value) || 10];
-            const yRange = [parseFloat(yMinInput.value) || 0, parseFloat(yMaxInput.value) || 10];
-            const zRange = [parseFloat(zMinInput.value) || 0, parseFloat(zMaxInput.value) || 10];
-            
-            const expr = input.value;
-            if (!validatePhiExpr(expr)) {
-                if (errDiv) { errDiv.textContent = '表达式格式有误，无法预览。'; errDiv.style.display = ''; }
-                return;
-            }
-            
-            lastPlotData = generate3DSine(Kx, Ky, Kz, V, expr, xRange, yRange, zRange);
-            plot.style.display = '';
-            
-            // 创建3D等值面图 - 使用3个不同的等值面
-            const data = [
-                {
-                    type: 'isosurface',
-                    x: lastPlotData.x,
-                    y: lastPlotData.y,
-                    z: lastPlotData.z,
-                    value: lastPlotData.values,
-                    isomin: 0.5,
-                    isomax: 1.5,
-                    surface: { show: true, count: 3, fill: 0.7 },
-                    colorscale: 'Viridis',
-                    caps: { x: { show: false }, y: { show: false }, z: { show: false } }
+            const isValid = validatePhaseExpr(expr);
+            if (!isValid) {
+                input.style.borderColor = '#d00'; // Consider using class for styling
+                if (errDiv) { 
+                    errDiv.textContent = LANGS[currentLang]?.phi_expr_invalid_validation || '表达式格式有误。'; 
+                    errDiv.style.display = 'block'; 
                 }
-            ];
-            
-            Plotly.newPlot(plot, data, {
-                title: '三维正弦分布预览',
-                scene: {
-                    xaxis: {title: 'X'},
-                    yaxis: {title: 'Y'},
-                    zaxis: {title: 'Z'}
-                },
-                margin: {t:40, l:0, r:0, b:0},
-                height: 350
-            }, {displayModeBar: true});
-            
-            if (scrollToPlot) {
-                setTimeout(()=>{plot.scrollIntoView({behavior:'smooth', block:'center'});}, 200);
+                calcBtn.disabled = true;
+                btn.disabled = true; // Disable preview button if expression is invalid
+            } else {
+                input.style.borderColor = ''; // Reset border
+                if (errDiv) { 
+                    errDiv.textContent = ''; 
+                    errDiv.style.display = 'none'; 
+                }
+                calcBtn.disabled = false;
+                btn.disabled = false; // Enable preview button
             }
-        }
+        });
         
-        function updateBtnUI() {
-            // 恢复原状：不添加 fas fa-eye 类
-            const text = isPreviewShown ? (LANGS[currentLang]?.btn_collapse_3d_preview || '收起3D分布') : (LANGS[currentLang]?.btn_preview_3d_distribution || '预览3D分布');
+        btn.style.display = 'block'; // Make button visible
+        let isPreviewShown = false;
+
+        function updateBtnText() {
+            const langKeyShown = is3D ? 'btn_collapse_3d_preview' : 'btn_collapse_2d_preview';
+            const langKeyHidden = is3D ? 'btn_preview_3d_distribution' : 'btn_preview_2d_distribution';
+            const defaultTextShown = is3D ? '收起3D分布' : '收起分布';
+            const defaultTextHidden = is3D ? '预览3D分布' : '预览分布';
+            const text = isPreviewShown ? (LANGS[currentLang]?.[langKeyShown] || defaultTextShown) : (LANGS[currentLang]?.[langKeyHidden] || defaultTextHidden);
             btn.innerHTML = `<span class="preview-icon"></span> ${text}`;
         }
-        
-        updateBtnUI();
-        
+        updateBtnText(); // Initial button text
+
         btn.addEventListener('click', function() {
-            if (!isPreviewShown) {
-                draw3DPreviewPlot(true);
-                isPreviewShown = true;
-                updateBtnUI();
+            if (validatePhaseExpr(input.value)) { // Only proceed if expression is valid
+                isPreviewShown = !isPreviewShown;
+                if (isPreviewShown) {
+                    config.drawFunc(true); // Call the specific draw function, scroll to plot
+                } else {
+                    plotElement.style.display = 'none'; // Hide plot
+                    if (Plotly.purge) Plotly.purge(plotElement); // Clear plot to free resources
+                }
+                updateBtnText();
             } else {
-                plot.style.display = 'none';
-                isPreviewShown = false;
-                updateBtnUI();
+                 if (errDiv) { 
+                    errDiv.textContent = LANGS[currentLang]?.phi_expr_invalid_preview_click || '无法预览无效表达式。'; 
+                    errDiv.style.display = 'block'; 
+                }
             }
         });
-        
-        // 只要分布图显示，参数变动就自动刷新
-        [input, kxInput, kyInput, kzInput, vInput, xMinInput, xMaxInput, yMinInput, yMaxInput, zMinInput, zMaxInput].forEach(param => {
-            if (param) {
-                param.addEventListener('change', function() {
-                    if (isPreviewShown) draw3DPreviewPlot(false);
-                });
-                // 仅在blur时自动滚动
-                param.addEventListener('blur', function() {
-                    if (isPreviewShown) draw3DPreviewPlot(true);
+
+        // Auto-refresh on parameter change if preview is shown
+        const paramInputs = [input];
+        if (config.kx) paramInputs.push(document.getElementById(config.kx));
+        if (config.ky) paramInputs.push(document.getElementById(config.ky));
+        if (config.kz) paramInputs.push(document.getElementById(config.kz));
+        if (config.v) paramInputs.push(document.getElementById(config.v));
+        if (is3D) {
+            ['xmin', 'xmax', 'ymin', 'ymax', 'zmin', 'zmax'].forEach(p => {
+                if (config[p]) paramInputs.push(document.getElementById(config[p]));
+            });
+        }
+
+        paramInputs.forEach(pInput => {
+            if (pInput) {
+                pInput.addEventListener('input', () => { // Use 'input' for immediate feedback
+                    if (isPreviewShown && validatePhaseExpr(input.value)) {
+                        config.drawFunc(false); // No scroll on auto-refresh
+                    }
                 });
             }
         });
-    });
+    }
+
+    configs.forEach(cfg => setupPreview(cfg, false));
+    configs3D.forEach(cfg => setupPreview(cfg, true));
 }
-document.addEventListener('DOMContentLoaded', bindPhiExprUI);
 
 function highlightErrorCard(msg) {
     // 先移除所有高亮
@@ -2562,4 +2570,521 @@ function initSineWaveTypeSelectors() {
     if (dillSineType) dillSineType.dispatchEvent(new Event('change'));
     if (enhancedDillSineType) enhancedDillSineType.dispatchEvent(new Event('change'));
     if (carSineType) carSineType.dispatchEvent(new Event('change'));
+}
+
+// 处理相位表达式下拉菜单
+function initPhaseExpressionDropdowns() {
+    // 获取所有相位表达式下拉框和输入框
+    const phiSelects = [
+        { select: document.getElementById('phi_expr_select'), input: document.getElementById('phi_expr'), previewPlotElement: document.getElementById('phi-expr-preview-plot'), drawFunc: dillDrawPreviewPlot, is3D: false },
+        { select: document.getElementById('phi_expr_3d_select'), input: document.getElementById('phi_expr_3d'), previewPlotElement: document.getElementById('phi-expr-3d-preview-plot'), drawFunc: dillDraw3DPreviewPlot, is3D: true },
+        { select: document.getElementById('enhanced_phi_expr_select'), input: document.getElementById('enhanced_phi_expr'), previewPlotElement: document.getElementById('enhanced-phi-expr-preview-plot'), drawFunc: enhancedDrawPreviewPlot, is3D: false },
+        { select: document.getElementById('enhanced_phi_expr_3d_select'), input: document.getElementById('enhanced_phi_expr_3d'), previewPlotElement: document.getElementById('enhanced-phi-expr-3d-preview-plot'), drawFunc: enhancedDraw3DPreviewPlot, is3D: true },
+        { select: document.getElementById('car_phi_expr_select'), input: document.getElementById('car_phi_expr'), previewPlotElement: document.getElementById('car-phi-expr-preview-plot'), drawFunc: carDrawPreviewPlot, is3D: false },
+        { select: document.getElementById('car_phi_expr_3d_select'), input: document.getElementById('car_phi_expr_3d'), previewPlotElement: document.getElementById('car-phi-expr-3d-preview-plot'), drawFunc: carDraw3DPreviewPlot, is3D: true }
+    ];
+    
+    // 为每个下拉框添加事件监听
+    phiSelects.forEach(item => {
+        if (!item.select || !item.input) return;
+        
+        // 初始化时设置下拉框选中项
+        setSelectedOptionBasedOnValue(item.select, item.input.value);
+        
+        // 添加change事件监听
+        item.select.addEventListener('change', function() {
+            const selectedValue = this.value;
+            
+            if (selectedValue !== 'custom') {
+                item.input.value = selectedValue;
+                // 触发input事件以便执行校验和UI更新
+                item.input.dispatchEvent(new Event('input', { bubbles: true }));
+
+                // REMOVED: Automatic preview plot generation on select change.
+                // The user now needs to explicitly click the preview button.
+                // if (validatePhaseExpr(item.input.value)) {
+                //     if (typeof item.drawFunc === 'function') {
+                //         item.drawFunc(true); 
+                //     } else {
+                //         console.error("Draw function is not defined for:", item.select.id);
+                //     }
+                // }
+            } else {
+                item.input.focus();
+            }
+        });
+        
+        // 当输入框值变化时，更新下拉框选中项并进行验证
+        item.input.addEventListener('input', function() {
+            setSelectedOptionBasedOnValue(item.select, this.value);
+            validateAndUpdateUI(this); // validateAndUpdateUI handles error display and input styling
+        });
+        
+        // 添加失焦事件进行验证 (主要是为了样式，input事件已经处理了大部分逻辑)
+        item.input.addEventListener('blur', function() {
+            validateAndUpdateUI(this);
+        });
+        
+        // 初始验证
+        validateAndUpdateUI(item.input);
+    });
+    
+    // 验证表达式并更新UI (input border and error message)
+    function validateAndUpdateUI(inputElem) {
+        const errorContainer = inputElem.closest('.parameter-item').querySelector('.phi-expr-error');
+        const isValid = validatePhaseExpr(inputElem.value);
+        const previewButton = inputElem.closest('.parameter-item').querySelector('.preview-button');
+
+        if (isValid) {
+            inputElem.classList.remove('invalid-expr');
+            inputElem.classList.add('valid-expr');
+            if (errorContainer) {
+                errorContainer.textContent = ''; // Clear error message
+                errorContainer.style.display = 'none';
+            }
+            if (previewButton) previewButton.disabled = false;
+        } else {
+            inputElem.classList.remove('valid-expr');
+            inputElem.classList.add('invalid-expr');
+            if (errorContainer) {
+                errorContainer.textContent = LANGS[currentLang]?.phi_expr_invalid_format || '表达式格式无效，请检查语法。';
+                errorContainer.style.display = 'block';
+            }
+            if (previewButton) previewButton.disabled = true;
+        }
+        // Also disable main calculate button if any phi expression is invalid
+        const allPhiInputs = Array.from(document.querySelectorAll('.phi-expr-input'));
+        const anyInvalid = allPhiInputs.some(phiInput => !validatePhaseExpr(phiInput.value) && phiInput.closest('.parameters-grid').style.display !== 'none');
+        document.getElementById('calculate-btn').disabled = anyInvalid;
+
+        return isValid;
+    }
+}
+
+// 增强的相位表达式验证函数
+function validatePhaseExpr(expr) {
+    if (!expr || expr.trim() === '') return false;
+    
+    try {
+        // 定义允许的数学函数和常量
+        const allowedFunctions = ['sin', 'cos', 'tan', 'exp', 'abs', 'sqrt', 'log', 'pow'];
+        const allowedConstants = ['PI', 'E'];
+        const allowedVariables = ['t'];
+        
+        // 替换所有允许的函数、常量和变量为占位符
+        let testExpr = expr;
+        allowedFunctions.forEach(func => {
+            testExpr = testExpr.replace(new RegExp(func + '\\s*\\(', 'g'), 'Math.sin(');
+        });
+        allowedConstants.forEach(constant => {
+            testExpr = testExpr.replace(new RegExp('\\b' + constant + '\\b', 'g'), '3.14159');
+        });
+        allowedVariables.forEach(variable => {
+            testExpr = testExpr.replace(new RegExp('\\b' + variable + '\\b', 'g'), '0.5');
+        });
+        
+        // 尝试计算表达式
+        const t = 0.5; // 模拟变量t
+        const PI = Math.PI; // 定义常量
+        const E = Math.E;
+        const sin = Math.sin;
+        const cos = Math.cos;
+        const tan = Math.tan;
+        const exp = Math.exp;
+        const abs = Math.abs;
+        const sqrt = Math.sqrt;
+        const log = Math.log;
+        const pow = Math.pow;
+        
+        // 使用Function构造器创建函数并计算结果
+        const result = new Function('t', 'PI', 'E', 'sin', 'cos', 'tan', 'exp', 'abs', 'sqrt', 'log', 'pow', 'return ' + expr)(t, PI, E, sin, cos, tan, exp, abs, sqrt, log, pow);
+        
+        return typeof result === 'number' && !isNaN(result);
+    } catch (e) {
+        return false;
+    }
+}
+
+// 根据值设置下拉菜单的选择项
+function setSelectedOptionBasedOnValue(selectElem, value) {
+    let optionFound = false;
+    
+    // 先检查是否与预设选项匹配
+    for (let i = 0; i < selectElem.options.length; i++) {
+        if (selectElem.options[i].value === value && selectElem.options[i].value !== 'custom') {
+            selectElem.selectedIndex = i;
+            optionFound = true;
+            break;
+        }
+    }
+    
+    // 如果没有找到匹配项，设置为"自定义输入"
+    if (!optionFound) {
+        for (let i = 0; i < selectElem.options.length; i++) {
+            if (selectElem.options[i].value === 'custom') {
+                selectElem.selectedIndex = i;
+                break;
+            }
+        }
+    }
+}
+
+// 增强Dill模型2D预览绘图函数
+function enhancedDrawPreviewPlot(scrollToPlot = false) {
+    const phiExpr = document.getElementById('enhanced_phi_expr').value;
+    const previewPlot = document.getElementById('enhanced-phi-expr-preview-plot');
+    
+    if (!validatePhaseExpr(phiExpr)) {
+        console.error('相位表达式无效，无法绘制预览');
+        return;
+    }
+    
+    const t = Array.from({length: 101}, (_, i) => i / 10); // 0到10，步长为0.1
+    const phi = [];
+    
+    try {
+        // 计算phi(t)的值
+        const PI = Math.PI;
+        const E = Math.E;
+        const sin = Math.sin;
+        const cos = Math.cos;
+        const tan = Math.tan;
+        const exp = Math.exp;
+        const abs = Math.abs;
+        const sqrt = Math.sqrt;
+        const log = Math.log;
+        const pow = Math.pow;
+        
+        const phiFunc = new Function('t', 'PI', 'E', 'sin', 'cos', 'tan', 'exp', 'abs', 'sqrt', 'log', 'pow', 'return ' + phiExpr);
+        
+        for (let i = 0; i < t.length; i++) {
+            const val = phiFunc(t[i], PI, E, sin, cos, tan, exp, abs, sqrt, log, pow);
+            phi.push(val);
+        }
+        
+        // 创建绘图数据
+        const trace = {
+            x: t,
+            y: phi,
+            type: 'scatter',
+            mode: 'lines',
+            line: {
+                color: '#9b59b6',
+                width: 2
+            },
+            name: 'φ(t)'
+        };
+        
+        const layout = {
+            title: '相位表达式 φ(t) 曲线',
+            xaxis: {
+                title: 't'
+            },
+            yaxis: {
+                title: 'φ(t)'
+            },
+            margin: {
+                l: 50,
+                r: 20,
+                t: 50,
+                b: 50
+            },
+            height: 300,
+            width: 450,
+            showlegend: false,
+            plot_bgcolor: '#f8f9fa',
+            paper_bgcolor: '#f8f9fa',
+            font: {
+                family: 'Arial, sans-serif'
+            }
+        };
+        
+        // 绘制图表
+        Plotly.newPlot(previewPlot, [trace], layout, {responsive: true, displayModeBar: false});
+        
+        // 显示预览区域
+        previewPlot.style.display = 'block';
+        
+        // 如果需要，滚动到预览区域
+        if (scrollToPlot) {
+            setTimeout(() => {
+                previewPlot.scrollIntoView({behavior: 'smooth', block: 'center'});
+            }, 100);
+        }
+        
+    } catch (error) {
+        console.error('绘制相位表达式预览时出错:', error);
+        // 隐藏预览区域
+        previewPlot.style.display = 'none';
+    }
+}
+
+// 增强Dill模型3D预览绘图函数
+function enhancedDraw3DPreviewPlot(scrollToPlot = false) {
+    const phiExpr = document.getElementById('enhanced_phi_expr_3d').value;
+    const previewPlot = document.getElementById('enhanced-phi-expr-3d-preview-plot');
+    
+    if (!validatePhaseExpr(phiExpr)) {
+        console.error('相位表达式无效，无法绘制预览');
+        return;
+    }
+    
+    const t = Array.from({length: 101}, (_, i) => i / 10); // 0到10，步长为0.1
+    const phi = [];
+    
+    try {
+        // 计算phi(t)的值
+        const PI = Math.PI;
+        const E = Math.E;
+        const sin = Math.sin;
+        const cos = Math.cos;
+        const tan = Math.tan;
+        const exp = Math.exp;
+        const abs = Math.abs;
+        const sqrt = Math.sqrt;
+        const log = Math.log;
+        const pow = Math.pow;
+        
+        const phiFunc = new Function('t', 'PI', 'E', 'sin', 'cos', 'tan', 'exp', 'abs', 'sqrt', 'log', 'pow', 'return ' + phiExpr);
+        
+        for (let i = 0; i < t.length; i++) {
+            const val = phiFunc(t[i], PI, E, sin, cos, tan, exp, abs, sqrt, log, pow);
+            phi.push(val);
+        }
+        
+        // 创建绘图数据
+        const trace = {
+            x: t,
+            y: phi,
+            type: 'scatter',
+            mode: 'lines',
+            line: {
+                color: '#9b59b6',
+                width: 2
+            },
+            name: '3D φ(t)'
+        };
+        
+        const layout = {
+            title: '3D相位表达式 φ(t) 曲线',
+            xaxis: {
+                title: 't'
+            },
+            yaxis: {
+                title: 'φ(t)'
+            },
+            margin: {
+                l: 50,
+                r: 20,
+                t: 50,
+                b: 50
+            },
+            height: 300,
+            width: 450,
+            showlegend: false,
+            plot_bgcolor: '#f8f9fa',
+            paper_bgcolor: '#f8f9fa',
+            font: {
+                family: 'Arial, sans-serif'
+            }
+        };
+        
+        // 绘制图表
+        Plotly.newPlot(previewPlot, [trace], layout, {responsive: true, displayModeBar: false});
+        
+        // 显示预览区域
+        previewPlot.style.display = 'block';
+        
+        // 如果需要，滚动到预览区域
+        if (scrollToPlot) {
+            setTimeout(() => {
+                previewPlot.scrollIntoView({behavior: 'smooth', block: 'center'});
+            }, 100);
+        }
+        
+    } catch (error) {
+        console.error('绘制相位表达式预览时出错:', error);
+        // 隐藏预览区域
+        previewPlot.style.display = 'none';
+    }
+}
+
+// CAR模型2D预览绘图函数
+function carDrawPreviewPlot(scrollToPlot = false) {
+    const phiExpr = document.getElementById('car_phi_expr').value;
+    const previewPlot = document.getElementById('car-phi-expr-preview-plot');
+    
+    if (!validatePhaseExpr(phiExpr)) {
+        console.error('相位表达式无效，无法绘制预览');
+        return;
+    }
+    
+    const t = Array.from({length: 101}, (_, i) => i / 10); // 0到10，步长为0.1
+    const phi = [];
+    
+    try {
+        // 计算phi(t)的值
+        const PI = Math.PI;
+        const E = Math.E;
+        const sin = Math.sin;
+        const cos = Math.cos;
+        const tan = Math.tan;
+        const exp = Math.exp;
+        const abs = Math.abs;
+        const sqrt = Math.sqrt;
+        const log = Math.log;
+        const pow = Math.pow;
+        
+        const phiFunc = new Function('t', 'PI', 'E', 'sin', 'cos', 'tan', 'exp', 'abs', 'sqrt', 'log', 'pow', 'return ' + phiExpr);
+        
+        for (let i = 0; i < t.length; i++) {
+            const val = phiFunc(t[i], PI, E, sin, cos, tan, exp, abs, sqrt, log, pow);
+            phi.push(val);
+        }
+        
+        // 创建绘图数据
+        const trace = {
+            x: t,
+            y: phi,
+            type: 'scatter',
+            mode: 'lines',
+            line: {
+                color: '#e67e22',
+                width: 2
+            },
+            name: 'φ(t)'
+        };
+        
+        const layout = {
+            title: '相位表达式 φ(t) 曲线',
+            xaxis: {
+                title: 't'
+            },
+            yaxis: {
+                title: 'φ(t)'
+            },
+            margin: {
+                l: 50,
+                r: 20,
+                t: 50,
+                b: 50
+            },
+            height: 300,
+            width: 450,
+            showlegend: false,
+            plot_bgcolor: '#f8f9fa',
+            paper_bgcolor: '#f8f9fa',
+            font: {
+                family: 'Arial, sans-serif'
+            }
+        };
+        
+        // 绘制图表
+        Plotly.newPlot(previewPlot, [trace], layout, {responsive: true, displayModeBar: false});
+        
+        // 显示预览区域
+        previewPlot.style.display = 'block';
+        
+        // 如果需要，滚动到预览区域
+        if (scrollToPlot) {
+            setTimeout(() => {
+                previewPlot.scrollIntoView({behavior: 'smooth', block: 'center'});
+            }, 100);
+        }
+        
+    } catch (error) {
+        console.error('绘制相位表达式预览时出错:', error);
+        // 隐藏预览区域
+        previewPlot.style.display = 'none';
+    }
+}
+
+// CAR模型3D预览绘图函数
+function carDraw3DPreviewPlot(scrollToPlot = false) {
+    const phiExpr = document.getElementById('car_phi_expr_3d').value;
+    const previewPlot = document.getElementById('car-phi-expr-3d-preview-plot');
+    
+    if (!validatePhaseExpr(phiExpr)) {
+        console.error('相位表达式无效，无法绘制预览');
+        return;
+    }
+    
+    const t = Array.from({length: 101}, (_, i) => i / 10); // 0到10，步长为0.1
+    const phi = [];
+    
+    try {
+        // 计算phi(t)的值
+        const PI = Math.PI;
+        const E = Math.E;
+        const sin = Math.sin;
+        const cos = Math.cos;
+        const tan = Math.tan;
+        const exp = Math.exp;
+        const abs = Math.abs;
+        const sqrt = Math.sqrt;
+        const log = Math.log;
+        const pow = Math.pow;
+        
+        const phiFunc = new Function('t', 'PI', 'E', 'sin', 'cos', 'tan', 'exp', 'abs', 'sqrt', 'log', 'pow', 'return ' + phiExpr);
+        
+        for (let i = 0; i < t.length; i++) {
+            const val = phiFunc(t[i], PI, E, sin, cos, tan, exp, abs, sqrt, log, pow);
+            phi.push(val);
+        }
+        
+        // 创建绘图数据
+        const trace = {
+            x: t,
+            y: phi,
+            type: 'scatter',
+            mode: 'lines',
+            line: {
+                color: '#e67e22',
+                width: 2
+            },
+            name: '3D φ(t)'
+        };
+        
+        const layout = {
+            title: '3D相位表达式 φ(t) 曲线',
+            xaxis: {
+                title: 't'
+            },
+            yaxis: {
+                title: 'φ(t)'
+            },
+            margin: {
+                l: 50,
+                r: 20,
+                t: 50,
+                b: 50
+            },
+            height: 300,
+            width: 450,
+            showlegend: false,
+            plot_bgcolor: '#f8f9fa',
+            paper_bgcolor: '#f8f9fa',
+            font: {
+                family: 'Arial, sans-serif'
+            }
+        };
+        
+        // 绘制图表
+        Plotly.newPlot(previewPlot, [trace], layout, {responsive: true, displayModeBar: false});
+        
+        // 显示预览区域
+        previewPlot.style.display = 'block';
+        
+        // 如果需要，滚动到预览区域
+        if (scrollToPlot) {
+            setTimeout(() => {
+                previewPlot.scrollIntoView({behavior: 'smooth', block: 'center'});
+            }, 100);
+        }
+        
+    } catch (error) {
+        console.error('绘制相位表达式预览时出错:', error);
+        // 隐藏预览区域
+        previewPlot.style.display = 'none';
+    }
 }

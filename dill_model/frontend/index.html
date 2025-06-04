@@ -57,6 +57,57 @@
             white-space: nowrap;
             letter-spacing: 0.3px;
         }
+        
+        /* 相位表达式选择器样式 */
+        .phi-expr-container {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        
+        .phi-expr-select {
+            padding: 6px 8px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+            width: 100%;
+            font-size: 0.9em;
+            cursor: pointer;
+        }
+        
+        .phi-expr-input {
+            padding: 6px 8px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            width: 100%;
+            font-size: 0.95em;
+        }
+        
+        .phi-expr-select:focus,
+        .phi-expr-input:focus {
+            border-color: var(--accent-color, #3498db);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        /* 主题特定颜色 */
+        .theme-dill .phi-expr-select:focus,
+        .theme-dill .phi-expr-input:focus {
+            border-color: var(--dill-accent-color);
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+        
+        .theme-enhanced-dill .phi-expr-select:focus,
+        .theme-enhanced-dill .phi-expr-input:focus {
+            border-color: var(--enhanced-dill-accent-color);
+            box-shadow: 0 0 0 2px rgba(155, 89, 182, 0.2);
+        }
+        
+        .theme-car .phi-expr-select:focus,
+        .theme-car .phi-expr-input:focus {
+            border-color: var(--car-accent-color);
+            box-shadow: 0 0 0 2px rgba(230, 126, 34, 0.2);
+        }
     </style>
     <!-- 引入Plotly.js -->
     <script src="https://cdn.plot.ly/plotly-2.25.2.min.js"></script>
@@ -412,7 +463,23 @@
                         </div>
                         <div class="parameter-item slider-fill">
                             <div class="parameter-label"><span class="parameter-name" data-i18n="phi_label">φ(t) (相位表达式)</span></div>
-                            <div class="parameter-input"><input type="text" id="phi_expr" value="0"></div>
+                            <div class="parameter-input phi-expr-container">
+                                <select id="phi_expr_select" class="phi-expr-select" title="选择常用相位表达式或使用自定义表达式">
+                                    <option value="custom" data-i18n="phi_expr_custom">自定义输入</option>
+                                    <option value="0" selected data-i18n="phi_expr_constant">常量: 0</option>
+                                    <option value="0.5*t" data-i18n="phi_expr_linear">线性变化: 0.5*t</option>
+                                    <option value="sin(t)" data-i18n="phi_expr_sin">正弦变化: sin(t)</option>
+                                    <option value="cos(t)" data-i18n="phi_expr_cos">余弦变化: cos(t)</option>
+                                    <option value="sin(2*PI*t)" data-i18n="phi_expr_sin_2pi">正弦周期变化: sin(2*PI*t)</option>
+                                    <option value="0.2*t*t" data-i18n="phi_expr_quadratic">二次变化: 0.2*t*t</option>
+                                    <option value="t*sin(2*PI*t)" data-i18n="phi_expr_complex1">复合函数: t*sin(2*PI*t)</option>
+                                    <option value="exp(-0.1*t)*sin(t)" data-i18n="phi_expr_complex2">衰减正弦: exp(-0.1*t)*sin(t)</option>
+                                    <option value="PI/4" data-i18n="phi_expr_pi4">固定相位: PI/4</option>
+                                </select>
+                                <i class="fas fa-question-circle phi-expr-help-icon"></i>
+                                <div class="phi-expr-tooltip" data-i18n="phi_expr_help">支持数学函数: sin, cos, tan, exp, abs, sqrt, PI, E</div>
+                                <input type="text" id="phi_expr" value="0" class="phi-expr-input" placeholder="输入相位表达式，可使用t,PI,sin,cos,exp等函数">
+                            </div>
                             <div class="phi-expr-error" style="color:#d00;font-size:0.95em;display:none;"></div>
                             <button id="phi-expr-preview-btn" class="preview-button" style="margin-top:4px;display:none;">预览分布</button>
                             <div id="phi-expr-preview-plot" class="preview-plot preview-plot-2d" style="margin-top:8px;display:none;"></div>
@@ -449,7 +516,23 @@
                         </div>
                         <div class="parameter-item slider-fill">
                             <div class="parameter-label"><span class="parameter-name" data-i18n="phi_label">φ(t) (相位表达式)</span></div>
-                            <div class="parameter-input"><input type="text" id="phi_expr_3d" value="0"></div>
+                            <div class="parameter-input phi-expr-container">
+                                <select id="phi_expr_3d_select" class="phi-expr-select" title="选择常用相位表达式或使用自定义表达式">
+                                    <option value="custom" data-i18n="phi_expr_custom">自定义输入</option>
+                                    <option value="0" selected data-i18n="phi_expr_constant">常量: 0</option>
+                                    <option value="0.5*t" data-i18n="phi_expr_linear">线性变化: 0.5*t</option>
+                                    <option value="sin(t)" data-i18n="phi_expr_sin">正弦变化: sin(t)</option>
+                                    <option value="cos(t)" data-i18n="phi_expr_cos">余弦变化: cos(t)</option>
+                                    <option value="sin(2*PI*t)" data-i18n="phi_expr_sin_2pi">正弦周期变化: sin(2*PI*t)</option>
+                                    <option value="0.2*t*t" data-i18n="phi_expr_quadratic">二次变化: 0.2*t*t</option>
+                                    <option value="t*sin(2*PI*t)" data-i18n="phi_expr_complex1">复合函数: t*sin(2*PI*t)</option>
+                                    <option value="exp(-0.1*t)*sin(t)" data-i18n="phi_expr_complex2">衰减正弦: exp(-0.1*t)*sin(t)</option>
+                                    <option value="PI/4" data-i18n="phi_expr_pi4">固定相位: PI/4</option>
+                                </select>
+                                <i class="fas fa-question-circle phi-expr-help-icon"></i>
+                                <div class="phi-expr-tooltip" data-i18n="phi_expr_help">支持数学函数: sin, cos, tan, exp, abs, sqrt, PI, E</div>
+                                <input type="text" id="phi_expr_3d" value="0" class="phi-expr-input" placeholder="输入相位表达式，可使用t,PI,sin,cos,exp等函数">
+                            </div>
                             <div class="phi-expr-error" style="color:#d00;font-size:0.95em;display:none;"></div>
                             <button id="phi-expr-3d-preview-btn" class="preview-button" style="margin-top:4px;display:none;">预览3D分布</button>
                             <div id="phi-expr-3d-preview-plot" class="preview-plot preview-plot-3d" style="margin-top:8px;display:none;"></div>
@@ -535,7 +618,23 @@
                         </div>
                         <div class="parameter-item slider-fill">
                             <div class="parameter-label"><span class="parameter-name" data-i18n="phi_label">φ(t) (相位表达式)</span></div>
-                            <div class="parameter-input"><input type="text" id="enhanced_phi_expr" value="0"></div>
+                            <div class="parameter-input phi-expr-container">
+                                <select id="enhanced_phi_expr_select" class="phi-expr-select" title="选择常用相位表达式或使用自定义表达式">
+                                    <option value="custom" data-i18n="phi_expr_custom">自定义输入</option>
+                                    <option value="0" selected data-i18n="phi_expr_constant">常量: 0</option>
+                                    <option value="0.5*t" data-i18n="phi_expr_linear">线性变化: 0.5*t</option>
+                                    <option value="sin(t)" data-i18n="phi_expr_sin">正弦变化: sin(t)</option>
+                                    <option value="cos(t)" data-i18n="phi_expr_cos">余弦变化: cos(t)</option>
+                                    <option value="sin(2*PI*t)" data-i18n="phi_expr_sin_2pi">正弦周期变化: sin(2*PI*t)</option>
+                                    <option value="0.2*t*t" data-i18n="phi_expr_quadratic">二次变化: 0.2*t*t</option>
+                                    <option value="t*sin(2*PI*t)" data-i18n="phi_expr_complex1">复合函数: t*sin(2*PI*t)</option>
+                                    <option value="exp(-0.1*t)*sin(t)" data-i18n="phi_expr_complex2">衰减正弦: exp(-0.1*t)*sin(t)</option>
+                                    <option value="PI/4" data-i18n="phi_expr_pi4">固定相位: PI/4</option>
+                                </select>
+                                <i class="fas fa-question-circle phi-expr-help-icon"></i>
+                                <div class="phi-expr-tooltip" data-i18n="phi_expr_help">支持数学函数: sin, cos, tan, exp, abs, sqrt, PI, E</div>
+                                <input type="text" id="enhanced_phi_expr" value="0" class="phi-expr-input" placeholder="输入相位表达式，可使用t,PI,sin,cos,exp等函数">
+                            </div>
                             <div class="phi-expr-error" style="color:#d00;font-size:0.95em;display:none;"></div>
                             <button id="enhanced-phi-expr-preview-btn" class="preview-button" style="margin-top:4px;display:none;">预览分布</button>
                             <div id="enhanced-phi-expr-preview-plot" class="preview-plot preview-plot-2d" style="margin-top:8px;display:none;"></div>
@@ -572,7 +671,18 @@
                         </div>
                         <div class="parameter-item slider-fill">
                             <div class="parameter-label"><span class="parameter-name" data-i18n="phi_label">φ(t) (相位表达式)</span></div>
-                            <div class="parameter-input"><input type="text" id="enhanced_phi_expr_3d" value="0"></div>
+                            <div class="parameter-input phi-expr-container">
+                                <select id="enhanced_phi_expr_3d_select" class="phi-expr-select" title="选择常用相位表达式或使用自定义表达式">
+                                    <option value="custom" data-i18n="phi_expr_custom">自定义输入</option>
+                                    <option value="0" selected data-i18n="phi_expr_constant">常量: 0</option>
+                                    <option value="0.5*t" data-i18n="phi_expr_linear">线性变化: 0.5*t</option>
+                                    <option value="sin(t)" data-i18n="phi_expr_sin">正弦变化: sin(t)</option>
+                                    <option value="cos(t)" data-i18n="phi_expr_cos">余弦变化: cos(t)</option>
+                                    <option value="sin(2*PI*t)" data-i18n="phi_expr_sin_2pi">正弦周期变化: sin(2*PI*t)</option>
+                                    <option value="0.2*t*t" data-i18n="phi_expr_quadratic">二次变化: 0.2*t*t</option>
+                                </select>
+                                <input type="text" id="enhanced_phi_expr_3d" value="0" class="phi-expr-input">
+                            </div>
                             <div class="phi-expr-error" style="color:#d00;font-size:0.95em;display:none;"></div>
                             <button id="enhanced-phi-expr-3d-preview-btn" class="preview-button" style="margin-top:4px;display:none;">预览3D分布</button>
                             <div id="enhanced-phi-expr-3d-preview-plot" class="preview-plot preview-plot-3d" style="margin-top:8px;display:none;"></div>
@@ -753,7 +863,23 @@
                         </div>
                         <div class="parameter-item slider-fill">
                             <div class="parameter-label"><span class="parameter-name" data-i18n="phi_label">φ(t) (相位表达式)</span></div>
-                            <div class="parameter-input"><input type="text" id="car_phi_expr" value="0"></div>
+                            <div class="parameter-input phi-expr-container">
+                                <select id="car_phi_expr_select" class="phi-expr-select" title="选择常用相位表达式或使用自定义表达式">
+                                    <option value="custom" data-i18n="phi_expr_custom">自定义输入</option>
+                                    <option value="0" selected data-i18n="phi_expr_constant">常量: 0</option>
+                                    <option value="0.5*t" data-i18n="phi_expr_linear">线性变化: 0.5*t</option>
+                                    <option value="sin(t)" data-i18n="phi_expr_sin">正弦变化: sin(t)</option>
+                                    <option value="cos(t)" data-i18n="phi_expr_cos">余弦变化: cos(t)</option>
+                                    <option value="sin(2*PI*t)" data-i18n="phi_expr_sin_2pi">正弦周期变化: sin(2*PI*t)</option>
+                                    <option value="0.2*t*t" data-i18n="phi_expr_quadratic">二次变化: 0.2*t*t</option>
+                                    <option value="t*sin(2*PI*t)" data-i18n="phi_expr_complex1">复合函数: t*sin(2*PI*t)</option>
+                                    <option value="exp(-0.1*t)*sin(t)" data-i18n="phi_expr_complex2">衰减正弦: exp(-0.1*t)*sin(t)</option>
+                                    <option value="PI/4" data-i18n="phi_expr_pi4">固定相位: PI/4</option>
+                                </select>
+                                <i class="fas fa-question-circle phi-expr-help-icon"></i>
+                                <div class="phi-expr-tooltip" data-i18n="phi_expr_help">支持数学函数: sin, cos, tan, exp, abs, sqrt, PI, E</div>
+                                <input type="text" id="car_phi_expr" value="0" class="phi-expr-input" placeholder="输入相位表达式，可使用t,PI,sin,cos,exp等函数">
+                            </div>
                             <div class="phi-expr-error" style="color:#d00;font-size:0.95em;display:none;"></div>
                             <button id="car-phi-expr-preview-btn" class="preview-button" style="margin-top:4px;display:none;">预览分布</button>
                             <div id="car-phi-expr-preview-plot" class="preview-plot preview-plot-2d" style="margin-top:8px;display:none;"></div>
@@ -790,7 +916,23 @@
                         </div>
                         <div class="parameter-item slider-fill">
                             <div class="parameter-label"><span class="parameter-name" data-i18n="car_phi_label">φ(t) (相位表达式)</span></div>
-                            <div class="parameter-input"><input type="text" id="car_phi_expr_3d" value="0"></div>
+                            <div class="parameter-input phi-expr-container">
+                                <select id="car_phi_expr_3d_select" class="phi-expr-select" title="选择常用相位表达式或使用自定义表达式">
+                                    <option value="custom" data-i18n="phi_expr_custom">自定义输入</option>
+                                    <option value="0" selected data-i18n="phi_expr_constant">常量: 0</option>
+                                    <option value="0.5*t" data-i18n="phi_expr_linear">线性变化: 0.5*t</option>
+                                    <option value="sin(t)" data-i18n="phi_expr_sin">正弦变化: sin(t)</option>
+                                    <option value="cos(t)" data-i18n="phi_expr_cos">余弦变化: cos(t)</option>
+                                    <option value="sin(2*PI*t)" data-i18n="phi_expr_sin_2pi">正弦周期变化: sin(2*PI*t)</option>
+                                    <option value="0.2*t*t" data-i18n="phi_expr_quadratic">二次变化: 0.2*t*t</option>
+                                    <option value="t*sin(2*PI*t)" data-i18n="phi_expr_complex1">复合函数: t*sin(2*PI*t)</option>
+                                    <option value="exp(-0.1*t)*sin(t)" data-i18n="phi_expr_complex2">衰减正弦: exp(-0.1*t)*sin(t)</option>
+                                    <option value="PI/4" data-i18n="phi_expr_pi4">固定相位: PI/4</option>
+                                </select>
+                                <i class="fas fa-question-circle phi-expr-help-icon"></i>
+                                <div class="phi-expr-tooltip" data-i18n="phi_expr_help">支持数学函数: sin, cos, tan, exp, abs, sqrt, PI, E</div>
+                                <input type="text" id="car_phi_expr_3d" value="0" class="phi-expr-input" placeholder="输入相位表达式，可使用t,PI,sin,cos,exp等函数">
+                            </div>
                             <div class="phi-expr-error" style="color:#d00;font-size:0.95em;display:none;"></div>
                             <button id="car-phi-expr-3d-preview-btn" class="preview-button" style="margin-top:4px;display:none;">预览3D分布</button>
                             <div id="car-phi-expr-3d-preview-plot" class="preview-plot preview-plot-3d" style="margin-top:8px;display:none;"></div>

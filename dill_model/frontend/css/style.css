@@ -3508,3 +3508,264 @@ div[data-i18n="car_formula_ref"] {
     vertical-align: super;
     line-height: 0;
 }
+
+/* 相位表达式相关样式 - 增强版 */
+.phi-expr-container {
+    position: relative;
+    margin-bottom: 6px;
+}
+
+.phi-expr-select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #f8f8f8;
+    font-size: 0.95em;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.phi-expr-select:hover {
+    border-color: #aaa;
+    background-color: #f0f0f0;
+}
+
+.phi-expr-input {
+    width: 100%;
+    padding: 8px 10px;
+    margin-top: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.95em;
+    color: #333;
+    transition: border 0.2s ease;
+}
+
+.phi-expr-input:focus {
+    border-color: var(--accent-color, #3498db);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+/* 主题相关的颜色 */
+.theme-dill .phi-expr-select:focus,
+.theme-dill .phi-expr-input:focus {
+    border-color: var(--dill-accent-color, #3498db);
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.theme-enhanced-dill .phi-expr-select:focus,
+.theme-enhanced-dill .phi-expr-input:focus {
+    border-color: var(--enhanced-dill-accent-color, #9b59b6);
+    box-shadow: 0 0 0 2px rgba(155, 89, 182, 0.2);
+}
+
+.theme-car .phi-expr-select:focus,
+.theme-car .phi-expr-input:focus {
+    border-color: var(--car-accent-color, #e67e22);
+    box-shadow: 0 0 0 2px rgba(230, 126, 34, 0.2);
+}
+
+.phi-expr-help-icon {
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    color: #777;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.phi-expr-help-icon:hover {
+    color: var(--accent-color, #3498db);
+}
+
+.phi-expr-tooltip {
+    display: none;
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    max-width: 250px;
+    z-index: 100;
+    top: -5px;
+    right: 30px;
+    transform: translateY(-100%);
+}
+
+.phi-expr-help-icon:hover + .phi-expr-tooltip {
+    display: block;
+}
+
+.phi-expr-valid {
+    border-color: #2ecc71 !important;
+}
+
+.phi-expr-invalid {
+    border-color: #e74c3c !important;
+    background-color: rgba(231, 76, 60, 0.05);
+}
+
+.phi-expr-error {
+    color: #e74c3c;
+    font-size: 0.9em;
+    margin-top: 4px;
+    min-height: 20px;
+}
+
+/* 增强相位表达式容器样式 */
+.phi-expr-container {
+    display: flex;
+    position: relative;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+}
+
+/* 美化相位表达式下拉选择器 */
+.phi-expr-select {
+    padding: 8px 10px;
+    border-radius: 4px;
+    border: 1px solid #d1d1d1;
+    background-color: #f9f9f9;
+    width: 100%;
+    font-size: 0.95em;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23333333%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 12px;
+    padding-right: 30px;
+}
+
+.phi-expr-select:hover {
+    border-color: #b0b0b0;
+    background-color: #f0f0f0;
+}
+
+.phi-expr-select:focus {
+    outline: none;
+    border-color: var(--accent-color, #3498db);
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+/* 美化相位表达式输入框 */
+.phi-expr-input {
+    padding: 8px 10px;
+    border-radius: 4px;
+    border: 1px solid #d1d1d1;
+    width: 100%;
+    font-size: 0.95em;
+    transition: all 0.2s ease-in-out;
+}
+
+.phi-expr-input:focus {
+    outline: none;
+    border-color: var(--accent-color, #3498db);
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.phi-expr-input:hover {
+    border-color: #b0b0b0;
+}
+
+/* 有效/无效表达式的视觉反馈 */
+.phi-expr-input.valid-expr {
+    border-color: #2ecc71;
+    background-color: rgba(46, 204, 113, 0.05);
+}
+
+.phi-expr-input.invalid-expr {
+    border-color: #e74c3c;
+    background-color: rgba(231, 76, 60, 0.05);
+}
+
+/* 美化帮助图标和工具提示 */
+.phi-expr-help-icon {
+    position: absolute;
+    right: 8px;
+    top: 45px;
+    font-size: 1em;
+    color: #7f8c8d;
+    cursor: pointer;
+    z-index: 2;
+    transition: color 0.2s ease;
+    padding: 5px;  /* 增加点击区域 */
+}
+
+.phi-expr-help-icon:hover {
+    color: var(--accent-color, #3498db);
+}
+
+.phi-expr-tooltip {
+    position: absolute;
+    top: 35px;  /* 调整位置，避开图标本身 */
+    right: 25px;  /* 向右偏移，不直接覆盖图标 */
+    background-color: #34495e;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    max-width: 250px;
+    z-index: 100;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+    pointer-events: none;  /* 防止工具提示捕获鼠标事件 */
+}
+
+.phi-expr-container {
+    position: relative;  /* 确保相对定位 */
+}
+
+.phi-expr-help-icon:hover + .phi-expr-tooltip {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* 错误消息样式 */
+.phi-expr-error {
+    color: #e74c3c;
+    font-size: 0.9em;
+    margin-top: 4px;
+    transition: all 0.3s ease;
+}
+
+/* 主题特定样式 */
+.theme-dill .phi-expr-select:focus,
+.theme-dill .phi-expr-input:focus {
+    border-color: var(--dill-accent-color);
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.theme-enhanced-dill .phi-expr-select:focus,
+.theme-enhanced-dill .phi-expr-input:focus {
+    border-color: var(--enhanced-dill-accent-color);
+    box-shadow: 0 0 0 2px rgba(155, 89, 182, 0.2);
+}
+
+.theme-car .phi-expr-select:focus,
+.theme-car .phi-expr-input:focus {
+    border-color: var(--car-accent-color);
+    box-shadow: 0 0 0 2px rgba(230, 126, 34, 0.2);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .phi-expr-help-icon {
+        top: 42px;
+    }
+    
+    .phi-expr-tooltip {
+        font-size: 0.8em;
+        max-width: 220px;
+    }
+}
