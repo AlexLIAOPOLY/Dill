@@ -370,6 +370,13 @@ def calculate_data():
                 y_range = np.linspace(y_min, y_max, 50).tolist() if y_min < y_max else None
                 z_range = np.linspace(z_min, z_max, 50).tolist() if z_min < z_max else None
                 plot_data = model.generate_data(I_avg, V_car, None, t_exp_car, acid_gen_eff, diff_len, react_rate, amp, contr, sine_type=sine_type, Kx=Kx, Ky=Ky, Kz=Kz, phi_expr=phi_expr, y_range=y_range, z_range=z_range)
+                
+                # 对CAR模型3D数据进行详细诊断
+                print(f"CAR 3D数据生成完成，返回数据字段: {list(plot_data.keys() if plot_data else [])}")
+                if plot_data and 'initial_acid' in plot_data and isinstance(plot_data['initial_acid'], list):
+                    print(f"CAR 3D initial_acid 数组形状: [{len(plot_data['initial_acid'])}, {len(plot_data['initial_acid'][0]) if plot_data['initial_acid'] and len(plot_data['initial_acid']) > 0 else 0}]")
+                if plot_data and 'x_coords' in plot_data and 'y_coords' in plot_data:
+                    print(f"CAR 3D 坐标维度: x={len(plot_data['x_coords'])}, y={len(plot_data['y_coords'])}")
             else: # 1D CAR
                 K_car = float(data.get('K', 2.0))
                 plot_data = model.generate_data(I_avg, V_car, K_car, t_exp_car, acid_gen_eff, diff_len, react_rate, amp, contr, sine_type=sine_type)

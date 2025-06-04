@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+CAR模型 (化学放大光刻胶)
+"""
+
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
@@ -7,6 +13,8 @@ import base64
 from scipy.ndimage import gaussian_filter
 import math
 import ast
+import re
+import warnings
 
 # 新增：全局字体设置，优先使用常见的无衬线字体
 plt.rcParams['font.sans-serif'] = ['Arial', 'DejaVu Sans', 'Liberation Sans', 'SimHei', 'Microsoft YaHei']
@@ -259,6 +267,7 @@ class CARModel:
                 'diffused_acid': diffused_acid.tolist(),
                 'deprotection': deprotection.tolist(),
                 'thickness': thickness.tolist(),
+                'sine_type': '3d',
                 'is_3d': True
             }
         # 二维正弦波
@@ -288,6 +297,9 @@ class CARModel:
                     'y_coords': y_axis_points.tolist(),
                     'z_exposure_dose': initial_acid_2d.tolist(),  # 使用与Dill模型一致的键名
                     'z_thickness': thickness_2d.tolist(),         # 使用与Dill模型一致的键名
+                    'z_initial_acid': initial_acid_2d.tolist(),   # 为前端提供完整的2D热力图数据
+                    'z_diffused_acid': diffused_acid_2d.tolist(), # 为前端提供完整的2D热力图数据
+                    'z_deprotection': deprotection_2d.tolist(),   # 为前端提供完整的2D热力图数据
                     'initial_acid': initial_acid_2d.flatten().tolist(),
                     'diffused_acid': diffused_acid_2d.flatten().tolist(),
                     'deprotection': deprotection_2d.flatten().tolist(),
@@ -589,48 +601,81 @@ class CARModel:
                 deprotection = deprotection.T
                 thickness = thickness.T
             
-            # 创建3D表面图 - 光酸浓度
+            # 存储所有图表的Base64编码
+            plots = {}
+
+            # 1. 创建3D表面图 - 初始光酸分布
             fig1 = plt.figure(figsize=(10, 8))
             ax1 = fig1.add_subplot(111, projection='3d')
-            surf1 = ax1.plot_surface(X, Y, diffused_acid, cmap='viridis', edgecolor='none')
-            ax1.set_title('3D Acid Concentration Distribution', fontsize=16)
+            surf1 = ax1.plot_surface(X, Y, initial_acid, cmap='viridis', edgecolor='none')
+            ax1.set_title('3D Initial Acid Distribution', fontsize=16)
             ax1.set_xlabel('X Position (μm)', fontsize=14)
             ax1.set_ylabel('Y Position (μm)', fontsize=14)
-            ax1.set_zlabel('Acid Concentration', fontsize=14)
+            ax1.set_zlabel('Initial Acid Concentration', fontsize=14)
             fig1.colorbar(surf1, ax=ax1, shrink=0.5, aspect=5)
             plt.tight_layout()
             
             buffer1 = BytesIO()
             fig1.savefig(buffer1, format='png', dpi=100)
             buffer1.seek(0)
-            exposure_plot = base64.b64encode(buffer1.getvalue()).decode()
+            plots['initial_acid_plot'] = base64.b64encode(buffer1.getvalue()).decode()
             plt.close(fig1)
             
-            # 创建3D表面图 - 厚度
+            # 2. 创建3D表面图 - 扩散后光酸分布
             fig2 = plt.figure(figsize=(10, 8))
             ax2 = fig2.add_subplot(111, projection='3d')
-            surf2 = ax2.plot_surface(X, Y, thickness, cmap='plasma', edgecolor='none')
-            ax2.set_title('3D Photoresist Thickness Distribution', fontsize=16)
+            surf2 = ax2.plot_surface(X, Y, diffused_acid, cmap='viridis', edgecolor='none')
+            ax2.set_title('3D Diffused Acid Distribution', fontsize=16)
             ax2.set_xlabel('X Position (μm)', fontsize=14)
             ax2.set_ylabel('Y Position (μm)', fontsize=14)
-            ax2.set_zlabel('Relative Thickness', fontsize=14)
+            ax2.set_zlabel('Acid Concentration After Diffusion', fontsize=14)
             fig2.colorbar(surf2, ax=ax2, shrink=0.5, aspect=5)
             plt.tight_layout()
             
             buffer2 = BytesIO()
             fig2.savefig(buffer2, format='png', dpi=100)
             buffer2.seek(0)
-            thickness_plot = base64.b64encode(buffer2.getvalue()).decode()
+            plots['acid_diffusion_plot'] = base64.b64encode(buffer2.getvalue()).decode()
             plt.close(fig2)
             
-            # 同时提供其他CAR模型需要的图表键
-            return {
-                'initial_acid_plot': exposure_plot,
-                'thickness_plot': thickness_plot,
-                'exposure_plot': exposure_plot,
-                'acid_diffusion_plot': exposure_plot,
-                'deprotection_plot': thickness_plot
-            }
+            # 3. 创建3D表面图 - 脱保护程度分布
+            fig3 = plt.figure(figsize=(10, 8))
+            ax3 = fig3.add_subplot(111, projection='3d')
+            surf3 = ax3.plot_surface(X, Y, deprotection, cmap='YlOrRd', edgecolor='none')
+            ax3.set_title('3D Deprotection Distribution', fontsize=16)
+            ax3.set_xlabel('X Position (μm)', fontsize=14)
+            ax3.set_ylabel('Y Position (μm)', fontsize=14)
+            ax3.set_zlabel('Deprotection Degree', fontsize=14)
+            fig3.colorbar(surf3, ax=ax3, shrink=0.5, aspect=5)
+            plt.tight_layout()
+            
+            buffer3 = BytesIO()
+            fig3.savefig(buffer3, format='png', dpi=100)
+            buffer3.seek(0)
+            plots['deprotection_plot'] = base64.b64encode(buffer3.getvalue()).decode()
+            plt.close(fig3)
+            
+            # 4. 创建3D表面图 - 光刻胶厚度分布
+            fig4 = plt.figure(figsize=(10, 8))
+            ax4 = fig4.add_subplot(111, projection='3d')
+            surf4 = ax4.plot_surface(X, Y, thickness, cmap='plasma', edgecolor='none')
+            ax4.set_title('3D Photoresist Thickness Distribution', fontsize=16)
+            ax4.set_xlabel('X Position (μm)', fontsize=14)
+            ax4.set_ylabel('Y Position (μm)', fontsize=14)
+            ax4.set_zlabel('Relative Thickness', fontsize=14)
+            fig4.colorbar(surf4, ax=ax4, shrink=0.5, aspect=5)
+            plt.tight_layout()
+            
+            buffer4 = BytesIO()
+            fig4.savefig(buffer4, format='png', dpi=100)
+            buffer4.seek(0)
+            plots['thickness_plot'] = base64.b64encode(buffer4.getvalue()).decode()
+            plt.close(fig4)
+            
+            # 曝光剂量与初始光酸相同
+            plots['exposure_plot'] = plots['initial_acid_plot']
+            
+            return plots
         
         # 情况4: 参数不明确，默认回退到1D模式
         else:
