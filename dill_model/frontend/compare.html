@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="css/animations.css?v=1.1">
     <link rel="stylesheet" href="css/popup-enhanced.css?v=1.0">
     <link rel="stylesheet" href="css/loading-animation.css">
+    <link rel="stylesheet" href="css/theme-colors.css?v=1.0">
     <!-- 引入Font Awesome图标 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- 引入Plotly.js -->
@@ -770,9 +771,45 @@
     <script src="js/compare.js"></script>
     <script src="js/lang.js"></script>
     <script>
-    // 模型切换逻辑补充
     document.addEventListener('DOMContentLoaded', function() {
-        // 模型选择处理已在compare.js中通过initModelSelection处理
+        // 设置主题颜色函数
+        function applyThemeColor(modelType) {
+            // 首先移除所有主题类
+            document.body.classList.remove('theme-dill', 'theme-enhanced-dill', 'theme-car');
+            
+            // 然后添加选中的主题类
+            if (modelType === 'dill') {
+                document.body.classList.add('theme-dill');
+            } else if (modelType === 'enhanced_dill') {
+                document.body.classList.add('theme-enhanced-dill');
+            } else if (modelType === 'car') {
+                document.body.classList.add('theme-car');
+            }
+        }
+        
+        // 获取模型选择下拉框
+        const modelSelect = document.getElementById('model-select');
+        
+        // 初始化应用默认主题
+        applyThemeColor(modelSelect.value);
+        
+        // 添加模型切换事件监听器
+        modelSelect.addEventListener('change', function() {
+            applyThemeColor(this.value);
+            
+            // 切换模型描述显示
+            document.querySelectorAll('#model-description-container > div').forEach(div => {
+                div.style.display = 'none';
+            });
+            
+            if (this.value === 'dill') {
+                document.getElementById('dill-desc').style.display = 'block';
+            } else if (this.value === 'enhanced_dill') {
+                document.getElementById('enhanced-dill-desc').style.display = 'block';
+            } else if (this.value === 'car') {
+                document.getElementById('car-desc').style.display = 'block';
+            }
+        });
     });
     </script>
 </body>

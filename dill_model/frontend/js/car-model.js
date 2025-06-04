@@ -302,18 +302,63 @@ function renderCarInteractivePlots(data) {
         // 处理二维热力图数据
         console.log('CAR模型：渲染2D热力图');
         
+        // 创建2D展示的容器标题和样式
+        const title2D = document.createElement('h2');
+        title2D.className = 'section-title';
+        title2D.textContent = 'CAR模型二维分布图';
+        plotContainer.appendChild(title2D);
+        
+        // 创建图表网格容器
+        const gridContainer = document.createElement('div');
+        gridContainer.className = 'car-2d-grid';
+        gridContainer.style.display = 'grid';
+        gridContainer.style.gridTemplateColumns = 'repeat(2, 1fr)';
+        gridContainer.style.gap = '20px';
+        gridContainer.style.marginBottom = '30px';
+        plotContainer.appendChild(gridContainer);
+        
+        // 1. 初始光酸分布图的容器
+        const initialAcidDiv = document.createElement('div');
+        initialAcidDiv.className = 'car-2d-plot-container';
+        initialAcidDiv.style.height = '400px';
+        initialAcidDiv.innerHTML = `
+            <h3>初始光酸分布 (2D)</h3>
+            <div id="car-initial-acid-2d" class="car-2d-plot" style="width:100%; height:350px;"></div>
+        `;
+        gridContainer.appendChild(initialAcidDiv);
+        
+        // 2. 扩散后光酸分布图的容器
+        const diffusedAcidDiv = document.createElement('div');
+        diffusedAcidDiv.className = 'car-2d-plot-container';
+        diffusedAcidDiv.style.height = '400px';
+        diffusedAcidDiv.innerHTML = `
+            <h3>扩散后光酸分布 (2D)</h3>
+            <div id="car-diffused-acid-2d" class="car-2d-plot" style="width:100%; height:350px;"></div>
+        `;
+        gridContainer.appendChild(diffusedAcidDiv);
+        
+        // 3. 脱保护程度分布图的容器
+        const deprotectionDiv = document.createElement('div');
+        deprotectionDiv.className = 'car-2d-plot-container';
+        deprotectionDiv.style.height = '400px';
+        deprotectionDiv.innerHTML = `
+            <h3>脱保护程度分布 (2D)</h3>
+            <div id="car-deprotection-2d" class="car-2d-plot" style="width:100%; height:350px;"></div>
+        `;
+        gridContainer.appendChild(deprotectionDiv);
+        
+        // 4. 光刻胶厚度分布图的容器
+        const thicknessDiv = document.createElement('div');
+        thicknessDiv.className = 'car-2d-plot-container';
+        thicknessDiv.style.height = '400px';
+        thicknessDiv.innerHTML = `
+            <h3>显影后光刻胶厚度 (2D)</h3>
+            <div id="car-thickness-2d" class="car-2d-plot" style="width:100%; height:350px;"></div>
+        `;
+        gridContainer.appendChild(thicknessDiv);
+        
         // 初始光酸分布热力图
         if (data.z_exposure_dose || data.z_initial_acid) {
-            const acidTitle = document.createElement('h3');
-            acidTitle.className = 'plot-title';
-            acidTitle.textContent = '初始光酸分布 (2D)';
-            plotContainer.appendChild(acidTitle);
-            
-            const acidHeatmapDiv = document.createElement('div');
-            acidHeatmapDiv.id = 'car-acid-heatmap';
-            acidHeatmapDiv.className = 'car-plot-container';
-            plotContainer.appendChild(acidHeatmapDiv);
-            
             const acidHeatmapTrace = {
                 x: data.x_coords,
                 y: data.y_coords,
@@ -331,35 +376,31 @@ function renderCarInteractivePlots(data) {
                 margin: { l: 60, r: 20, t: 60, b: 60 }
             };
             
-            Plotly.newPlot('car-acid-heatmap', [acidHeatmapTrace], acidHeatmapLayout, plotlyConfig);
-            // 修改：仅导出按钮，不导出错误的数据格式
-            const btnContainer = document.createElement('div');
-            btnContainer.className = 'plot-export-btns';
-            btnContainer.style.textAlign = 'center';
-            btnContainer.style.margin = '10px 0 20px 0';
+            Plotly.newPlot('car-initial-acid-2d', [acidHeatmapTrace], acidHeatmapLayout, plotlyConfig);
             
-            const exportImgBtn = document.createElement('button');
-            exportImgBtn.textContent = '导出图片';
-            exportImgBtn.onclick = function() {
-                Plotly.downloadImage(acidHeatmapDiv, {format: 'png', filename: 'car_acid_heatmap', willReadFrequently: true});
+            // 添加导出按钮
+            const btnContainer1 = document.createElement('div');
+            btnContainer1.className = 'plot-export-btns';
+            btnContainer1.style.textAlign = 'center';
+            btnContainer1.style.margin = '10px 0';
+            
+            const exportImgBtn1 = document.createElement('button');
+            exportImgBtn1.textContent = '导出图片';
+            exportImgBtn1.onclick = function() {
+                Plotly.downloadImage('car-initial-acid-2d', {
+                    format: 'png',
+                    filename: 'car_initial_acid_2d',
+                    width: 800,
+                    height: 600
+                });
             };
             
-            btnContainer.appendChild(exportImgBtn);
-            acidHeatmapDiv.parentNode.insertBefore(btnContainer, acidHeatmapDiv.nextSibling);
+            btnContainer1.appendChild(exportImgBtn1);
+            document.getElementById('car-initial-acid-2d').parentNode.appendChild(btnContainer1);
         }
         
         // 扩散后光酸分布热力图
         if (data.z_diffused_acid) {
-            const diffusedTitle = document.createElement('h3');
-            diffusedTitle.className = 'plot-title';
-            diffusedTitle.textContent = '扩散后光酸分布 (2D)';
-            plotContainer.appendChild(diffusedTitle);
-            
-            const diffusedHeatmapDiv = document.createElement('div');
-            diffusedHeatmapDiv.id = 'car-diffused-heatmap';
-            diffusedHeatmapDiv.className = 'car-plot-container';
-            plotContainer.appendChild(diffusedHeatmapDiv);
-            
             const diffusedHeatmapTrace = {
                 x: data.x_coords,
                 y: data.y_coords,
@@ -377,35 +418,31 @@ function renderCarInteractivePlots(data) {
                 margin: { l: 60, r: 20, t: 60, b: 60 }
             };
             
-            Plotly.newPlot('car-diffused-heatmap', [diffusedHeatmapTrace], diffusedHeatmapLayout, plotlyConfig);
-            // 修改：仅导出按钮，不导出错误的数据格式
-            const btnContainer = document.createElement('div');
-            btnContainer.className = 'plot-export-btns';
-            btnContainer.style.textAlign = 'center';
-            btnContainer.style.margin = '10px 0 20px 0';
+            Plotly.newPlot('car-diffused-acid-2d', [diffusedHeatmapTrace], diffusedHeatmapLayout, plotlyConfig);
             
-            const exportImgBtn = document.createElement('button');
-            exportImgBtn.textContent = '导出图片';
-            exportImgBtn.onclick = function() {
-                Plotly.downloadImage(diffusedHeatmapDiv, {format: 'png', filename: 'car_diffused_heatmap', willReadFrequently: true});
+            // 添加导出按钮
+            const btnContainer2 = document.createElement('div');
+            btnContainer2.className = 'plot-export-btns';
+            btnContainer2.style.textAlign = 'center';
+            btnContainer2.style.margin = '10px 0';
+            
+            const exportImgBtn2 = document.createElement('button');
+            exportImgBtn2.textContent = '导出图片';
+            exportImgBtn2.onclick = function() {
+                Plotly.downloadImage('car-diffused-acid-2d', {
+                    format: 'png',
+                    filename: 'car_diffused_acid_2d',
+                    width: 800,
+                    height: 600
+                });
             };
             
-            btnContainer.appendChild(exportImgBtn);
-            diffusedHeatmapDiv.parentNode.insertBefore(btnContainer, diffusedHeatmapDiv.nextSibling);
+            btnContainer2.appendChild(exportImgBtn2);
+            document.getElementById('car-diffused-acid-2d').parentNode.appendChild(btnContainer2);
         }
         
         // 脱保护程度热力图
         if (data.z_deprotection) {
-            const deprotectionTitle = document.createElement('h3');
-            deprotectionTitle.className = 'plot-title';
-            deprotectionTitle.textContent = '树脂脱保护程度 (2D)';
-            plotContainer.appendChild(deprotectionTitle);
-            
-            const deprotectionHeatmapDiv = document.createElement('div');
-            deprotectionHeatmapDiv.id = 'car-deprotection-heatmap';
-            deprotectionHeatmapDiv.className = 'car-plot-container';
-            plotContainer.appendChild(deprotectionHeatmapDiv);
-            
             const deprotectionHeatmapTrace = {
                 x: data.x_coords,
                 y: data.y_coords,
@@ -417,49 +454,45 @@ function renderCarInteractivePlots(data) {
             };
             
             const deprotectionHeatmapLayout = {
-                title: '树脂脱保护程度 (2D)',
+                title: '脱保护程度分布 (2D)',
                 xaxis: { title: '位置 (μm)' },
                 yaxis: { title: '位置 (μm)' },
                 margin: { l: 60, r: 20, t: 60, b: 60 }
             };
             
-            Plotly.newPlot('car-deprotection-heatmap', [deprotectionHeatmapTrace], deprotectionHeatmapLayout, plotlyConfig);
-            // 修改：仅导出按钮，不导出错误的数据格式
-            const btnContainer = document.createElement('div');
-            btnContainer.className = 'plot-export-btns';
-            btnContainer.style.textAlign = 'center';
-            btnContainer.style.margin = '10px 0 20px 0';
+            Plotly.newPlot('car-deprotection-2d', [deprotectionHeatmapTrace], deprotectionHeatmapLayout, plotlyConfig);
             
-            const exportImgBtn = document.createElement('button');
-            exportImgBtn.textContent = '导出图片';
-            exportImgBtn.onclick = function() {
-                Plotly.downloadImage(deprotectionHeatmapDiv, {format: 'png', filename: 'car_deprotection_heatmap', willReadFrequently: true});
+            // 添加导出按钮
+            const btnContainer3 = document.createElement('div');
+            btnContainer3.className = 'plot-export-btns';
+            btnContainer3.style.textAlign = 'center';
+            btnContainer3.style.margin = '10px 0';
+            
+            const exportImgBtn3 = document.createElement('button');
+            exportImgBtn3.textContent = '导出图片';
+            exportImgBtn3.onclick = function() {
+                Plotly.downloadImage('car-deprotection-2d', {
+                    format: 'png',
+                    filename: 'car_deprotection_2d',
+                    width: 800,
+                    height: 600
+                });
             };
             
-            btnContainer.appendChild(exportImgBtn);
-            deprotectionHeatmapDiv.parentNode.insertBefore(btnContainer, deprotectionHeatmapDiv.nextSibling);
+            btnContainer3.appendChild(exportImgBtn3);
+            document.getElementById('car-deprotection-2d').parentNode.appendChild(btnContainer3);
         }
         
-        // 最终厚度热力图
+        // 光刻胶厚度热力图
         if (data.z_thickness) {
-            const thicknessTitle = document.createElement('h3');
-            thicknessTitle.className = 'plot-title';
-            thicknessTitle.textContent = '显影后光刻胶厚度 (2D)';
-            plotContainer.appendChild(thicknessTitle);
-            
-            const thicknessHeatmapDiv = document.createElement('div');
-            thicknessHeatmapDiv.id = 'car-thickness-heatmap';
-            thicknessHeatmapDiv.className = 'car-plot-container';
-            plotContainer.appendChild(thicknessHeatmapDiv);
-            
             const thicknessHeatmapTrace = {
                 x: data.x_coords,
                 y: data.y_coords,
                 z: data.z_thickness,
                 type: 'heatmap',
-                colorscale: 'Turbo',
-                colorbar: { title: '相对厚度' },
-                hovertemplate: 'X: %{x}<br>Y: %{y}<br>相对厚度: %{z}<extra></extra>'
+                colorscale: 'Plasma',
+                colorbar: { title: '归一化厚度' },
+                hovertemplate: 'X: %{x}<br>Y: %{y}<br>光刻胶厚度: %{z}<extra></extra>'
             };
             
             const thicknessHeatmapLayout = {
@@ -469,21 +502,27 @@ function renderCarInteractivePlots(data) {
                 margin: { l: 60, r: 20, t: 60, b: 60 }
             };
             
-            Plotly.newPlot('car-thickness-heatmap', [thicknessHeatmapTrace], thicknessHeatmapLayout, plotlyConfig);
-            // 修改：仅导出按钮，不导出错误的数据格式
-            const btnContainer = document.createElement('div');
-            btnContainer.className = 'plot-export-btns';
-            btnContainer.style.textAlign = 'center';
-            btnContainer.style.margin = '10px 0 20px 0';
+            Plotly.newPlot('car-thickness-2d', [thicknessHeatmapTrace], thicknessHeatmapLayout, plotlyConfig);
             
-            const exportImgBtn = document.createElement('button');
-            exportImgBtn.textContent = '导出图片';
-            exportImgBtn.onclick = function() {
-                Plotly.downloadImage(thicknessHeatmapDiv, {format: 'png', filename: 'car_thickness_heatmap', willReadFrequently: true});
+            // 添加导出按钮
+            const btnContainer4 = document.createElement('div');
+            btnContainer4.className = 'plot-export-btns';
+            btnContainer4.style.textAlign = 'center';
+            btnContainer4.style.margin = '10px 0';
+            
+            const exportImgBtn4 = document.createElement('button');
+            exportImgBtn4.textContent = '导出图片';
+            exportImgBtn4.onclick = function() {
+                Plotly.downloadImage('car-thickness-2d', {
+                    format: 'png',
+                    filename: 'car_thickness_2d',
+                    width: 800,
+                    height: 600
+                });
             };
             
-            btnContainer.appendChild(exportImgBtn);
-            thicknessHeatmapDiv.parentNode.insertBefore(btnContainer, thicknessHeatmapDiv.nextSibling);
+            btnContainer4.appendChild(exportImgBtn4);
+            document.getElementById('car-thickness-2d').parentNode.appendChild(btnContainer4);
         }
     } 
     // 处理3D数据
@@ -910,65 +949,147 @@ function renderCarInteractivePlots(data) {
             return;
         }
         
-        // 创建初始光酸和扩散后光酸对比图
-        if (data.initial_acid && data.diffused_acid) {
-            // 新增：大标题
-            const acidTitle = document.createElement('h3');
-            acidTitle.className = 'plot-title';
-            acidTitle.textContent = '光酸分布对比';
-            plotContainer.appendChild(acidTitle);
-            const acidComparisonDiv = document.createElement('div');
-            acidComparisonDiv.id = 'car-acid-comparison-plot';
-            acidComparisonDiv.className = 'car-plot-container';
-            plotContainer.appendChild(acidComparisonDiv);
-            const acidTraces = [
-                {
-                    x: data.x,
-                    y: data.initial_acid,
-                    name: '初始光酸分布',
-                    type: 'scatter',
-                    mode: 'lines',
-                    line: { color: '#2ca02c', width: 2 }
-                },
-                {
-                    x: data.x,
-                    y: data.diffused_acid,
-                    name: '扩散后光酸分布',
-                    type: 'scatter',
-                    mode: 'lines',
-                    line: { color: '#1f77b4', width: 2 }
-                }
-            ];
-            const acidLayout = {
-                title: '光酸分布对比',
+        // 创建1D展示的容器标题和样式
+        const title1D = document.createElement('h2');
+        title1D.className = 'section-title';
+        title1D.textContent = 'CAR模型一维分布图';
+        plotContainer.appendChild(title1D);
+        
+        // 创建图表网格容器
+        const gridContainer = document.createElement('div');
+        gridContainer.className = 'car-1d-grid';
+        gridContainer.style.display = 'grid';
+        gridContainer.style.gridTemplateColumns = 'repeat(2, 1fr)';
+        gridContainer.style.gap = '20px';
+        gridContainer.style.marginBottom = '30px';
+        plotContainer.appendChild(gridContainer);
+        
+        // 1. 初始光酸分布图的容器
+        const initialAcidDiv = document.createElement('div');
+        initialAcidDiv.className = 'car-1d-plot-container';
+        initialAcidDiv.style.height = '400px';
+        initialAcidDiv.innerHTML = `
+            <h3>初始光酸分布 (1D)</h3>
+            <div id="car-initial-acid-1d" class="car-1d-plot" style="width:100%; height:350px;"></div>
+        `;
+        gridContainer.appendChild(initialAcidDiv);
+        
+        // 2. 扩散后光酸分布图的容器
+        const diffusedAcidDiv = document.createElement('div');
+        diffusedAcidDiv.className = 'car-1d-plot-container';
+        diffusedAcidDiv.style.height = '400px';
+        diffusedAcidDiv.innerHTML = `
+            <h3>扩散后光酸分布 (1D)</h3>
+            <div id="car-diffused-acid-1d" class="car-1d-plot" style="width:100%; height:350px;"></div>
+        `;
+        gridContainer.appendChild(diffusedAcidDiv);
+        
+        // 3. 脱保护程度分布图的容器
+        const deprotectionDiv = document.createElement('div');
+        deprotectionDiv.className = 'car-1d-plot-container';
+        deprotectionDiv.style.height = '400px';
+        deprotectionDiv.innerHTML = `
+            <h3>脱保护程度分布 (1D)</h3>
+            <div id="car-deprotection-1d" class="car-1d-plot" style="width:100%; height:350px;"></div>
+        `;
+        gridContainer.appendChild(deprotectionDiv);
+        
+        // 4. 光刻胶厚度分布图的容器
+        const thicknessDiv = document.createElement('div');
+        thicknessDiv.className = 'car-1d-plot-container';
+        thicknessDiv.style.height = '400px';
+        thicknessDiv.innerHTML = `
+            <h3>显影后光刻胶厚度 (1D)</h3>
+            <div id="car-thickness-1d" class="car-1d-plot" style="width:100%; height:350px;"></div>
+        `;
+        gridContainer.appendChild(thicknessDiv);
+
+        // 创建初始光酸分布图
+        if (data.initial_acid) {
+            const initialAcidTrace = [{
+                x: data.x,
+                y: data.initial_acid,
+                name: '初始光酸分布',
+                type: 'scatter',
+                mode: 'lines',
+                line: { color: '#2ca02c', width: 2 }
+            }];
+            
+            const initialAcidLayout = {
+                title: '初始光酸分布 (1D)',
                 xaxis: { title: '位置 (μm)' },
                 yaxis: { title: '归一化光酸浓度' },
-                legend: { x: 0.05, y: 1 },
                 margin: { t: 40, b: 40, l: 60, r: 10 },
                 hovermode: 'closest'
             };
-            Plotly.newPlot('car-acid-comparison-plot', acidTraces, acidLayout, plotlyConfig);
-            // 弹窗支持
-            acidComparisonDiv.on('plotly_click', function(eventData) {
-                if (eventData.points && eventData.points.length > 0) {
-                    const pt = eventData.points[0];
-                    window.showSinglePointDetailsPopup(pt, 'car_acid_concentration', acidComparisonDiv, eventData);
-                }
-            });
-            addExportButtonsForPlot(acidComparisonDiv, 'car_acid_comparison', data.x, data.initial_acid);
+            
+            Plotly.newPlot('car-initial-acid-1d', initialAcidTrace, initialAcidLayout, plotlyConfig);
+            
+            // 添加导出按钮
+            const btnContainer1 = document.createElement('div');
+            btnContainer1.className = 'plot-export-btns';
+            btnContainer1.style.textAlign = 'center';
+            btnContainer1.style.margin = '10px 0';
+            
+            const exportImgBtn1 = document.createElement('button');
+            exportImgBtn1.textContent = '导出图片';
+            exportImgBtn1.onclick = function() {
+                Plotly.downloadImage('car-initial-acid-1d', {
+                    format: 'png',
+                    filename: 'car_initial_acid_1d',
+                    width: 800,
+                    height: 600
+                });
+            };
+            
+            btnContainer1.appendChild(exportImgBtn1);
+            document.getElementById('car-initial-acid-1d').parentNode.appendChild(btnContainer1);
         }
         
+        // 创建扩散后光酸分布图
+        if (data.diffused_acid) {
+            const diffusedAcidTrace = [{
+                x: data.x,
+                y: data.diffused_acid,
+                name: '扩散后光酸分布',
+                type: 'scatter',
+                mode: 'lines',
+                line: { color: '#1f77b4', width: 2 }
+            }];
+            
+            const diffusedAcidLayout = {
+                title: '扩散后光酸分布 (1D)',
+                xaxis: { title: '位置 (μm)' },
+                yaxis: { title: '归一化光酸浓度' },
+                margin: { t: 40, b: 40, l: 60, r: 10 },
+                hovermode: 'closest'
+            };
+            
+            Plotly.newPlot('car-diffused-acid-1d', diffusedAcidTrace, diffusedAcidLayout, plotlyConfig);
+            
+            // 添加导出按钮
+            const btnContainer2 = document.createElement('div');
+            btnContainer2.className = 'plot-export-btns';
+            btnContainer2.style.textAlign = 'center';
+            btnContainer2.style.margin = '10px 0';
+            
+            const exportImgBtn2 = document.createElement('button');
+            exportImgBtn2.textContent = '导出图片';
+            exportImgBtn2.onclick = function() {
+                Plotly.downloadImage('car-diffused-acid-1d', {
+                    format: 'png',
+                    filename: 'car_diffused_acid_1d',
+                    width: 800,
+                    height: 600
+                });
+            };
+            
+            btnContainer2.appendChild(exportImgBtn2);
+            document.getElementById('car-diffused-acid-1d').parentNode.appendChild(btnContainer2);
+        }
+
         // 创建树脂脱保护程度图
         if (data.deprotection) {
-            // 新增：大标题
-            const deprotectionTitle = document.createElement('h3');
-            deprotectionTitle.className = 'plot-title';
-            deprotectionTitle.textContent = '树脂脱保护程度分布';
-            plotContainer.appendChild(deprotectionTitle);
-            const deprotectionDiv = document.createElement('div');
-            deprotectionDiv.id = 'car-deprotection-plot';
-            deprotectionDiv.className = 'car-plot-container';
-            plotContainer.appendChild(deprotectionDiv);
             const deprotectionTrace = [{
                 x: data.x,
                 y: data.deprotection,
@@ -977,34 +1098,40 @@ function renderCarInteractivePlots(data) {
                 mode: 'lines',
                 line: { color: '#d62728', width: 2 }
             }];
+            
             const deprotectionLayout = {
-                title: '树脂脱保护程度分布',
+                title: '脱保护程度分布 (1D)',
                 xaxis: { title: '位置 (μm)' },
                 yaxis: { title: '脱保护程度' },
                 margin: { t: 40, b: 40, l: 60, r: 10 },
                 hovermode: 'closest'
             };
-            Plotly.newPlot('car-deprotection-plot', deprotectionTrace, deprotectionLayout, plotlyConfig);
-            deprotectionDiv.on('plotly_click', function(eventData) {
-                if (eventData.points && eventData.points.length > 0) {
-                    const pt = eventData.points[0];
-                    window.showSinglePointDetailsPopup(pt, 'car_deprotection_degree', deprotectionDiv, eventData);
-                }
-            });
-            addExportButtonsForPlot(deprotectionDiv, 'car_deprotection', data.x, data.deprotection);
+            
+            Plotly.newPlot('car-deprotection-1d', deprotectionTrace, deprotectionLayout, plotlyConfig);
+            
+            // 添加导出按钮
+            const btnContainer3 = document.createElement('div');
+            btnContainer3.className = 'plot-export-btns';
+            btnContainer3.style.textAlign = 'center';
+            btnContainer3.style.margin = '10px 0';
+            
+            const exportImgBtn3 = document.createElement('button');
+            exportImgBtn3.textContent = '导出图片';
+            exportImgBtn3.onclick = function() {
+                Plotly.downloadImage('car-deprotection-1d', {
+                    format: 'png',
+                    filename: 'car_deprotection_1d',
+                    width: 800,
+                    height: 600
+                });
+            };
+            
+            btnContainer3.appendChild(exportImgBtn3);
+            document.getElementById('car-deprotection-1d').parentNode.appendChild(btnContainer3);
         }
-        
+
         // 创建最终光刻胶厚度图
         if (data.thickness) {
-            // 新增：大标题
-            const thicknessTitle = document.createElement('h3');
-            thicknessTitle.className = 'plot-title';
-            thicknessTitle.textContent = '显影后光刻胶厚度分布';
-            plotContainer.appendChild(thicknessTitle);
-            const thicknessDiv = document.createElement('div');
-            thicknessDiv.id = 'car-thickness-plot';
-            thicknessDiv.className = 'car-plot-container';
-            plotContainer.appendChild(thicknessDiv);
             const thicknessTrace = [{
                 x: data.x,
                 y: data.thickness,
@@ -1015,21 +1142,36 @@ function renderCarInteractivePlots(data) {
                 fillcolor: 'rgba(148, 103, 189, 0.2)',
                 line: { color: '#9467bd', width: 2 }
             }];
+            
             const thicknessLayout = {
-                title: '显影后光刻胶厚度分布',
+                title: '显影后光刻胶厚度 (1D)',
                 xaxis: { title: '位置 (μm)' },
                 yaxis: { title: '归一化厚度' },
                 margin: { t: 40, b: 40, l: 60, r: 10 },
                 hovermode: 'closest'
             };
-            Plotly.newPlot('car-thickness-plot', thicknessTrace, thicknessLayout, plotlyConfig);
-            thicknessDiv.on('plotly_click', function(eventData) {
-                if (eventData.points && eventData.points.length > 0) {
-                    const pt = eventData.points[0];
-                    window.showSinglePointDetailsPopup(pt, 'car_thickness', thicknessDiv, eventData);
-                }
-            });
-            addExportButtonsForPlot(thicknessDiv, 'car_thickness', data.x, data.thickness);
+            
+            Plotly.newPlot('car-thickness-1d', thicknessTrace, thicknessLayout, plotlyConfig);
+            
+            // 添加导出按钮
+            const btnContainer4 = document.createElement('div');
+            btnContainer4.className = 'plot-export-btns';
+            btnContainer4.style.textAlign = 'center';
+            btnContainer4.style.margin = '10px 0';
+            
+            const exportImgBtn4 = document.createElement('button');
+            exportImgBtn4.textContent = '导出图片';
+            exportImgBtn4.onclick = function() {
+                Plotly.downloadImage('car-thickness-1d', {
+                    format: 'png',
+                    filename: 'car_thickness_1d',
+                    width: 800,
+                    height: 600
+                });
+            };
+            
+            btnContainer4.appendChild(exportImgBtn4);
+            document.getElementById('car-thickness-1d').parentNode.appendChild(btnContainer4);
         }
     }
 }

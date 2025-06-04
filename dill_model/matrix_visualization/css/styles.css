@@ -782,4 +782,66 @@ html[dir="rtl"] .formula {
     font-size: 0.8em;
     vertical-align: super;
     line-height: 0;
+}
+
+/* 主题颜色样式 */
+.theme-dill-cell {
+    border-color: rgba(255, 100, 100, 0.5) !important;
+}
+
+.theme-dill-cell .cell-header {
+    background: linear-gradient(to right, rgba(255, 100, 100, 0.15), rgba(255, 100, 100, 0.05)) !important;
+}
+
+.theme-dill-cell .cell-content {
+    background-color: rgba(255, 100, 100, 0.03) !important;
+}
+
+.theme-dill-cell h3 {
+    color: rgba(200, 60, 60, 1) !important;
+}
+
+.theme-enhanced-dill-cell {
+    border-color: rgba(100, 150, 255, 0.5) !important;
+}
+
+.theme-enhanced-dill-cell .cell-header {
+    background: linear-gradient(to right, rgba(100, 150, 255, 0.15), rgba(100, 150, 255, 0.05)) !important;
+}
+
+.theme-enhanced-dill-cell .cell-content {
+    background-color: rgba(100, 150, 255, 0.03) !important;
+}
+
+.theme-enhanced-dill-cell h3 {
+    color: rgba(70, 120, 220, 1) !important;
+}
+
+.theme-car-cell {
+    border-color: rgba(100, 200, 100, 0.5) !important;
+}
+
+.theme-car-cell .cell-header {
+    background: linear-gradient(to right, rgba(100, 200, 100, 0.15), rgba(100, 200, 100, 0.05)) !important;
+}
+
+.theme-car-cell .cell-content {
+    background-color: rgba(100, 200, 100, 0.03) !important;
+}
+
+.theme-car-cell h3 {
+    color: rgba(60, 180, 60, 1) !important;
+}
+
+/* 主题色按钮高亮 */
+.theme-dill-cell .expand-button:hover {
+    background-color: rgba(255, 100, 100, 0.2) !important;
+}
+
+.theme-enhanced-dill-cell .expand-button:hover {
+    background-color: rgba(100, 150, 255, 0.2) !important;
+}
+
+.theme-car-cell .expand-button:hover {
+    background-color: rgba(100, 200, 100, 0.2) !important;
 } 

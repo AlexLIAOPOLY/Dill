@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="css/popup-enhanced.css?v=1.0">
     <link rel="stylesheet" href="css/car-model.css?v=1.0">
     <link rel="stylesheet" href="css/loading-animation.css">
+    <link rel="stylesheet" href="css/theme-colors.css?v=1.0">
     <!-- 添加数学公式所需的样式 -->
     <style>
         /* 分数样式 */
@@ -907,6 +908,26 @@
     const carInteractivePlots = document.getElementById('car-interactive-plots');
     const carResults = document.getElementById('car-results');
     
+    // 设置主题颜色函数
+    function applyThemeColor(modelType) {
+        // 首先移除所有主题类
+        document.body.classList.remove('theme-dill', 'theme-enhanced-dill', 'theme-car');
+        
+        // 然后添加选中的主题类
+        if (modelType === 'dill') {
+            document.body.classList.add('theme-dill');
+        } else if (modelType === 'enhanced_dill') {
+            document.body.classList.add('theme-enhanced-dill');
+        } else if (modelType === 'car') {
+            document.body.classList.add('theme-car');
+        }
+    }
+    
+    // 在页面加载时应用默认主题
+    document.addEventListener('DOMContentLoaded', function() {
+        applyThemeColor(modelSelect.value);
+    });
+    
     modelSelect.addEventListener('change', function() {
         if (this.value === 'dill') {
             dillDesc.style.display = 'block';
@@ -917,6 +938,7 @@
             carParams.style.display = 'none';
             carInteractivePlots.style.display = 'none';
             carResults.style.display = 'none';
+            applyThemeColor('dill'); // 应用Dill模型主题
         } else if (this.value === 'enhanced_dill') {
             dillDesc.style.display = 'none';
             enhancedDillDesc.style.display = 'block';
@@ -926,6 +948,7 @@
             carParams.style.display = 'none';
             carInteractivePlots.style.display = 'none';
             carResults.style.display = 'none';
+            applyThemeColor('enhanced_dill'); // 应用增强Dill模型主题
         } else if (this.value === 'car') {
             dillDesc.style.display = 'none';
             enhancedDillDesc.style.display = 'none';
@@ -935,6 +958,7 @@
             carParams.style.display = 'block';
             carInteractivePlots.style.display = 'block';
             carResults.style.display = 'block';
+            applyThemeColor('car'); // 应用CAR模型主题
         }
     });
     

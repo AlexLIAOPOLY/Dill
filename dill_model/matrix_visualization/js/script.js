@@ -97,6 +97,9 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeTheme();
     initializeLanguage();
     
+    // 初始化主题色
+    initThemeColors();
+    
     // 视图模式切换
     viewModeToggle.addEventListener('click', function() {
         matrixContainer.classList.toggle('card-view');
@@ -458,6 +461,29 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
+    
+    // 添加主题色功能
+    function initThemeColors() {
+        // 获取模型单元格
+        const dillCells = document.querySelectorAll('.matrix-cell[data-model="dill"]');
+        const enhancedDillCells = document.querySelectorAll('.matrix-cell[data-model="enhanced-dill"]');
+        const carCells = document.querySelectorAll('.matrix-cell[data-model="car"]');
+        
+        // 应用红色主题给Dill模型单元格
+        dillCells.forEach(cell => {
+            cell.classList.add('theme-dill-cell');
+        });
+        
+        // 应用蓝色主题给增强Dill模型单元格
+        enhancedDillCells.forEach(cell => {
+            cell.classList.add('theme-enhanced-dill-cell');
+        });
+        
+        // 应用绿色主题给CAR模型单元格
+        carCells.forEach(cell => {
+            cell.classList.add('theme-car-cell');
+        });
+    }
     
     // 初始化调用
     updateI18n();
