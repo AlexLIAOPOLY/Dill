@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from io import BytesIO
 import base64
 import ast
+import logging  # 添加logging模块
 
 def parse_phi_expr(phi_expr, t):
     """
@@ -44,8 +45,8 @@ class EnhancedDillModel:
         ∂M(z, t)/∂t = -I(z, t) * M(z, t) * C(z_h, T, t_B)
     其中A/B/C为厚度、前烘温度、前烘时间的函数
     """
-    def __init__(self):
-        pass
+    def __init__(self, debug_mode=False):
+        self.debug_mode = debug_mode  # 增加调试模式标志
 
     def get_abc(self, z_h, T, t_B):
         """
@@ -88,8 +89,15 @@ class EnhancedDillModel:
         # 检查是否为1D正弦波模式
         is_1d_sine = (current_K is not None and sine_type in ['single', '1d'] and V > 0)
         
-        # 仅在开发调试时打开
-        # print(f"[调试] Enhanced Dill: is_1d_sine={is_1d_sine}")
+        # 仅在调试模式下输出调试信息
+        if self.debug_mode:
+            logging.debug("[调试信息] Enhanced Dill 1D正弦波条件检查:")
+            logging.debug(f"  K = {current_K}, sine_type = {sine_type}, V = {V}")
+            logging.debug(f"  条件1(K is not None): {current_K is not None}")
+            logging.debug(f"  条件2(sine_type in ['single', '1d']): {sine_type in ['single', '1d']}")
+            logging.debug(f"  条件3(V > 0): {V > 0}")
+            logging.debug(f"  最终结果(is_1d_sine): {is_1d_sine}")
+            logging.debug(f"  A = {A}, B = {B}, C = {C}")
         
         if is_1d_sine:
             # 1D正弦波模式：生成正弦波调制的光强和PAC浓度分布
@@ -216,9 +224,9 @@ class EnhancedDillModel:
         if sine_type == 'single':
             sine_type = '1d'
         
-        # 简化调试输出，完全注释掉
-        # if sine_type != '1d': 
-        #     print(f"[generate_data] 模式:{sine_type}")
+        # 添加调试输出，检查参数传递
+        if self.debug_mode:
+            logging.debug(f"[generate_data] 输入参数: K={K}, V={V}, sine_type={sine_type}")
         
         # 2D热力图模式
         if sine_type == 'multi' and Kx is not None and Ky is not None and y_range is not None and len(y_range) > 1:

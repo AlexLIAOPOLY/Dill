@@ -499,7 +499,7 @@ def get_model_by_name(model_name):
     if model_name == 'dill':
         return DillModel()
     elif model_name == 'enhanced_dill':
-        return EnhancedDillModel()
+        return EnhancedDillModel(debug_mode=False)
     elif model_name == 'car':
         from .car_model import CARModel
         return CARModel()

@@ -25,7 +25,7 @@ def calculate():
     """
     try:
         data = request.get_json()
-        # print('收到前端参数:', data)  # 调试信息已注释
+        print('收到前端参数:', data)  # 调试用
         model_type = data.get('model_type', 'dill')
         model = get_model_by_name(model_type)
         
@@ -232,7 +232,7 @@ def calculate_data():
     """
     try:
         data = request.get_json()
-        # print('收到前端参数:', data)  # 调试信息已注释
+        print('收到前端参数:', data)  # 调试用
         model_type = data.get('model_type', 'dill')
         model = get_model_by_name(model_type)
         
