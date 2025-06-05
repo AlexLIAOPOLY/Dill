@@ -32,10 +32,6 @@
 
 这是一个基于Python Flask后端和HTML前端的Web应用，用于计算和可视化多种光刻胶模型。该工具提供了直观的用户界面，支持实时参数调整、高级可视化和丰富的交互功能。
 
-<div align="center">
-  <img src="https://user-images.githubusercontent.com/placeholder/dill-model-screenshot.png" alt="Dill模型工具截图" width="800px"/>
-</div>
-
 ## 📊 项目技术栈组成
 
 ![技术栈组成](https://img.shields.io/badge/Python-65%25-3776AB)
@@ -48,51 +44,41 @@
 <table>
   <tr>
     <td>
-      <img src="https://user-images.githubusercontent.com/placeholder/multi-model-icon.png" width="30px">
       <b>多模型支持</b>: 支持三种光刻胶模型 - Dill模型(薄胶)、增强Dill模型(厚胶)和CAR模型(化学放大型光刻胶)
     </td>
     <td>
-      <img src="https://user-images.githubusercontent.com/placeholder/dimensions-icon.png" width="30px">
       <b>多维度模拟</b>: 支持一维、二维和三维波形模拟，满足不同场景需求
     </td>
   </tr>
   <tr>
     <td>
-      <img src="https://user-images.githubusercontent.com/placeholder/interactive-icon.png" width="30px">
       <b>交互式图表</b>: 提供高度交互的可视化界面，支持缩放、平移、悬停查看详情等功能
     </td>
     <td>
-      <img src="https://user-images.githubusercontent.com/placeholder/matrix-icon.png" width="30px">
       <b>矩阵可视化</b>: 专门的矩阵可视化模块，展示不同模型在不同维度下的表现差异
     </td>
   </tr>
   <tr>
     <td>
-      <img src="https://user-images.githubusercontent.com/placeholder/compare-icon.png" width="30px">
       <b>参数对比</b>: 支持多组参数并行计算和结果对比分析
     </td>
     <td>
-      <img src="https://user-images.githubusercontent.com/placeholder/preview-icon.png" width="30px">
       <b>实时预览</b>: 调整参数时实时生成预览图，直观反馈参数变化
     </td>
   </tr>
   <tr>
     <td>
-      <img src="https://user-images.githubusercontent.com/placeholder/export-icon.png" width="30px">
       <b>数据导出</b>: 支持计算结果和图表的导出功能
     </td>
     <td>
-      <img src="https://user-images.githubusercontent.com/placeholder/language-icon.png" width="30px">
       <b>多语言支持</b>: 支持中英文切换，满足不同用户需求
     </td>
   </tr>
   <tr>
     <td>
-      <img src="https://user-images.githubusercontent.com/placeholder/theme-icon.png" width="30px">
       <b>主题定制</b>: 针对不同模型提供独特的视觉主题
     </td>
     <td>
-      <img src="https://user-images.githubusercontent.com/placeholder/command-icon.png" width="30px">
       <b>全局命令</b>: 支持在任何位置通过 `dill` 命令启动
     </td>
   </tr>
@@ -186,10 +172,6 @@ dill_model/
 </details>
 
 ## 🔬 支持的光刻胶模型
-
-<div align="center">
-  <img src="https://user-images.githubusercontent.com/placeholder/models-comparison.png" alt="模型比较" width="800px"/>
-</div>
 
 ### 1. Dill模型 (薄胶模型)
 适用于薄层光刻胶，核心公式：
@@ -300,10 +282,6 @@ python open_matrix_visualization.py
 
 ## 📖 使用指南
 
-<div align="center">
-  <img src="https://user-images.githubusercontent.com/placeholder/usage-flow.png" alt="使用流程" width="800px"/>
-</div>
-
 ### 1. 基本操作
 
 <details>
@@ -345,22 +323,6 @@ python open_matrix_visualization.py
 - **1D波形**: 一维正弦波，适用于基础模拟
 - **2D波形**: 二维正弦波，支持X、Y方向频率设置和相位表达式
 - **3D波形**: 三维正弦波，实现空间完整模拟
-
-<div align="center">
-  <img src="https://user-images.githubusercontent.com/placeholder/wave-types.png" alt="波形类型" width="800px"/>
-</div>
-
-### 3. 矩阵可视化
-
-矩阵可视化模块提供了一个直观的界面，以矩阵形式展示不同模型在不同维度下的实现：
-- **行**: 代表三种模型 (Dill、增强Dill、CAR)
-- **列**: 代表三种维度 (1D、2D、3D)
-- **单元格**: 包含每种组合的模型公式和可视化
-
-通过矩阵可视化可以：
-- 比较不同模型的理论基础
-- 理解维度对模拟结果的影响
-- 学习不同模型的数学公式
 
 ## 🔧 API文档
 
@@ -577,16 +539,6 @@ docker run -p 8080:8080 dill-model
 ## 👥 贡献者
 
 <div align="center">
-  <a href="https://github.com/yourusername">
-    <img src="https://user-images.githubusercontent.com/placeholder/contributor1.png" width="100px;" alt="贡献者1"/>
-  </a>
-  <a href="https://github.com/yourusername">
-    <img src="https://user-images.githubusercontent.com/placeholder/contributor2.png" width="100px;" alt="贡献者2"/>
-  </a>
-  <a href="https://github.com/yourusername">
-    <img src="https://user-images.githubusercontent.com/placeholder/contributor3.png" width="100px;" alt="贡献者3"/>
-  </a>
-  
   <p>感谢所有为本项目做出贡献的开发者！</p>
 </div>
 
