@@ -339,7 +339,11 @@ def calculate_data():
                 z_range = np.linspace(z_min, z_max, 50).tolist() if z_min < z_max else None
                 plot_data = model.generate_data(z_h, T, t_B, I0, M0, t_exp_enh, sine_type=sine_type, Kx=Kx, Ky=Ky, Kz=Kz, phi_expr=phi_expr, y_range=y_range, z_range=z_range)
             else: # 1D Enhanced Dill
-                plot_data = model.generate_data(z_h, T, t_B, I0, M0, t_exp_enh, sine_type=sine_type)
+                # 获取1D模式的空间频率K和干涉条纹可见度V参数
+                K = float(data.get('K', 2.0))
+                V = float(data.get('V', 0.8))
+                # 确保传递K和V参数
+                plot_data = model.generate_data(z_h, T, t_B, I0, M0, t_exp_enh, sine_type=sine_type, K=K, V=V)
 
         elif model_type == 'car':
             is_valid, message = validate_car_input(data)

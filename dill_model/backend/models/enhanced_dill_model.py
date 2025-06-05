@@ -82,8 +82,20 @@ class EnhancedDillModel:
         A, B, C = self.get_abc(z_h, T, t_B)
         z = np.linspace(0, z_h, num_points)
         
+        # 确保1D模式下，如果提供了K，则使用K值
+        current_K = K if K is not None else Kx
+        
         # 检查是否为1D正弦波模式
-        is_1d_sine = (K is not None and sine_type in ['single', '1d'] and V > 0)
+        is_1d_sine = (current_K is not None and sine_type in ['single', '1d'] and V > 0)
+        
+        # 添加调试打印，显示关键参数和条件判断结果
+        print("[调试信息] Enhanced Dill 1D正弦波条件检查:")
+        print(f"  K = {current_K}, sine_type = {sine_type}, V = {V}")
+        print(f"  条件1(K is not None): {current_K is not None}")
+        print(f"  条件2(sine_type in ['single', '1d']): {sine_type in ['single', '1d']}")
+        print(f"  条件3(V > 0): {V > 0}")
+        print(f"  最终结果(is_1d_sine): {is_1d_sine}")
+        print(f"  A = {A}, B = {B}, C = {C}")
         
         if is_1d_sine:
             # 1D正弦波模式：生成正弦波调制的光强和PAC浓度分布
@@ -92,10 +104,12 @@ class EnhancedDillModel:
             # 基础衰减曲线（类似原始Dill模型）
             # 使用简化的指数衰减模型：I(z) = I0 * exp(-alpha * z)
             alpha = A + B  # 总的衰减系数
-            base_I = I0 * np.exp(-alpha * z)
+            # 减小alpha以增强正弦波效果
+            alpha_reduced = alpha * 0.7  # 减小衰减系数，增强正弦波效果
+            base_I = I0 * np.exp(-alpha_reduced * z)
             
             # 应用正弦波调制：I(z) = base_I(z) * (1 + V * np.cos(K * z + phi))
-            I_final = base_I * (1 + V * np.cos(K * z + phi))
+            I_final = base_I * (1 + V * np.cos(current_K * z + phi))
             
             # PAC浓度与光强相关：M(z) = M0 * exp(-C * I(z) * t_exp)
             # I_final(z) is the effective intensity at depth z over the exposure time
@@ -208,6 +222,9 @@ class EnhancedDillModel:
         if sine_type == 'single':
             sine_type = '1d'
         
+        # 添加调试输出，检查参数传递
+        print(f"[generate_data] 输入参数: K={K}, V={V}, sine_type={sine_type}")
+        
         # 2D热力图模式
         if sine_type == 'multi' and Kx is not None and Ky is not None and y_range is not None and len(y_range) > 1:
             # 生成2D热力图数据
@@ -222,7 +239,7 @@ class EnhancedDillModel:
             # 对每个y值计算对应的1D曲线
             for i, y_val in enumerate(y_coords):
                 z, I, M = self.simulate(z_h, T, t_B, I0, M0, t_exp, num_points=x_points, 
-                                        sine_type=sine_type, Kx=Kx, Ky=Ky, phi_expr=phi_expr, V=V, y=y_val)
+                                        sine_type=sine_type, Kx=Kx, Ky=Ky, phi_expr=phi_expr, V=V, y=y_val, K=K)
                 
                 # 存储结果到2D数组
                 z_exposure_dose[i] = I
@@ -242,47 +259,74 @@ class EnhancedDillModel:
             # 生成3D表面数据
             x_points = 50
             y_points = 50
+            z_points = 5  # 创建5个Z平面的切片
             
             # 设置范围
             x_min, x_max = 0, 10
             y_min = float(0 if y_range is None else y_range[0])
             y_max = float(10 if y_range is None else y_range[-1])
+            z_min = float(0 if z_range is None else z_range[0])
+            z_max = float(10 if z_range is None else z_range[-1])
             
             # 创建网格
             x_coords = np.linspace(x_min, x_max, x_points)
             y_coords = np.linspace(y_min, y_max, y_points) if y_range is None else np.array(y_range)
-            X, Y = np.meshgrid(x_coords, y_coords)
+            z_coords = np.linspace(z_min, z_max, z_points) if z_range is None else np.array(z_range)
             
             # 计算相位
             phi = parse_phi_expr(phi_expr, 0) if phi_expr is not None else 0.0
             
-            # 生成3D正弦波分布
-            # 增强正弦波效果，确保可见
-            amplitude = max(0.3, V)  # 最小振幅0.3，确保可见
+            # 确保振幅有足够的可见度
+            amplitude = max(0.3, V)
             
-            # 曝光剂量的3D分布
-            modulation = np.cos(Kx * X + Ky * Y + phi)
-            exposure_dose = I0 * t_exp * (1 + amplitude * modulation)
+            # 生成多个Z层的数据
+            exposure_doses = []
+            thickness_values = []
             
-            # PAC浓度的3D分布（与曝光剂量成反比）
-            thickness = M0 * (1 - 0.5 * amplitude * modulation)
+            for z_value in z_coords:
+                # 创建该Z层的2D网格
+                X, Y = np.meshgrid(x_coords, y_coords)
+                
+                # 在该Z层生成3D正弦波分布，包含Kz的影响
+                modulation = np.cos(Kx * X + Ky * Y + Kz * z_value + phi)
+                
+                # 计算该层的曝光剂量
+                base_exposure = I0 * t_exp
+                exposure_dose = base_exposure * (1 + amplitude * modulation)
+                
+                # 计算该层的厚度
+                thickness = M0 * (1 - 0.5 * amplitude * modulation)
+                
+                # 确保数组维度正确
+                if exposure_dose.shape != (len(y_coords), len(x_coords)):
+                    exposure_dose = exposure_dose.T
+                if thickness.shape != (len(y_coords), len(x_coords)):
+                    thickness = thickness.T
+                
+                # 添加到结果列表
+                exposure_doses.append(exposure_dose.tolist())
+                thickness_values.append(thickness.tolist())
             
-            # 确保数组维度正确
-            if exposure_dose.shape != (len(y_coords), len(x_coords)):
-                exposure_dose = exposure_dose.T
-            if thickness.shape != (len(y_coords), len(x_coords)):
-                thickness = thickness.T
-            
+            # 返回带有多个Z层的3D数据
             return {
                 'x_coords': x_coords.tolist(),
                 'y_coords': y_coords.tolist(),
-                'exposure_dose': exposure_dose.tolist(),
-                'thickness': thickness.tolist(),
-                'is_3d': True
+                'z_coords': z_coords.tolist(),
+                'exposure_doses': exposure_doses,  # 现在是三维数组
+                'thickness_values': thickness_values,  # 现在是三维数组
+                'exposure_dose': exposure_doses[0],  # 第一层，向后兼容
+                'thickness': thickness_values[0],    # 第一层，向后兼容
+                'is_3d': True,
+                'has_z_layers': True
             }
         
         # 1D模式（默认模式）
         else:
+            # 确保1D模式传递V值
+            if K is not None and sine_type in ['single', '1d'] and V <= 0:
+                print(f"[1D警告] 干涉条纹可见度V={V}，已设为默认值0.8以显示正弦波")
+                V = 0.8  # 当未设置V或V=0时，使用默认值0.8以显示正弦波效果
+            
             # 生成1D数据，支持正弦波调制
             z, I, M = self.simulate(z_h, T, t_B, I0, M0, t_exp, 
                                     sine_type=sine_type, Kx=Kx, Ky=Ky, Kz=Kz, 
@@ -303,48 +347,51 @@ class EnhancedDillModel:
         
         支持1D和3D模式下的图形生成
         """
+        # 确保1D模式下V值有效
+        if K is not None and sine_type in ['single', '1d'] and V <= 0:
+            print(f"[Plots警告] 干涉条纹可见度V={V}，已设为默认值0.8以显示正弦波")
+            V = 0.8  # 使用默认值以显示正弦波效果
+
         plt.close('all')
         
         if sine_type == '3d' and Kx is not None and Ky is not None and Kz is not None:
             # 处理3D情况，生成3D表面图
             x_points = 50  # 与数据生成保持一致
             y_points = 50
+            z_points = 5   # 与数据生成保持一致，生成5个Z层
             
             # 如果范围参数存在，则使用指定范围
             x_min, x_max = 0, 10
             y_min = float(0 if y_range is None else y_range[0])
             y_max = float(10 if y_range is None else y_range[-1])
+            z_min = float(0 if z_range is None else z_range[0])
+            z_max = float(10 if z_range is None else z_range[-1])
             
             # 创建网格
             x_coords = np.linspace(x_min, x_max, x_points)
             y_coords = np.linspace(y_min, y_max, y_points) if y_range is None else np.array(y_range)
+            z_coords = np.linspace(z_min, z_max, z_points) if z_range is None else np.array(z_range)
             
-            # 创建网格点 (用于2D表面)
+            # 创建中间Z层的网格点作为示例
+            mid_z_idx = z_points // 2
+            mid_z = z_coords[mid_z_idx]
             X, Y = np.meshgrid(x_coords, y_coords)
             
             # 计算相位
             phi = parse_phi_expr(phi_expr, 0) if phi_expr is not None else 0.0
             
-            # 使用与generate_data方法完全相同的逻辑
-            # 1. 增大频率系数使波纹更加明显
-            Kx_scaled = Kx * 2.0
-            Ky_scaled = Ky * 2.0
+            # 确保振幅有足够的可见度
+            amplitude = max(0.3, V)
             
-            # 2. 增加振幅，确保波动很明显
-            amplitude = 0.8 if V < 0.2 else V
+            # 生成中间Z层的3D正弦波分布，包含Kz的影响
+            modulation = np.cos(Kx * X + Ky * Y + Kz * mid_z + phi)
             
-            # 3. 生成真正的正弦波形状
-            modulation = np.cos(Kx_scaled * X + Ky_scaled * Y + phi)  # 纯正弦波
-            
-            # 4. 对曝光剂量和厚度应用清晰的正弦波调制
+            # 计算中间层的曝光剂量
             base_exposure = I0 * t_exp
-            variation = amplitude * base_exposure * 0.5
+            exposure_dose = base_exposure * (1 + amplitude * modulation)
             
-            # 曝光剂量随位置变化：基准值 ± 变化量
-            exposure_dose = base_exposure + variation * modulation
-            
-            # 厚度与曝光剂量成反比关系，波动也需要明显
-            thickness = M0 * (1.0 - 0.5 * amplitude * modulation)
+            # 计算中间层的厚度分布
+            thickness = M0 * (1 - 0.5 * amplitude * modulation)
             
             # 确保数组维度正确
             if exposure_dose.shape != (y_points, x_points):
@@ -352,15 +399,31 @@ class EnhancedDillModel:
             if thickness.shape != (y_points, x_points):
                 thickness = thickness.T
             
-            # 创建3D表面图
+            # 生成每个Z层的插值面，从而创建真正的3D可视化
+            # 生成曝光剂量的3D表面图
             fig1 = plt.figure(figsize=(10, 8))
             ax1 = fig1.add_subplot(111, projection='3d')
-            surf1 = ax1.plot_surface(X, Y, exposure_dose, cmap='viridis', edgecolor='none')
+            
+            # 绘制带有Z层差异的表面
+            for i, z_val in enumerate(z_coords):
+                # 为每层创建调整后的z网格
+                Z = np.ones(X.shape) * z_val
+                
+                # 计算该z层的曝光剂量
+                curr_modulation = np.cos(Kx * X + Ky * Y + Kz * z_val + phi)
+                curr_exposure = base_exposure * (1 + amplitude * curr_modulation)
+                
+                # 根据曝光剂量调整Z坐标，创建3D表面效果
+                Z_adjusted = Z + curr_exposure * 0.1
+                
+                # 绘制此Z层的表面
+                ax1.plot_surface(X, Y, Z_adjusted, alpha=0.7, cmap='viridis', 
+                                 edgecolor='none', rstride=5, cstride=5)
+            
             ax1.set_title('3D Exposure Dose Distribution', fontsize=16)
             ax1.set_xlabel('X Position (μm)', fontsize=14)
             ax1.set_ylabel('Y Position (μm)', fontsize=14)
-            ax1.set_zlabel('Exposure Dose', fontsize=14)
-            fig1.colorbar(surf1, ax=ax1, shrink=0.5, aspect=5)
+            ax1.set_zlabel('Z Position (μm)', fontsize=14)
             plt.tight_layout()
             
             buffer1 = BytesIO()
@@ -369,15 +432,30 @@ class EnhancedDillModel:
             exposure_plot = base64.b64encode(buffer1.getvalue()).decode()
             plt.close(fig1)
             
-            # PAC浓度3D表面图
+            # 生成PAC浓度3D表面图，同样带有Z层差异
             fig2 = plt.figure(figsize=(10, 8))
             ax2 = fig2.add_subplot(111, projection='3d')
-            surf2 = ax2.plot_surface(X, Y, thickness, cmap='plasma', edgecolor='none')
+            
+            # 绘制带有Z层差异的表面
+            for i, z_val in enumerate(z_coords):
+                # 为每层创建调整后的z网格
+                Z = np.ones(X.shape) * z_val
+                
+                # 计算该z层的PAC浓度
+                curr_modulation = np.cos(Kx * X + Ky * Y + Kz * z_val + phi)
+                curr_thickness = M0 * (1 - 0.5 * amplitude * curr_modulation)
+                
+                # 根据厚度调整Z坐标，创建3D表面效果
+                Z_adjusted = Z + curr_thickness * 0.2
+                
+                # 绘制此Z层的表面
+                ax2.plot_surface(X, Y, Z_adjusted, alpha=0.7, cmap='plasma', 
+                                edgecolor='none', rstride=5, cstride=5)
+            
             ax2.set_title('3D PAC Concentration Distribution', fontsize=16)
             ax2.set_xlabel('X Position (μm)', fontsize=14)
             ax2.set_ylabel('Y Position (μm)', fontsize=14)
-            ax2.set_zlabel('PAC Concentration', fontsize=14)
-            fig2.colorbar(surf2, ax=ax2, shrink=0.5, aspect=5)
+            ax2.set_zlabel('Z Position (μm)', fontsize=14)
             plt.tight_layout()
             
             buffer2 = BytesIO()
@@ -387,8 +465,11 @@ class EnhancedDillModel:
             plt.close(fig2)
             
         else:
+            # 使用与simulate相同的参数处理逻辑
+            current_K = K if K is not None else Kx
             # 原始1D模式
-            z, I, M = self.simulate(z_h, T, t_B, I0, M0, t_exp, sine_type=sine_type, Kx=Kx, Ky=Ky, Kz=Kz, phi_expr=phi_expr, V=V, K=K)
+            z, I, M = self.simulate(z_h, T, t_B, I0, M0, t_exp, sine_type=sine_type, 
+                                    Kx=Kx, Ky=Ky, Kz=Kz, phi_expr=phi_expr, V=V, K=current_K)
             
             # Exposure dose distribution plot (I)
             fig1 = plt.figure(figsize=(10, 6))

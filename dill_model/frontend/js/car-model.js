@@ -406,7 +406,7 @@ function renderCarInteractivePlots(data) {
                 y: data.y_coords,
                 z: data.z_diffused_acid,
                 type: 'heatmap',
-                colorscale: 'Inferno',
+                colorscale: 'Viridis',
                 colorbar: { title: '光酸浓度' },
                 hovertemplate: 'X: %{x}<br>Y: %{y}<br>扩散后光酸浓度: %{z}<extra></extra>'
             };
@@ -654,7 +654,7 @@ function renderCarInteractivePlots(data) {
                     x: x_coords,
                     y: y_coords,
                     z: data.diffused_acid,
-                    colorscale: 'Cividis',
+                    colorscale: 'Viridis',
                     contours: {
                         z: {
                             show: true,
