@@ -1,6 +1,4 @@
 <div align="center">
-  
-  <img src="frontend/assets/images/BG.jpg" alt="Dill模型计算工具" width="600px"/>
 
   # Dill模型计算工具
   ### 多维光刻胶模型计算与可视化平台
@@ -606,7 +604,7 @@ docker run -p 8080:8080 dill-model
 
 - 查看 [FAQ](docs/FAQ.md)
 - 提交 [Issue](https://github.com/yourusername/dill-model/issues)
-- 发送邮件至：support@example.com
+- 发送邮件至: 2997725873@qq.com
 
 ---
 
@@ -614,7 +612,7 @@ docker run -p 8080:8080 dill-model
   <p>用 ❤️ 打造，致力于光刻胶模型计算的创新</p>
   <p>
     <a href="https://github.com/yourusername/dill-model">Dill模型计算工具</a> •
-    版权所有 © 2024
+    版权所有 © 2025
   </p>
 </div>
 
