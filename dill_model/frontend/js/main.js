@@ -1523,7 +1523,18 @@ function dillDrawPreviewPlot(scrollToPlot = false) {
     if (kyInput) Ky = parseFloat(kyInput.value);
     if (vInput) V_val = parseFloat(vInput.value); // Use V_val to avoid conflict with V variable if any
 
-    const xRange = [0, 10], yRange = [0, 10]; // Default ranges
+    // 获取Y范围参数
+    const yMinInput = document.getElementById('y_min');
+    const yMaxInput = document.getElementById('y_max');
+    
+    // 默认范围，或从输入框获取
+    let xRange = [0, 10];
+    let yRange = [0, 10];
+    
+    if (yMinInput && yMaxInput) {
+        yRange = [parseFloat(yMinInput.value) || 0, parseFloat(yMaxInput.value) || 10];
+    }
+
     const expr = input.value;
 
     if (!validatePhaseExpr(expr)) {
@@ -1748,6 +1759,61 @@ function bindPhiExprUI() {
 
     configs.forEach(cfg => setupPreview(cfg, false));
     configs3D.forEach(cfg => setupPreview(cfg, true));
+    
+    // 为2D模式下的Y范围参数添加监听器
+    // Dill模型
+    const dillYMin = document.getElementById('y_min');
+    const dillYMax = document.getElementById('y_max');
+    const dillYPoints = document.getElementById('y_points');
+    const dillPlot = document.getElementById('phi-expr-preview-plot');
+    
+    // Enhanced Dill模型
+    const enhancedYMin = document.getElementById('enhanced_y_min');
+    const enhancedYMax = document.getElementById('enhanced_y_max');
+    const enhancedYPoints = document.getElementById('enhanced_y_points');
+    const enhancedPlot = document.getElementById('enhanced-phi-expr-preview-plot');
+    
+    // CAR模型
+    const carYMin = document.getElementById('car_y_min');
+    const carYMax = document.getElementById('car_y_max');
+    const carYPoints = document.getElementById('car_y_points');
+    const carPlot = document.getElementById('car-phi-expr-preview-plot');
+    
+    // 为Dill模型的Y范围参数添加监听器
+    [dillYMin, dillYMax, dillYPoints].forEach(input => {
+        if (input) {
+            input.addEventListener('input', () => {
+                // 检查是否正在显示预览
+                if (dillPlot && dillPlot.style.display !== 'none') {
+                    dillDrawPreviewPlot(false); // 不滚动到图表位置
+                }
+            });
+        }
+    });
+    
+    // 为Enhanced Dill模型的Y范围参数添加监听器
+    [enhancedYMin, enhancedYMax, enhancedYPoints].forEach(input => {
+        if (input) {
+            input.addEventListener('input', () => {
+                // 检查是否正在显示预览
+                if (enhancedPlot && enhancedPlot.style.display !== 'none') {
+                    enhancedDrawPreviewPlot(false); // 不滚动到图表位置
+                }
+            });
+        }
+    });
+    
+    // 为CAR模型的Y范围参数添加监听器
+    [carYMin, carYMax, carYPoints].forEach(input => {
+        if (input) {
+            input.addEventListener('input', () => {
+                // 检查是否正在显示预览
+                if (carPlot && carPlot.style.display !== 'none') {
+                    carDrawPreviewPlot(false); // 不滚动到图表位置
+                }
+            });
+        }
+    });
 }
 
 function highlightErrorCard(msg) {
@@ -2731,91 +2797,60 @@ function setSelectedOptionBasedOnValue(selectElem, value) {
 
 // 增强Dill模型2D预览绘图函数
 function enhancedDrawPreviewPlot(scrollToPlot = false) {
-    const phiExpr = document.getElementById('enhanced_phi_expr').value;
-    const previewPlot = document.getElementById('enhanced-phi-expr-preview-plot');
+    const input = document.getElementById('enhanced_phi_expr');
+    const kxInput = document.getElementById('enhanced_Kx');
+    const kyInput = document.getElementById('enhanced_Ky');
+    const vInput = document.getElementById('I0'); // 使用I0作为增强Dill模型的V
+    const plot = document.getElementById('enhanced-phi-expr-preview-plot');
+    const errDiv = input?.closest('.parameter-item')?.querySelector('.phi-expr-error');
+
+    if (!input || !plot) return;
+
+    let Kx = 2, Ky = 0, V_val = 1.0;
+    if (kxInput) Kx = parseFloat(kxInput.value);
+    if (kyInput) Ky = parseFloat(kyInput.value);
+    if (vInput) V_val = parseFloat(vInput.value);
     
-    if (!validatePhaseExpr(phiExpr)) {
-        console.error('相位表达式无效，无法绘制预览');
+    // 获取Y范围参数
+    const yMinInput = document.getElementById('enhanced_y_min');
+    const yMaxInput = document.getElementById('enhanced_y_max');
+    
+    // 默认范围，或从输入框获取
+    let xRange = [0, 10];
+    let yRange = [0, 10];
+    
+    if (yMinInput && yMaxInput) {
+        yRange = [parseFloat(yMinInput.value) || 0, parseFloat(yMaxInput.value) || 10];
+    }
+
+    const expr = input.value;
+
+    if (!validatePhaseExpr(expr)) {
+        if (errDiv) {
+            errDiv.textContent = LANGS[currentLang]?.phi_expr_invalid_preview || '表达式格式有误，无法预览。';
+            errDiv.style.display = 'block';
+        }
         return;
     }
-    
-    const t = Array.from({length: 101}, (_, i) => i / 10); // 0到10，步长为0.1
-    const phi = [];
-    
-    try {
-        // 计算phi(t)的值
-        const PI = Math.PI;
-        const E = Math.E;
-        const sin = Math.sin;
-        const cos = Math.cos;
-        const tan = Math.tan;
-        const exp = Math.exp;
-        const abs = Math.abs;
-        const sqrt = Math.sqrt;
-        const log = Math.log;
-        const pow = Math.pow;
-        
-        const phiFunc = new Function('t', 'PI', 'E', 'sin', 'cos', 'tan', 'exp', 'abs', 'sqrt', 'log', 'pow', 'return ' + phiExpr);
-        
-        for (let i = 0; i < t.length; i++) {
-            const val = phiFunc(t[i], PI, E, sin, cos, tan, exp, abs, sqrt, log, pow);
-            phi.push(val);
-        }
-        
-        // 创建绘图数据
-        const trace = {
-            x: t,
-            y: phi,
-            type: 'scatter',
-            mode: 'lines',
-            line: {
-                color: '#9b59b6',
-                width: 2
-            },
-            name: 'φ(t)'
-        };
-        
-        const layout = {
-            title: '相位表达式 φ(t) 曲线',
-            xaxis: {
-                title: 't'
-            },
-            yaxis: {
-                title: 'φ(t)'
-            },
-            margin: {
-                l: 50,
-                r: 20,
-                t: 50,
-                b: 50
-            },
-            height: 300,
-            width: 450,
-            showlegend: false,
-            plot_bgcolor: '#f8f9fa',
-            paper_bgcolor: '#f8f9fa',
-            font: {
-                family: 'Arial, sans-serif'
-            }
-        };
-        
-        // 绘制图表
-        Plotly.newPlot(previewPlot, [trace], layout, {responsive: true, displayModeBar: false});
-        
-        // 显示预览区域
-        previewPlot.style.display = 'block';
-        
-        // 如果需要，滚动到预览区域
-        if (scrollToPlot) {
-            setTimeout(() => {
-                previewPlot.scrollIntoView({behavior: 'smooth', block: 'center'});
-            }, 100);
-        }
-        
-    } catch (error) {
-        console.error('绘制相位表达式预览时出错:', error);
-        // 隐藏预览区域
-        previewPlot.style.display = 'none';
+    if (errDiv) {
+        errDiv.textContent = '';
+        errDiv.style.display = 'none';
+    }
+
+    const plotData = generate2DSine(Kx, Ky, V_val, expr, xRange, yRange);
+    plot.style.display = 'block';
+    Plotly.newPlot(plot, [{
+        z: plotData.z, x: plotData.x, y: plotData.y, type: 'heatmap', colorscale: 'Viridis',
+        colorbar: {title: 'I(x,y)'}
+    }], {
+        title: LANGS[currentLang]?.preview_2d_title || '二维正弦分布预览',
+        xaxis: {title: 'x'},
+        yaxis: {title: 'y'},
+        margin: {t:40, l:40, r:20, b:10}, height: 260
+    }, {displayModeBar: false});
+
+    if (scrollToPlot) {
+        setTimeout(()=>{plot.scrollIntoView({behavior:'smooth', block:'center'});}, 200);
     }
 }
 
@@ -2911,91 +2946,60 @@ function enhancedDraw3DPreviewPlot(scrollToPlot = false) {
 
 // CAR模型2D预览绘图函数
 function carDrawPreviewPlot(scrollToPlot = false) {
-    const phiExpr = document.getElementById('car_phi_expr').value;
-    const previewPlot = document.getElementById('car-phi-expr-preview-plot');
+    const input = document.getElementById('car_phi_expr');
+    const kxInput = document.getElementById('car_Kx');
+    const kyInput = document.getElementById('car_Ky');
+    const vInput = document.getElementById('car_V');
+    const plot = document.getElementById('car-phi-expr-preview-plot');
+    const errDiv = input?.closest('.parameter-item')?.querySelector('.phi-expr-error');
+
+    if (!input || !plot) return;
+
+    let Kx = 2, Ky = 0, V_val = 0.8;
+    if (kxInput) Kx = parseFloat(kxInput.value);
+    if (kyInput) Ky = parseFloat(kyInput.value);
+    if (vInput) V_val = parseFloat(vInput.value);
     
-    if (!validatePhaseExpr(phiExpr)) {
-        console.error('相位表达式无效，无法绘制预览');
+    // 获取Y范围参数
+    const yMinInput = document.getElementById('car_y_min');
+    const yMaxInput = document.getElementById('car_y_max');
+    
+    // 默认范围，或从输入框获取
+    let xRange = [0, 10];
+    let yRange = [0, 10];
+    
+    if (yMinInput && yMaxInput) {
+        yRange = [parseFloat(yMinInput.value) || 0, parseFloat(yMaxInput.value) || 10];
+    }
+
+    const expr = input.value;
+
+    if (!validatePhaseExpr(expr)) {
+        if (errDiv) {
+            errDiv.textContent = LANGS[currentLang]?.phi_expr_invalid_preview || '表达式格式有误，无法预览。';
+            errDiv.style.display = 'block';
+        }
         return;
     }
-    
-    const t = Array.from({length: 101}, (_, i) => i / 10); // 0到10，步长为0.1
-    const phi = [];
-    
-    try {
-        // 计算phi(t)的值
-        const PI = Math.PI;
-        const E = Math.E;
-        const sin = Math.sin;
-        const cos = Math.cos;
-        const tan = Math.tan;
-        const exp = Math.exp;
-        const abs = Math.abs;
-        const sqrt = Math.sqrt;
-        const log = Math.log;
-        const pow = Math.pow;
-        
-        const phiFunc = new Function('t', 'PI', 'E', 'sin', 'cos', 'tan', 'exp', 'abs', 'sqrt', 'log', 'pow', 'return ' + phiExpr);
-        
-        for (let i = 0; i < t.length; i++) {
-            const val = phiFunc(t[i], PI, E, sin, cos, tan, exp, abs, sqrt, log, pow);
-            phi.push(val);
-        }
-        
-        // 创建绘图数据
-        const trace = {
-            x: t,
-            y: phi,
-            type: 'scatter',
-            mode: 'lines',
-            line: {
-                color: '#e67e22',
-                width: 2
-            },
-            name: 'φ(t)'
-        };
-        
-        const layout = {
-            title: '相位表达式 φ(t) 曲线',
-            xaxis: {
-                title: 't'
-            },
-            yaxis: {
-                title: 'φ(t)'
-            },
-            margin: {
-                l: 50,
-                r: 20,
-                t: 50,
-                b: 50
-            },
-            height: 300,
-            width: 450,
-            showlegend: false,
-            plot_bgcolor: '#f8f9fa',
-            paper_bgcolor: '#f8f9fa',
-            font: {
-                family: 'Arial, sans-serif'
-            }
-        };
-        
-        // 绘制图表
-        Plotly.newPlot(previewPlot, [trace], layout, {responsive: true, displayModeBar: false});
-        
-        // 显示预览区域
-        previewPlot.style.display = 'block';
-        
-        // 如果需要，滚动到预览区域
-        if (scrollToPlot) {
-            setTimeout(() => {
-                previewPlot.scrollIntoView({behavior: 'smooth', block: 'center'});
-            }, 100);
-        }
-        
-    } catch (error) {
-        console.error('绘制相位表达式预览时出错:', error);
-        // 隐藏预览区域
-        previewPlot.style.display = 'none';
+    if (errDiv) {
+        errDiv.textContent = '';
+        errDiv.style.display = 'none';
+    }
+
+    const plotData = generate2DSine(Kx, Ky, V_val, expr, xRange, yRange);
+    plot.style.display = 'block';
+    Plotly.newPlot(plot, [{
+        z: plotData.z, x: plotData.x, y: plotData.y, type: 'heatmap', colorscale: 'Viridis',
+        colorbar: {title: 'I(x,y)'}
+    }], {
+        title: LANGS[currentLang]?.preview_2d_title || '二维正弦分布预览',
+        xaxis: {title: 'x'},
+        yaxis: {title: 'y'},
+        margin: {t:40, l:40, r:20, b:10}, height: 260
+    }, {displayModeBar: false});
+
+    if (scrollToPlot) {
+        setTimeout(()=>{plot.scrollIntoView({behavior:'smooth', block:'center'});}, 200);
     }
 }
 

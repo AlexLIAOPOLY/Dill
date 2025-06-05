@@ -72,73 +72,143 @@ class EnhancedDillModel:
 
     def simulate(self, z_h, T, t_B, I0=1.0, M0=1.0, t_exp=5.0, num_points=100, sine_type='1d', Kx=None, Ky=None, Kz=None, phi_expr=None, V=0, y=0, K=None):
         """
-        用显式欧拉法在(z, t)二维网格上同步推进I(z, t)和M(z, t)，实现理论上更严谨的耦合积分。
+        增强Dill模型仿真，支持1D正弦波、2D正弦波和3D正弦波
         
         参数：
-        - K：空间频率，如果提供此参数，将覆盖Kx
-        - Kz：z方向的空间频率，用于3D模式
+        - K：空间频率，如果提供此参数，将覆盖Kx（用于1D模式）
+        - V：干涉条纹可见度，控制正弦波振幅
+        - sine_type：波形类型 ('single'=1D, 'multi'=2D, '3d'=3D)
         """
         A, B, C = self.get_abc(z_h, T, t_B)
         z = np.linspace(0, z_h, num_points)
-        t_points = 200  # 时间步数
-        t = np.linspace(0, t_exp, t_points)
-        dz = z[1] - z[0]
-        dt = t[1] - t[0]
         
-        # 支持K参数（比较模块使用）
-        if K is not None:
-            Kx = K
-            sine_type = 'multi'
+        # 检查是否为1D正弦波模式
+        is_1d_sine = (K is not None and sine_type in ['single', '1d'] and V > 0)
+        
+        if is_1d_sine:
+            # 1D正弦波模式：生成正弦波调制的光强和PAC浓度分布
+            phi = parse_phi_expr(phi_expr, 0) if phi_expr is not None else 0.0
             
-        # 多维正弦波支持：I0可为I(x)分布
-        if sine_type == 'multi' and Kx is not None:
-            x = np.linspace(0, 10, num_points)
-            phi = parse_phi_expr(phi_expr, 0) if phi_expr is not None else 0.0
-            I0_arr = I0 * (1 + V * np.cos(Kx * x + Ky * y + phi))
-        elif sine_type == '3d' and Kx is not None and Ky is not None and Kz is not None:
-            # 处理3D情况，这里我们简化为在z=0处的分布
-            x = np.linspace(0, 10, num_points)
-            phi = parse_phi_expr(phi_expr, 0) if phi_expr is not None else 0.0
-            I0_arr = I0 * (1 + V * np.cos(Kx * x + Ky * y + Kz * 0 + phi))
+            # 基础衰减曲线（类似原始Dill模型）
+            # 使用简化的指数衰减模型：I(z) = I0 * exp(-alpha * z)
+            alpha = A + B  # 总的衰减系数
+            base_I = I0 * np.exp(-alpha * z)
+            
+            # 应用正弦波调制：I(z) = base_I(z) * (1 + V * np.cos(K * z + phi))
+            I_final = base_I * (1 + V * np.cos(K * z + phi))
+            
+            # PAC浓度与光强相关：M(z) = M0 * exp(-C * I(z) * t_exp)
+            # I_final(z) is the effective intensity at depth z over the exposure time
+            M_final = M0 * np.exp(-C * I_final * t_exp)
+            
+            # 确保物理意义：光强和PAC浓度都非负，且在合理范围内
+            I_final = np.maximum(0, I_final)
+            M_final = np.clip(M_final, 0, M0)
+            
+            return z, I_final, M_final
+            
         else:
-            I0_arr = np.full(num_points, I0)
-        # 初始化二维数组
-        I = np.zeros((num_points, t_points))
-        M = np.zeros((num_points, t_points))
-        # 初始条件
-        I[:, 0] = I0_arr
-        M[:, 0] = M0
-        # 逐步推进
-        for j in range(1, t_points):  # 时间步
-            for i in range(num_points):  # 深度步
-                # z=0边界，I0固定
-                if i == 0:
-                    I[i, j] = I0_arr[j % len(I0_arr)]
+            # 原有的时间演化模式（用于非1D正弦波情况）
+            t_points = 200  # 时间步数
+            t = np.linspace(0, t_exp, t_points)
+            dz = z[1] - z[0] if len(z) > 1 else 0.1
+            dt = t[1] - t[0] if len(t) > 1 else t_exp / t_points
+            
+            # 设置初始光强分布
+            if Kx is not None and sine_type == 'multi':
+                # 2D正弦波：I(x,y) = I0 * (1 + V * cos(Kx * x + Ky * y + phi))
+                x_coords_calc = np.linspace(0, 10, num_points) # Renamed to avoid conflict with simulate's x parameter if any
+                phi = parse_phi_expr(phi_expr, 0) if phi_expr is not None else 0.0
+                I0_arr = I0 * (1 + V * np.cos(Kx * x_coords_calc + Ky * y + phi))
+            elif sine_type == '3d' and Kx is not None and Ky is not None and Kz is not None:
+                # 3D正弦波：I(x,y,z) = I0 * (1 + V * cos(Kx * x + Ky * y + Kz * z + phi))
+                x_coords_calc = np.linspace(0, 10, num_points) # Renamed
+                phi = parse_phi_expr(phi_expr, 0) if phi_expr is not None else 0.0
+                # 对于深度模拟，我们在z=0处设定初始条件
+                I0_arr = I0 * (1 + V * np.cos(Kx * x_coords_calc + Ky * y + Kz * 0 + phi))
+            else:
+                 # This 'else' will also catch 1D cases if is_1d_sine was false due to V=0, K=None etc.
+                # For non-1D-sine cases, I0_arr might be modulated based on K, V if K was passed for other modes.
+                # If K was provided for 1D mode but V was 0, I0_arr would be I0 * (1 + 0 * cos) = I0 (constant array)
+                # If K was None for 1D, I0_arr = np.full(num_points, I0) (constant array)
+                
+                # Correct I0_arr initialization for the 'else' branch based on parameters:
+                # This logic was previously outside and before the is_1d_sine split.
+                # Now it's part of the 'else' path for the time-evolution model.
+                current_K_for_I0 = Kx # Default to Kx for multi/3D
+                if K is not None and sine_type in ['single', '1d']:
+                    current_K_for_I0 = K # Use K for 1D if provided
+                
+                if current_K_for_I0 is not None and V > 0: # Check V > 0 here for modulation
+                    # Applies to 1D, multi, or 3D if K/Kx and V are set
+                    # For 1D sine (if it fell into this else branch due to V=0 initially, then V would be 0 here)
+                    # use 'z' for 1D spatial coord, 'x_coords_calc' for 2D/3D's x-like coord
+                    spatial_coord = z if sine_type in ['single', '1d'] else np.linspace(0,10,num_points)
+                    phi_val = parse_phi_expr(phi_expr, 0) if phi_expr is not None else 0.0
+                    
+                    if sine_type in ['single', '1d']:
+                        I0_arr = I0 * (1 + V * np.cos(current_K_for_I0 * spatial_coord + phi_val))
+                    elif sine_type == 'multi': # Ky must exist
+                         I0_arr = I0 * (1 + V * np.cos(Kx * spatial_coord + Ky * y + phi_val))
+                    elif sine_type == '3d': # Kx, Ky, Kz must exist
+                         I0_arr = I0 * (1 + V * np.cos(Kx * spatial_coord + Ky * y + Kz * 0 + phi_val)) # z=0 for surface
+                    else:
+                        I0_arr = np.full(num_points, I0) # Fallback, should not happen
                 else:
-                    # 修正：I(z, t) = I(z-dz, t) + dI/dz * dz
-                    I[i, j] = I[i-1, j] + (-I[i-1, j] * (A * M[i-1, j-1] + B)) * dz
-                # M(z, t) = M(z, t-dt) + dM/dt * dt
-                I_here = I[i, j]
-                M[i, j] = M[i, j-1] + (-I_here * M[i, j-1] * C) * dt
-                # 保证M非负
-                if M[i, j] < 0:
-                    M[i, j] = 0
-        # 输出z, I(z, t_exp), M(z, t_exp)
-        I_z = I[:, -1]
-        M_final = M[:, -1]
-        return z, I_z, M_final
+                    # No K or V=0, so no modulation for I0_arr
+                    I0_arr = np.full(num_points, I0)
+
+            # 初始化二维数组
+            I = np.zeros((num_points, t_points))
+            M = np.zeros((num_points, t_points))
+            
+            # 初始条件
+            I[:, 0] = I0_arr
+            M[:, 0] = M0
+            
+            # 时间演化：使用修正的欧拉法
+            for j_time in range(1, t_points):  # 时间步 (renamed j to j_time)
+                for i_depth in range(num_points):  # 深度步 (renamed i to i_depth)
+                    if i_depth == 0:
+                        # z=0边界条件：保持初始光强分布
+                        I[i_depth, j_time] = I0_arr[i_depth]
+                    else:
+                        # 光强在深度方向的衰减：dI/dz = -I * (A * M + B)
+                        dI_dz = -I[i_depth-1, j_time-1] * (A * M[i_depth-1, j_time-1] + B)
+                        I[i_depth, j_time] = I[i_depth-1, j_time-1] + dI_dz * dz
+                        
+                        # 确保光强非负
+                        I[i_depth, j_time] = max(0, I[i_depth, j_time])
+                    
+                    # PAC浓度的时间演化：dM/dt = -I * M * C
+                    # M uses I at current depth and *current* time step from I array
+                    dM_dt = -I[i_depth, j_time] * M[i_depth, j_time-1] * C 
+                    M[i_depth, j_time] = M[i_depth, j_time-1] + dM_dt * dt
+                    
+                    # 确保PAC浓度非负
+                    M[i_depth, j_time] = max(0, M[i_depth, j_time])
+            
+            # 返回最终时刻的分布
+            I_final = I[:, -1]
+            M_final = M[:, -1]
+            
+            return z, I_final, M_final
 
     def generate_data(self, z_h, T, t_B, I0=1.0, M0=1.0, t_exp=5.0, sine_type='1d', Kx=None, Ky=None, Kz=None, phi_expr=None, V=0, K=None, y_range=None, z_range=None):
         """
-        生成增强Dill模型的曝光后分布数据
+        生成增强Dill模型的数据，支持1D/2D/3D模式
         
         参数：
-        - K：空间频率参数，用于比较模块
-        - V：干涉条纹可见度，用于控制空间调制深度
-        - y_range: Y轴范围数组，用于生成2D数据
-        - Kz：z方向的空间频率，用于3D模式
+        - K：空间频率参数，用于1D模式
+        - V：干涉条纹可见度，控制空间调制深度
+        - y_range：Y轴范围数组，用于生成2D数据
+        - sine_type：波形类型 ('single'=1D, 'multi'=2D, '3d'=3D)
         """
-        # 检查是否需要生成2D数据
+        # 确保sine_type参数正确
+        if sine_type == 'single':
+            sine_type = '1d'
+        
+        # 2D热力图模式
         if sine_type == 'multi' and Kx is not None and Ky is not None and y_range is not None and len(y_range) > 1:
             # 生成2D热力图数据
             x_points = 100  # x轴点数
@@ -166,54 +236,43 @@ class EnhancedDillModel:
                 'z_thickness': z_thickness.tolist(),
                 'is_2d': True
             }
-        elif sine_type == '3d':
-            # 处理3D情况，生成三维正弦波曲面
-            x_points = 50  # x轴点数
-            y_points = 50  # y轴点数
+        
+        # 3D表面模式
+        elif sine_type == '3d' and Kx is not None and Ky is not None and Kz is not None:
+            # 生成3D表面数据
+            x_points = 50
+            y_points = 50
             
-            # 如果范围参数存在，则使用指定范围
+            # 设置范围
             x_min, x_max = 0, 10
             y_min = float(0 if y_range is None else y_range[0])
             y_max = float(10 if y_range is None else y_range[-1])
             
-            # 创建网格坐标
+            # 创建网格
             x_coords = np.linspace(x_min, x_max, x_points)
             y_coords = np.linspace(y_min, y_max, y_points) if y_range is None else np.array(y_range)
-            
-            # 创建网格点 (用于2D表面)
             X, Y = np.meshgrid(x_coords, y_coords)
             
             # 计算相位
             phi = parse_phi_expr(phi_expr, 0) if phi_expr is not None else 0.0
             
-            # 使用与generate_data方法完全相同的逻辑
-            # 1. 增大频率系数使波纹更加明显
-            Kx_scaled = Kx * 2.0
-            Ky_scaled = Ky * 2.0
+            # 生成3D正弦波分布
+            # 增强正弦波效果，确保可见
+            amplitude = max(0.3, V)  # 最小振幅0.3，确保可见
             
-            # 2. 增加振幅，确保波动很明显
-            amplitude = 0.8 if V < 0.2 else V
+            # 曝光剂量的3D分布
+            modulation = np.cos(Kx * X + Ky * Y + phi)
+            exposure_dose = I0 * t_exp * (1 + amplitude * modulation)
             
-            # 3. 生成真正的正弦波形状
-            modulation = np.cos(Kx_scaled * X + Ky_scaled * Y + phi)  # 纯正弦波
-            
-            # 4. 对曝光剂量和厚度应用清晰的正弦波调制
-            base_exposure = I0 * t_exp
-            variation = amplitude * base_exposure * 0.5
-            
-            # 曝光剂量随位置变化：基准值 ± 变化量
-            exposure_dose = base_exposure + variation * modulation
-            
-            # 厚度与曝光剂量成反比关系，波动也需要明显
-            thickness = M0 * (1.0 - 0.5 * amplitude * modulation)
+            # PAC浓度的3D分布（与曝光剂量成反比）
+            thickness = M0 * (1 - 0.5 * amplitude * modulation)
             
             # 确保数组维度正确
-            if exposure_dose.shape != (y_points, x_points):
+            if exposure_dose.shape != (len(y_coords), len(x_coords)):
                 exposure_dose = exposure_dose.T
-            if thickness.shape != (y_points, x_points):
+            if thickness.shape != (len(y_coords), len(x_coords)):
                 thickness = thickness.T
             
-            # 返回3D数据
             return {
                 'x_coords': x_coords.tolist(),
                 'y_coords': y_coords.tolist(),
@@ -221,16 +280,21 @@ class EnhancedDillModel:
                 'thickness': thickness.tolist(),
                 'is_3d': True
             }
+        
+        # 1D模式（默认模式）
         else:
-            # 原始1D数据
-            z, I, M = self.simulate(z_h, T, t_B, I0, M0, t_exp, sine_type=sine_type, Kx=Kx, Ky=Ky, phi_expr=phi_expr, V=V, K=K)
+            # 生成1D数据，支持正弦波调制
+            z, I, M = self.simulate(z_h, T, t_B, I0, M0, t_exp, 
+                                    sine_type=sine_type, Kx=Kx, Ky=Ky, Kz=Kz, 
+                                    phi_expr=phi_expr, V=V, K=K)
+            
             return {
                 'z': z.tolist(),
-                'x': z.tolist(),  # 新增别名，兼容前端
+                'x': z.tolist(),  # 别名，兼容前端
                 'I': I.tolist(),
-                'exposure_dose': I.tolist(),  # 新增别名，兼容前端
+                'exposure_dose': I.tolist(),  # 别名，兼容前端
                 'M': M.tolist(),
-                'thickness': M.tolist()  # 新增别名，兼容前端
+                'thickness': M.tolist()  # 别名，兼容前端
             }
 
     def generate_plots(self, z_h, T, t_B, I0=1.0, M0=1.0, t_exp=5.0, sine_type='1d', Kx=None, Ky=None, Kz=None, phi_expr=None, V=0, K=None, y_range=None, z_range=None):
