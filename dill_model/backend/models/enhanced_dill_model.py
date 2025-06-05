@@ -88,14 +88,8 @@ class EnhancedDillModel:
         # 检查是否为1D正弦波模式
         is_1d_sine = (current_K is not None and sine_type in ['single', '1d'] and V > 0)
         
-        # 添加调试打印，显示关键参数和条件判断结果
-        print("[调试信息] Enhanced Dill 1D正弦波条件检查:")
-        print(f"  K = {current_K}, sine_type = {sine_type}, V = {V}")
-        print(f"  条件1(K is not None): {current_K is not None}")
-        print(f"  条件2(sine_type in ['single', '1d']): {sine_type in ['single', '1d']}")
-        print(f"  条件3(V > 0): {V > 0}")
-        print(f"  最终结果(is_1d_sine): {is_1d_sine}")
-        print(f"  A = {A}, B = {B}, C = {C}")
+        # 仅保留关键调试信息
+        print(f"[调试] Enhanced Dill: is_1d_sine={is_1d_sine}, K={current_K}, V={V}")
         
         if is_1d_sine:
             # 1D正弦波模式：生成正弦波调制的光强和PAC浓度分布
@@ -222,8 +216,9 @@ class EnhancedDillModel:
         if sine_type == 'single':
             sine_type = '1d'
         
-        # 添加调试输出，检查参数传递
-        print(f"[generate_data] 输入参数: K={K}, V={V}, sine_type={sine_type}")
+        # 简化调试输出
+        if sine_type != '1d':  # 只在非1D模式下打印
+            print(f"[generate_data] 模式:{sine_type}, K={K}, V={V}")
         
         # 2D热力图模式
         if sine_type == 'multi' and Kx is not None and Ky is not None and y_range is not None and len(y_range) > 1:
