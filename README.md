@@ -1,6 +1,4 @@
 <div align="center">
-  
-  <img src="frontend/assets/images/BG.jpg" alt="Dill模型计算工具" width="600px"/>
 
   # Dill模型计算工具
   ### 多维光刻胶模型计算与可视化平台
