@@ -996,9 +996,29 @@
                 <h2 class="section-title" data-i18n="result_section">计算结果</h2>
                 
                 <div class="plots-container">
+                    <!-- 新增(X, Y)平面曝光剂量热力图 -->
+                    <div class="plot-item" id="exposure-xy-plot-item" style="display:none;">
+                        <h3 class="plot-title">曝光计量分布 (2D) (X, Y平面)</h3>
+                        <div id="exposure-xy-plot-container" class="plot-container"></div>
+                        <div class="plot-export-btns">
+                            <button id="export-exposure-xy-img">导出图片</button>
+                            <button id="export-exposure-xy-data">导出数据</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 新增(X, Y)平面光刻胶厚度热力图 -->
+                    <div class="plot-item" id="thickness-xy-plot-item" style="display:none;">
+                        <h3 class="plot-title">光刻胶厚度分布 (2D) (X, Y平面)</h3>
+                        <div id="thickness-xy-plot-container" class="plot-container"></div>
+                        <div class="plot-export-btns">
+                            <button id="export-thickness-xy-img">导出图片</button>
+                            <button id="export-thickness-xy-data">导出数据</button>
+                        </div>
+                    </div>
+
                     <!-- 曝光剂量分布图 -->
                     <div class="plot-item">
-                        <h3 class="plot-title" data-i18n="exposure_dist">曝光剂量分布</h3>
+                        <h3 class="plot-title" data-i18n="exposure_dist">曝光计量分布 (1D)</h3>
                         <div id="exposure-plot-container" class="plot-container"></div>
                         <div class="individual-threshold-controls threshold-analysis-hint" id="exposure-thresholds-container">
                           <div class="threshold-control" data-idx="0">
@@ -1018,7 +1038,7 @@
                     
                     <!-- 光刻胶厚度分布图 -->
                     <div class="plot-item">
-                        <h3 class="plot-title" data-i18n="thickness_dist">光刻胶厚度分布</h3>
+                        <h3 class="plot-title" data-i18n="thickness_dist">光刻胶厚度分布 (1D)</h3>
                         <div id="thickness-plot-container" class="plot-container"></div>
                         <div class="individual-threshold-controls threshold-analysis-hint" id="thickness-thresholds-container">
                           <div class="threshold-control" data-idx="0">

@@ -248,12 +248,35 @@ class EnhancedDillModel:
                 z_exposure_dose[i] = I
                 z_thickness[i] = M
             
+            # 新增：生成真正的XY平面数据
+            # 选择z轴中间位置的切片作为XY平面
+            z_mid_idx = len(z) // 2
+            xy_exposure = np.zeros((len(y_coords), len(x_coords)))
+            xy_thickness = np.zeros((len(y_coords), len(x_coords)))
+            
+            # 计算XY平面的数据分布 (使用二维正弦波公式)
+            X, Y = np.meshgrid(x_coords, y_coords)
+            phi = parse_phi_expr(phi_expr, 0) if phi_expr is not None else 0.0
+            amplitude = max(0.3, V)
+            
+            # XY平面上的正弦波调制
+            modulation = np.cos(Kx * X + Ky * Y + phi)
+            
+            # 计算XY平面上的曝光剂量
+            base_exposure = I0 * t_exp
+            xy_exposure = base_exposure * (1 + amplitude * modulation)
+            
+            # 计算XY平面上的厚度分布
+            xy_thickness = M0 * (1 - 0.5 * amplitude * modulation)
+            
             # 返回2D数据
             return {
                 'x_coords': x_coords.tolist(),
                 'y_coords': y_coords.tolist(),
                 'z_exposure_dose': z_exposure_dose.tolist(),
                 'z_thickness': z_thickness.tolist(),
+                'xy_exposure': xy_exposure.tolist(),  # 新增：真正的XY平面曝光数据
+                'xy_thickness': xy_thickness.tolist(),  # 新增：真正的XY平面厚度数据
                 'is_2d': True
             }
         

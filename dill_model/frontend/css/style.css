@@ -2234,6 +2234,9 @@ footer {
 .plot-export-btns {
   margin-top: 8px;
   margin-bottom: 16px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
 }
 .plot-export-btns button {
   background: #3498db;
@@ -2241,7 +2244,6 @@ footer {
   border: none;
   border-radius: 5px;
   padding: 6px 18px;
-  margin-right: 10px;
   font-size: 14px;
   cursor: pointer;
   transition: background 0.2s;

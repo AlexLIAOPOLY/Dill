@@ -865,6 +865,10 @@ function displayInteractiveResults(data) {
         return;
     }
 
+    // Get title elements to dynamically update them
+    const exposureTitleElement = exposurePlotContainer.parentElement.querySelector('.plot-title');
+    const thicknessTitleElement = thicknessPlotContainer.parentElement.querySelector('.plot-title');
+
     // 清空容器，确保旧图被移除
     exposurePlotContainer.innerHTML = '';
     thicknessPlotContainer.innerHTML = '';
@@ -877,6 +881,23 @@ function displayInteractiveResults(data) {
     // 检查是否有二维数据
     const has2DData = data.is_2d || (data.z_exposure_dose && data.z_thickness) || 
                      (data.x_coords && data.y_coords && (data.z_exposure_dose || data.z_thickness));
+
+    // Dynamically set titles based on data dimensions
+    if (has3DData) {
+        if (exposureTitleElement) exposureTitleElement.textContent = '曝光剂量分布 (3D)';
+        if (thicknessTitleElement) thicknessTitleElement.textContent = '光刻胶厚度分布 (3D)';
+    } else if (has2DData) {
+        if (currentModelType === 'dill' || currentModelType === 'car') {
+            if (exposureTitleElement) exposureTitleElement.textContent = '曝光计量分布 (2D)';
+            if (thicknessTitleElement) thicknessTitleElement.textContent = '光刻胶厚度分布 (2D)';
+        } else { // For 'enhanced_dill' model
+            if (exposureTitleElement) exposureTitleElement.textContent = '曝光计量分布 (2D) (Y, Z平面)';
+            if (thicknessTitleElement) thicknessTitleElement.textContent = '光刻胶厚度分布 (2D) (Y, Z平面)';
+        }
+    } else {
+        if (exposureTitleElement) exposureTitleElement.textContent = '曝光计量分布 (1D)';
+        if (thicknessTitleElement) thicknessTitleElement.textContent = '光刻胶厚度分布 (1D)';
+    }
 
     // 新增：CAR模型特殊处理 - 始终使用2D热图
     if (currentModelType === 'car') {
@@ -946,6 +967,40 @@ function displayInteractiveResults(data) {
             console.log('显示增强Dill模型2D热图'); 
             createExposureHeatmap(exposurePlotContainer, data);
             createThicknessHeatmap(thicknessPlotContainer, data);
+            
+            // 显示XY平面热力图容器
+            const exposureXyPlotItem = document.getElementById('exposure-xy-plot-item');
+            const thicknessXyPlotItem = document.getElementById('thickness-xy-plot-item');
+            if (exposureXyPlotItem) exposureXyPlotItem.style.display = 'block';
+            if (thicknessXyPlotItem) thicknessXyPlotItem.style.display = 'block';
+            
+            // 创建XY平面热力图
+            const exposureXyContainer = document.getElementById('exposure-xy-plot-container');
+            const thicknessXyContainer = document.getElementById('thickness-xy-plot-container');
+            
+            if (exposureXyContainer) {
+                exposureXyContainer.innerHTML = '';
+                // 确保有XY平面数据
+                            if (data.xy_exposure || data.exposure_xy) {
+                createExposureXYHeatmap(exposureXyContainer, data);
+            } else {
+                console.log('没有(X, Y)平面曝光数据，生成模拟数据');
+                    // 如果没有真实XY平面数据，使用相同的数据源但改变显示标题和轴标签
+                    createExposureXYHeatmap(exposureXyContainer, data);
+                }
+            }
+            
+            if (thicknessXyContainer) {
+                thicknessXyContainer.innerHTML = '';
+                // 确保有XY平面数据
+                            if (data.xy_thickness || data.thickness_xy) {
+                createThicknessXYHeatmap(thicknessXyContainer, data);
+            } else {
+                console.log('没有(X, Y)平面厚度数据，生成模拟数据');
+                    // 如果没有真实XY平面数据，使用相同的数据源但改变显示标题和轴标签
+                    createThicknessXYHeatmap(thicknessXyContainer, data);
+                }
+            }
         } else {
             // 默认1D处理，确保兼容性
             console.log('显示增强Dill模型1D图表');
@@ -957,6 +1012,12 @@ function displayInteractiveResults(data) {
                 exposurePlotContainer.innerHTML = '<div style="color:red;padding:20px;">增强Dill模型1D曝光数据不完整</div>';
                 thicknessPlotContainer.innerHTML = '<div style="color:red;padding:20px;">增强Dill模型1D厚度数据不完整</div>';
             }
+            
+            // 隐藏XY平面热力图容器
+            const exposureXyPlotItem = document.getElementById('exposure-xy-plot-item');
+            const thicknessXyPlotItem = document.getElementById('thickness-xy-plot-item');
+            if (exposureXyPlotItem) exposureXyPlotItem.style.display = 'none';
+            if (thicknessXyPlotItem) thicknessXyPlotItem.style.display = 'none';
         }
     } else if (has3DData) {
         // 处理3D数据可视化
@@ -1104,7 +1165,7 @@ function createExposure3DPlot(container, data) {
     };
 
     const layout = {
-        title: LANGS[currentLang].exposure_dist + ' (3D)',
+        title: '曝光计量分布 (3D)',
         scene: {
             xaxis: { title: 'X (μm)' },
             yaxis: { title: 'Y (μm)' },
@@ -1340,7 +1401,7 @@ function createThickness3DPlot(container, data) {
     };
 
     const layout = {
-        title: LANGS[currentLang].thickness_dist + ' (3D)',
+        title: '光刻胶厚度分布 (3D)',
         scene: {
             xaxis: { title: 'X (μm)' },
             yaxis: { title: 'Y (μm)' },
@@ -1391,7 +1452,7 @@ function createExposurePlot(container, data) {
     };
 
     const layout = {
-        title: LANGS[currentLang].exposure_dist || '曝光剂量分布',
+        title: '曝光计量分布 (1D)',
         xaxis: { title: LANGS[currentLang].x_position },
         yaxis: { title: LANGS[currentLang].exposure_dose_unit || '曝光剂量 (mJ/cm²)' },
         margin: { l: 60, r: 20, t: 60, b: 60 },
@@ -1427,7 +1488,7 @@ function createThicknessPlot(container, data) {
     };
 
     const layout = {
-        title: LANGS[currentLang].thickness_dist || '光刻胶厚度分布',
+        title: '光刻胶厚度分布 (1D)',
         xaxis: { title: LANGS[currentLang].x_position },
         yaxis: { title: LANGS[currentLang].relative_thickness_unit || '相对厚度 (归一化)' },
         margin: { l: 60, r: 20, t: 60, b: 60 },
@@ -1446,6 +1507,35 @@ function createThicknessPlot(container, data) {
 }
 // END - Add 1D plot functions back
 
+/**
+ * 标准化热图数据格式，确保数据为二维数组形式
+ * @param {Array} data - 原始数据，可能是一维或二维数组
+ * @param {Array} xCoords - X坐标数组
+ * @param {Array} yCoords - Y坐标数组
+ * @returns {Array} - 标准化的二维数组
+ */
+function standardizeHeatmapData(data, xCoords, yCoords) {
+    // 已经是二维数组，直接返回
+    if (Array.isArray(data) && Array.isArray(data[0])) {
+        return data;
+    }
+    
+    // 一维数组，需要转换为二维数组
+    if (Array.isArray(data) && xCoords.length * yCoords.length === data.length) {
+        // 使用detectDataOrder检测数据排列顺序
+        const isRowMajor = detectDataOrder(data, xCoords, yCoords);
+        console.log(`检测到数据排列顺序: ${isRowMajor ? '行主序' : '列主序'}`);
+        
+        // 使用reshapeArray重塑数据
+        return reshapeArray(data, xCoords.length, yCoords.length, isRowMajor);
+    }
+    
+    // 无法处理的情况，返回原始数据并记录错误
+    console.error('数据维度不匹配: 无法重塑数组');
+    console.error(`数据长度=${data ? data.length : 'undefined'}, X长度=${xCoords.length}, Y长度=${yCoords.length}`);
+    return data; // 返回原始数据，让调用函数决定如何处理
+}
+
 function createExposureHeatmap(container, data) {
     // 统一字段名处理，增加更多兼容性
     let xCoords = data.x_coords || data.x;
@@ -1460,41 +1550,33 @@ function createExposureHeatmap(container, data) {
         return;
     }
 
-    // 检查数据格式并进行必要的转换
-    let heatmapZ = zData;
-    if (!Array.isArray(heatmapZ[0]) && xCoords.length * yCoords.length === heatmapZ.length) {
-        try {
-            // 尝试检测数据排列顺序 (按行主序还是列主序)
-            const isRowMajor = detectDataOrder(heatmapZ, xCoords, yCoords);
-            console.log(`热图数据排列顺序: ${isRowMajor ? '行主序' : '列主序'}`);
-            
-            // 根据检测到的顺序重塑数据
-            heatmapZ = reshapeArray(heatmapZ, xCoords.length, yCoords.length, isRowMajor);
-        } catch (error) {
-            console.error('无法重塑热图数据:', error);
-            container.innerHTML = `<div style="color:red;padding:20px;">热图数据转换错误: ${error.message}</div>`;
-            return;
-        }
-    }
-
-    const trace = {
-        x: xCoords,
-        y: yCoords,
-        z: heatmapZ,
-        type: 'heatmap',
-        colorscale: 'Viridis',
-        colorbar: { title: LANGS[currentLang].exposure_dose_trace_name || '曝光剂量' },
-        hovertemplate: `X: %{x}<br>Y: %{y}<br>${LANGS[currentLang].hover_exposure_value || '曝光剂量值'}: %{z}<extra></extra>`
-    };
-
-    const layout = {
-        title: LANGS[currentLang].exposure_dist + ' (2D)',
-        xaxis: { title: LANGS[currentLang].x_position },
-        yaxis: { title: LANGS[currentLang].y_position },
-        margin: { l: 60, r: 20, t: 60, b: 60 }
-    };
-    
+    // 使用标准化函数处理数据格式
     try {
+        let heatmapZ = standardizeHeatmapData(zData, xCoords, yCoords);
+
+        const trace = {
+            x: xCoords,
+            y: yCoords,
+            z: heatmapZ,
+            type: 'heatmap',
+            colorscale: 'Viridis',
+            colorbar: { title: LANGS[currentLang].exposure_dose_trace_name || '曝光剂量' },
+            hovertemplate: `X: %{x}<br>Y: %{y}<br>${LANGS[currentLang].hover_exposure_value || '曝光剂量值'}: %{z}<extra></extra>`
+        };
+
+        // 根据模型类型设置不同的标题
+        const modelSelect = document.getElementById('model-select');
+        const currentModelType = modelSelect ? modelSelect.value : 'dill';
+        
+        const layout = {
+            title: (currentModelType === 'dill' || currentModelType === 'car') ? 
+                  '曝光计量分布 (2D)' : 
+                  '曝光计量分布 (2D) (Y, Z平面)',
+            xaxis: { title: LANGS[currentLang].z_position },
+            yaxis: { title: LANGS[currentLang].y_position },
+            margin: { l: 60, r: 20, t: 60, b: 60 }
+        };
+        
         Plotly.newPlot(container, [trace], layout, {responsive: true});
         
         // 添加点击事件处理
@@ -1529,41 +1611,33 @@ function createThicknessHeatmap(container, data) {
         return;
     }
 
-    // 检查数据格式并进行必要的转换
-    let heatmapZ = zData;
-    if (!Array.isArray(heatmapZ[0]) && xCoords.length * yCoords.length === heatmapZ.length) {
-        try {
-            // 尝试检测数据排列顺序 (按行主序还是列主序)
-            const isRowMajor = detectDataOrder(heatmapZ, xCoords, yCoords);
-            console.log(`热图数据排列顺序: ${isRowMajor ? '行主序' : '列主序'}`);
-            
-            // 根据检测到的顺序重塑数据
-            heatmapZ = reshapeArray(heatmapZ, xCoords.length, yCoords.length, isRowMajor);
-        } catch (error) {
-            console.error('无法重塑热图数据:', error);
-            container.innerHTML = `<div style="color:red;padding:20px;">热图数据转换错误: ${error.message}</div>`;
-            return;
-        }
-    }
-
-    const trace = {
-        x: xCoords,
-        y: yCoords,
-        z: heatmapZ,
-        type: 'heatmap',
-        colorscale: 'Plasma',
-        colorbar: { title: LANGS[currentLang].thickness_trace_name || '相对厚度' },
-        hovertemplate: `X: %{x}<br>Y: %{y}<br>${LANGS[currentLang].hover_thickness_value || '相对厚度值'}: %{z}<extra></extra>`
-    };
-
-    const layout = {
-        title: LANGS[currentLang].thickness_dist + ' (2D)',
-        xaxis: { title: LANGS[currentLang].x_position },
-        yaxis: { title: LANGS[currentLang].y_position },
-        margin: { l: 60, r: 20, t: 60, b: 60 }
-    };
-    
+    // 使用标准化函数处理数据格式
     try {
+        let heatmapZ = standardizeHeatmapData(zData, xCoords, yCoords);
+
+        const trace = {
+            x: xCoords,
+            y: yCoords,
+            z: heatmapZ,
+            type: 'heatmap',
+            colorscale: 'Plasma',
+            colorbar: { title: LANGS[currentLang].thickness_trace_name || '相对厚度' },
+            hovertemplate: `X: %{x}<br>Y: %{y}<br>${LANGS[currentLang].hover_thickness_value || '相对厚度值'}: %{z}<extra></extra>`
+        };
+
+        // 根据模型类型设置不同的标题
+        const modelSelect = document.getElementById('model-select');
+        const currentModelType = modelSelect ? modelSelect.value : 'dill';
+        
+        const layout = {
+            title: (currentModelType === 'dill' || currentModelType === 'car') ? 
+                  '光刻胶厚度分布 (2D)' : 
+                  '光刻胶厚度分布 (2D) (Y, Z平面)',
+            xaxis: { title: LANGS[currentLang].z_position },
+            yaxis: { title: LANGS[currentLang].y_position },
+            margin: { l: 60, r: 20, t: 60, b: 60 }
+        };
+        
         Plotly.newPlot(container, [trace], layout, {responsive: true});
         
         // 添加点击事件处理
@@ -1581,6 +1655,146 @@ function createThicknessHeatmap(container, data) {
     } catch (error) {
         console.error('Error creating 2D Thickness heatmap:', error);
         container.innerHTML = `<div style="color:red;padding:20px;">创建2D热图失败: ${error.message}</div>`;
+    }
+}
+
+/**
+ * 创建(x, y)平面的曝光计量分布热力图
+ * 
+ * @param {HTMLElement} container - 容器元素
+ * @param {Object} data - 数据对象
+ */
+function createExposureXYHeatmap(container, data) {
+    // 统一字段名处理
+    let xCoords = data.x_coords || data.x;
+    let yCoords = data.y_coords || data.y;
+    // 支持不同的字段名，保持向后兼容性
+    let zData = data.exposure_xy || data.xy_exposure; 
+    
+    // 检查数据
+    if (!xCoords || !yCoords || !zData || 
+        !Array.isArray(xCoords) || !Array.isArray(yCoords) || !Array.isArray(zData) ||
+        xCoords.length === 0 || yCoords.length === 0 || zData.length === 0) {
+        container.innerHTML = '<div style="color:red;padding:20px;">无有效(X, Y)平面曝光剂量数据，无法绘图</div>';
+        return;
+    }
+    
+    // 处理数据格式，使用标准化函数
+    try {
+        let heatmapZ = standardizeHeatmapData(zData, xCoords, yCoords);
+        
+        const trace = {
+            x: xCoords,
+            y: yCoords,
+            z: heatmapZ,
+            type: 'heatmap',
+            colorscale: 'Viridis',
+            colorbar: { title: LANGS[currentLang].exposure_dose_trace_name || '曝光剂量' },
+            hovertemplate: `X: %{x}<br>Y: %{y}<br>${LANGS[currentLang].hover_exposure_value || '曝光剂量值'}: %{z}<extra></extra>`
+        };
+        
+        const layout = {
+            title: '曝光计量分布 (2D) (X, Y平面)',
+            xaxis: { title: LANGS[currentLang].x_position || 'X 位置 (μm)' },
+            yaxis: { title: LANGS[currentLang].y_position || 'Y 位置 (μm)' },
+            margin: { l: 60, r: 20, t: 60, b: 60 }
+        };
+        
+        Plotly.newPlot(container, [trace], layout, {responsive: true});
+        
+        // 添加点击事件处理
+        container.on('plotly_click', function(eventData) {
+            if(eventData.points.length > 0) {
+                const point = eventData.points[0];
+                showSinglePointDetailsPopup({ 
+                    x: point.x, 
+                    y: point.y, 
+                    z: point.z 
+                }, 'exposure', container, eventData);
+            }
+        });
+        
+        // 添加导出功能
+        document.getElementById('export-exposure-xy-img').onclick = function() {
+            Plotly.downloadImage(container, {format: 'png', filename: 'exposure_xy_distribution'});
+        };
+        
+        document.getElementById('export-exposure-xy-data').onclick = function() {
+            exportPlotData('exposure_xy');
+        };
+    } catch (error) {
+        console.error('创建(X, Y)平面曝光热图失败:', error);
+        container.innerHTML = `<div style="color:red;padding:20px;">创建(X, Y)平面曝光热图失败: ${error.message}</div>`;
+    }
+}
+
+/**
+ * 创建(x, y)平面的光刻胶厚度分布热力图
+ * 
+ * @param {HTMLElement} container - 容器元素
+ * @param {Object} data - 数据对象
+ */
+function createThicknessXYHeatmap(container, data) {
+    // 统一字段名处理
+    let xCoords = data.x_coords || data.x;
+    let yCoords = data.y_coords || data.y;
+    // 支持不同的字段名，保持向后兼容性
+    let zData = data.thickness_xy || data.xy_thickness;
+    
+    // 检查数据
+    if (!xCoords || !yCoords || !zData || 
+        !Array.isArray(xCoords) || !Array.isArray(yCoords) || !Array.isArray(zData) ||
+        xCoords.length === 0 || yCoords.length === 0 || zData.length === 0) {
+        container.innerHTML = '<div style="color:red;padding:20px;">无有效(X, Y)平面厚度数据，无法绘图</div>';
+        return;
+    }
+    
+    // 处理数据格式，使用标准化函数
+    try {
+        let heatmapZ = standardizeHeatmapData(zData, xCoords, yCoords);
+        
+        const trace = {
+            x: xCoords,
+            y: yCoords,
+            z: heatmapZ,
+            type: 'heatmap',
+            colorscale: 'Plasma',
+            colorbar: { title: LANGS[currentLang].thickness_trace_name || '相对厚度' },
+            hovertemplate: `X: %{x}<br>Y: %{y}<br>${LANGS[currentLang].hover_thickness_value || '相对厚度值'}: %{z}<extra></extra>`
+        };
+        
+        const layout = {
+            title: LANGS[currentLang].thickness_xy_dist || '光刻胶厚度分布 (2D) (X, Y平面)',
+            xaxis: { title: LANGS[currentLang].x_position || 'X 位置 (μm)' },
+            yaxis: { title: LANGS[currentLang].y_position || 'Y 位置 (μm)' },
+            margin: { l: 60, r: 20, t: 60, b: 60 }
+        };
+        
+        Plotly.newPlot(container, [trace], layout, {responsive: true});
+        
+        // 添加点击事件处理
+        container.on('plotly_click', function(eventData) {
+            if(eventData.points.length > 0) {
+                const point = eventData.points[0];
+                showSinglePointDetailsPopup({ 
+                    x: point.x, 
+                    y: point.y, 
+                    z: point.z 
+                }, 'thickness', container, eventData);
+            }
+        });
+        
+        // 添加导出功能
+        document.getElementById('export-thickness-xy-img').onclick = function() {
+            Plotly.downloadImage(container, {format: 'png', filename: 'thickness_xy_distribution'});
+        };
+        
+        document.getElementById('export-thickness-xy-data').onclick = function() {
+            exportPlotData('thickness_xy');
+        };
+    } catch (error) {
+        console.error('创建(X, Y)平面厚度热图失败:', error);
+        container.innerHTML = `<div style="color:red;padding:20px;">创建(X, Y)平面厚度热图失败: ${error.message}</div>`;
     }
 }
 
@@ -1725,6 +1939,36 @@ function clearAllCharts() {
         container.style.display = 'none';
     });
     
+    // 隐藏XY平面热力图容器
+    const exposureXyPlotItem = document.getElementById('exposure-xy-plot-item');
+    const thicknessXyPlotItem = document.getElementById('thickness-xy-plot-item');
+    if (exposureXyPlotItem) exposureXyPlotItem.style.display = 'none';
+    if (thicknessXyPlotItem) thicknessXyPlotItem.style.display = 'none';
+    
+    // 清空XY平面热力图内容
+    const exposureXyContainer = document.getElementById('exposure-xy-plot-container');
+    const thicknessXyContainer = document.getElementById('thickness-xy-plot-container');
+    if (exposureXyContainer) {
+        if (typeof Plotly !== 'undefined' && Plotly.purge && exposureXyContainer._fullLayout) {
+            try {
+                Plotly.purge(exposureXyContainer);
+            } catch (e) {
+                console.warn('清除XY平面曝光图表失败:', e);
+            }
+        }
+        exposureXyContainer.innerHTML = '';
+    }
+    if (thicknessXyContainer) {
+        if (typeof Plotly !== 'undefined' && Plotly.purge && thicknessXyContainer._fullLayout) {
+            try {
+                Plotly.purge(thicknessXyContainer);
+            } catch (e) {
+                console.warn('清除XY平面厚度图表失败:', e);
+            }
+        }
+        thicknessXyContainer.innerHTML = '';
+    }
+    
     console.log('图表已清空，等待用户重新生成');
 }
 
@@ -1864,22 +2108,75 @@ window.applyLang = function() {
 };
 
 function exportPlotData(type) {
-    let data, x, y, filename;
+    let data, x, y, z, filename, is2D = false;
+    data = window.lastPlotData;
+    
     if (type === 'exposure') {
-        data = window.lastPlotData;
         x = data.x;
         y = data.exposure_dose;
         filename = 'exposure_data.csv';
-    } else {
-        data = window.lastPlotData;
+    } else if (type === 'thickness') {
         x = data.x;
         y = data.thickness;
         filename = 'thickness_data.csv';
+    } else if (type === 'exposure_xy') {
+        // 导出XY平面曝光热力图数据
+        x = data.x_coords || data.x;
+        y = data.y_coords || data.y;
+        z = data.xy_exposure || data.exposure_xy; // 优先使用真正的XY平面数据
+        filename = 'exposure_xy_data.csv';
+        is2D = true;
+    } else if (type === 'thickness_xy') {
+        // 导出XY平面厚度热力图数据
+        x = data.x_coords || data.x;
+        y = data.y_coords || data.y;
+        z = data.xy_thickness || data.thickness_xy; // 优先使用真正的XY平面数据
+        filename = 'thickness_xy_data.csv';
+        is2D = true;
+    } else {
+        console.error('未知的数据导出类型:', type);
+        return;
     }
-    let csv = 'x,y\n';
-    for (let i = 0; i < x.length; i++) {
-        csv += `${x[i]},${y[i]}\n`;
+    
+    let csv;
+    
+    if (is2D && x && y && z) {
+        // 2D热力图数据导出 - 处理二维数据
+        let heatmapZ = z;
+        if (!Array.isArray(heatmapZ[0]) && x.length * y.length === heatmapZ.length) {
+            try {
+                // 尝试检测数据排列顺序并重塑数组
+                const isRowMajor = detectDataOrder(heatmapZ, x, y);
+                heatmapZ = reshapeArray(heatmapZ, x.length, y.length, isRowMajor);
+            } catch (error) {
+                console.error('导出数据格式转换失败:', error);
+                alert('无法转换数据格式，导出取消');
+                return;
+            }
+        }
+        
+        // 创建CSV标头 - X坐标作为列标题
+        csv = 'y/x,' + x.join(',') + '\n';
+        
+        // 为每行添加Y坐标和Z值
+        for (let j = 0; j < y.length; j++) {
+            let row = y[j].toString();
+            for (let i = 0; i < x.length; i++) {
+                row += ',' + (heatmapZ[j][i] || 0).toString();
+            }
+            csv += row + '\n';
+        }
+    } else if (x && y) {
+        // 1D数据导出
+        csv = 'x,y\n';
+        for (let i = 0; i < x.length; i++) {
+            csv += `${x[i]},${y[i]}\n`;
+        }
+    } else {
+        console.error('无法导出数据，缺少必要的坐标信息');
+        return;
     }
+    
     let blob = new Blob([csv], {type: 'text/csv'});
     let link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
