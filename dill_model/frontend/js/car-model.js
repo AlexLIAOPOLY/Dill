@@ -135,6 +135,11 @@ function calculateCarModel() {
     // 显示加载动画
     document.getElementById('loading').style.display = 'flex';
     
+    // 自动刷新系统化日志
+    if (window.systematicLogManager) {
+        window.systematicLogManager.autoRefreshLogsOnCalculation();
+    }
+    
     // 准备API请求数据
     const requestData = {
         model_type: 'car',

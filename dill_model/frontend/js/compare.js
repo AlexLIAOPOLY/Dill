@@ -50,6 +50,13 @@ let globalMeasurementActive = false;
 let globalThresholdVisible = false;
 // 当前模型类型
 let currentModelType = 'dill';
+// 加载期间日志相关状态
+let loadingLogsPanel = null;
+let loadingLogsContainer = null;
+let loadingProgressText = null;
+let loadingTimeText = null;
+let loadingStartTime = null;
+let loadingTimeInterval = null;
 
 /**
  * 初始化比较应用
@@ -63,12 +70,16 @@ function initCompareApp() {
     const errorMessage = document.getElementById('error-message');
     const loading = document.getElementById('loading');
     const globalDistanceMeasureBtn = document.getElementById('global-distance-measure-btn');
+    const viewLogsBtn = document.getElementById('view-logs-btn');
     
     // 初始化模型选择
     initModelSelection();
     
     // 初始化参数组集合
     initParameterSets();
+    
+    // 初始化系统化日志管理器
+    initSystematicLogs();
     
     // 全局距离测量按钮事件
     if (globalDistanceMeasureBtn) {
@@ -77,6 +88,13 @@ function initCompareApp() {
             globalDistanceMeasureBtn.classList.toggle('active', globalMeasurementActive);
             // 触发图表更新
             updateAllChartsForGlobalControls();
+        });
+    }
+    
+    // 查看日志按钮事件
+    if (viewLogsBtn) {
+        viewLogsBtn.addEventListener('click', () => {
+            showLogsModal();
         });
     }
     
@@ -109,12 +127,20 @@ function initCompareApp() {
     // 比较按钮事件
     if (compareBtn) {
         compareBtn.addEventListener('click', () => {
+            // 首先滑动到页面最底部
+            scrollToBottomAndRefreshLogs();
+            
             // 显示加载动画
             loading.classList.add('active');
             // 隐藏错误消息
             errorMessage.classList.remove('visible');
             // 隐藏结果区域
             comparisonResultsSection.classList.remove('visible');
+            
+            // 自动刷新系统化日志
+            if (window.systematicLogManager) {
+                window.systematicLogManager.autoRefreshLogsOnCalculation();
+            }
             
             // 获取所有参数组的参数
             const parameterSets = getAllParameterSets();
@@ -140,6 +166,9 @@ function initCompareApp() {
                     // 添加动画效果
                     comparisonResultsSection.classList.add('visible');
                     
+                    // 执行日志过渡动画
+                    transitionLogsFromLoadingToMain();
+                    
                     // 滚动到结果区域
                     comparisonResultsSection.scrollIntoView({ behavior: 'smooth' });
                 })
@@ -156,6 +185,9 @@ function initCompareApp() {
                             
                             // 添加动画效果
                             comparisonResultsSection.classList.add('visible');
+                            
+                            // 执行日志过渡动画
+                            transitionLogsFromLoadingToMain();
                             
                             // 滚动到结果区域
                             comparisonResultsSection.scrollIntoView({ behavior: 'smooth' });
@@ -193,43 +225,115 @@ function initModelSelection() {
     const dillDesc = document.getElementById('dill-desc');
     const enhancedDillDesc = document.getElementById('enhanced-dill-desc');
     const carDesc = document.getElementById('car-desc');
-    // const dillToggleBtn = document.getElementById('dill-toggle-details');
-    // const enhancedDillToggleBtn = document.getElementById('enhanced-dill-toggle-details');
-    // const dillFullDetails = document.getElementById('dill-full-details');
-    // const enhancedDillFullDetails = document.getElementById('enhanced-dill-full-details');
-    // 移除展开更多详情按钮事件绑定，全部交由bindToggleDetailsEvents统一管理
     
-    // 为模型选择添加事件监听
+    // 初始化当前模型类型
+    currentModelType = modelSelect.value;
+    console.log('初始化模型类型:', currentModelType);
+    
+    // 模型选择变化事件
     modelSelect.addEventListener('change', function() {
+        const previousModelType = currentModelType;
         currentModelType = this.value;
-        if (this.value === 'dill') {
+        console.log('模型类型变更:', previousModelType, '->', currentModelType);
+        
+        // 隐藏所有模型描述
+        dillDesc.style.display = 'none';
+        enhancedDillDesc.style.display = 'none';
+        carDesc.style.display = 'none';
+        
+        // 显示选中模型的描述
+        if (currentModelType === 'dill') {
             dillDesc.style.display = 'block';
-            enhancedDillDesc.style.display = 'none';
-            if (carDesc) carDesc.style.display = 'none';
-            clearAllParameterSets();
-            addParameterSetWithConfig('参数组 1', { I_avg: 10, V: 0.8, K: 2, t_exp: 5, C: 0.02 });
-            addParameterSetWithConfig('参数组 2', { I_avg: 20, V: 0.6, K: 3, t_exp: 5, C: 0.02 });
-        } else if (this.value === 'enhanced_dill') {
-            dillDesc.style.display = 'none';
+        } else if (currentModelType === 'enhanced_dill') {
             enhancedDillDesc.style.display = 'block';
-            if (carDesc) carDesc.style.display = 'none';
-            clearAllParameterSets();
-            addParameterSetWithConfig('参数组 1', { z_h: 10, T: 100, t_B: 10, I0: 1.0, M0: 1.0, t_exp: 5, K: 2 });
-            addParameterSetWithConfig('参数组 2', { z_h: 20, T: 110, t_B: 15, I0: 1.0, M0: 1.0, t_exp: 5, K: 2 });
-        } else if (this.value === 'car') {
-            if (dillDesc) dillDesc.style.display = 'none';
-            if (enhancedDillDesc) enhancedDillDesc.style.display = 'none';
-            if (carDesc) carDesc.style.display = 'block';
-            clearAllParameterSets();
-            addParameterSetWithConfig('参数组 1', {
-                I_avg: 10, V: 0.8, K: 2, t_exp: 5, acid_gen_efficiency: 0.5, diffusion_length: 3, reaction_rate: 0.3, amplification: 10, contrast: 3
+        } else if (currentModelType === 'car') {
+            carDesc.style.display = 'block';
+        }
+        
+        // 清空现有参数组并重新初始化
+        clearAllParameterSets();
+        
+        // 根据新模型类型添加默认参数组
+        if (currentModelType === 'enhanced_dill') {
+            addEnhancedDillParameterSet('参数组 1', {
+                z_h: 10,
+                T: 100,
+                t_B: 10,
+                I0: 1.0,
+                M0: 1.0,
+                t_exp: 5,
+                K: 2,
+                V: 0.8
             });
-            addParameterSetWithConfig('参数组 2', {
-                I_avg: 20, V: 0.6, K: 3, t_exp: 5, acid_gen_efficiency: 0.6, diffusion_length: 5, reaction_rate: 0.4, amplification: 15, contrast: 2
+            addEnhancedDillParameterSet('参数组 2', {
+                z_h: 15,
+                T: 110,
+                t_B: 15,
+                I0: 1.2,
+                M0: 1.0,
+                t_exp: 8,
+                K: 2.5,
+                V: 0.6
+            });
+        } else if (currentModelType === 'car') {
+            addCarParameterSet('参数组 1', {
+                I_avg: 10,
+                V: 0.8,
+                K: 2,
+                t_exp: 5,
+                acid_gen_efficiency: 0.5,
+                diffusion_length: 3,
+                reaction_rate: 0.3,
+                amplification: 10,
+                contrast: 3
+            });
+            addCarParameterSet('参数组 2', {
+                I_avg: 15,
+                V: 0.6,
+                K: 3,
+                t_exp: 8,
+                acid_gen_efficiency: 0.7,
+                diffusion_length: 5,
+                reaction_rate: 0.5,
+                amplification: 15,
+                contrast: 4
+            });
+        } else {
+            // Dill 模型默认参数组
+            addDillParameterSet('参数组 1', {
+                I_avg: 10,
+                V: 0.8,
+                K: 2,
+                t_exp: 250,
+                C: 0.02
+            });
+            addDillParameterSet('参数组 2', {
+                I_avg: 20,
+                V: 0.6,
+                K: 3,
+                t_exp: 5,  // 修正这里，确保是合理的曝光时间
+                C: 0.02
             });
         }
+        
+        // 清空结果区域
         clearAllCharts();
     });
+    
+    // 初始化显示对应的模型描述
+    if (currentModelType === 'enhanced_dill') {
+        enhancedDillDesc.style.display = 'block';
+        dillDesc.style.display = 'none';
+        carDesc.style.display = 'none';
+    } else if (currentModelType === 'car') {
+        carDesc.style.display = 'block';
+        dillDesc.style.display = 'none';
+        enhancedDillDesc.style.display = 'none';
+    } else {
+        dillDesc.style.display = 'block';
+        enhancedDillDesc.style.display = 'none';
+        carDesc.style.display = 'none';
+    }
 }
 
 /**
@@ -380,19 +484,15 @@ function addParameterSet() {
 /**
  * 获取下一个参数组ID
  * 
- * @returns {number} 下一个可用的参数组ID
+ * @returns {Number} 下一个参数组ID
  */
 function getNextSetId() {
-    const sets = document.querySelectorAll('.parameter-set');
+    const existingSets = document.querySelectorAll('.parameter-set');
     let maxId = 0;
-    
-    sets.forEach(set => {
-        const id = parseInt(set.dataset.setId);
-        if (id > maxId) {
-            maxId = id;
-        }
+    existingSets.forEach(set => {
+        const id = parseInt(set.dataset.setId) || 0;
+        maxId = Math.max(maxId, id);
     });
-    
     return maxId + 1;
 }
 
@@ -549,6 +649,7 @@ function getAllParameterSets() {
             params['M0'] = parseFloat(set.querySelector('.slider.M0').value);
             params['t_exp'] = parseFloat(set.querySelector('.slider.t_exp_enhanced').value);
             params['K'] = parseFloat(set.querySelector('.slider.K_enhanced').value);
+            params['V'] = parseFloat(set.querySelector('.slider.V_enhanced').value);
         } else if (currentModelType === 'car') {
             params['I_avg'] = parseFloat(set.querySelector('.slider.car_I_avg').value);
             params['V'] = parseFloat(set.querySelector('.slider.car_V').value);
@@ -635,11 +736,23 @@ async function compareParameterSetsData(parameterSets) {
  */
 function displayComparisonResults(data) {
     if (currentModelType === 'car') {
+        // ✅ 修复：CAR模型也使用标准的交互式图表显示
+        // 如果CAR模型返回的是标准格式（exposure_doses, thicknesses），则使用交互式显示
+        if (data.exposure_doses && data.thicknesses) {
+            console.log('CAR模型使用标准数据格式，切换到交互式显示');
+            return displayInteractiveComparisonResults(data);
+        }
+        
+        // 保留原有的car_plot_data格式支持（向后兼容）
         document.getElementById('car-comparison-results').style.display = 'block';
         const carPlotContainer = document.getElementById('car-comparison-plot-container');
         carPlotContainer.innerHTML = '';
         if (data.car_plot_data) {
             Plotly.newPlot(carPlotContainer, data.car_plot_data.traces, data.car_plot_data.layout, data.car_plot_data.config);
+        } else {
+            console.warn('CAR模型数据格式不正确，缺少car_plot_data字段');
+            // 如果没有car_plot_data，显示错误提示
+            carPlotContainer.innerHTML = '<div style="text-align:center;padding:50px;color:#666;">CAR模型数据格式错误</div>';
         }
         document.getElementById('exposure-comparison-plot-container').style.display = 'none';
         document.getElementById('thickness-comparison-plot-container').style.display = 'none';
@@ -678,6 +791,52 @@ function displayComparisonResults(data) {
  * @param {Object} data 比较结果数据
  */
 function displayInteractiveComparisonResults(data) {
+    // 数据验证
+    if (!data || typeof data !== 'object') {
+        console.error('接收到的数据无效:', data);
+        showError('接收到的数据格式不正确');
+        return;
+    }
+    
+    if (!data.x || !Array.isArray(data.x) || data.x.length === 0) {
+        console.error('x轴数据无效:', data.x);
+        showError('x轴数据格式不正确');
+        return;
+    }
+    
+    if (!data.exposure_doses || !Array.isArray(data.exposure_doses) || data.exposure_doses.length === 0) {
+        console.error('曝光剂量数据无效:', data.exposure_doses);
+        showError('曝光剂量数据格式不正确');
+        return;
+    }
+    
+    if (!data.thicknesses || !Array.isArray(data.thicknesses) || data.thicknesses.length === 0) {
+        console.error('厚度数据无效:', data.thicknesses);
+        showError('厚度数据格式不正确');
+        return;
+    }
+    
+    // 验证每个数据组的格式
+    for (let i = 0; i < data.exposure_doses.length; i++) {
+        const exposureItem = data.exposure_doses[i];
+        if (!exposureItem.data || !Array.isArray(exposureItem.data) || exposureItem.data.length !== data.x.length) {
+            console.error(`曝光剂量数据组${i+1}格式错误:`, exposureItem);
+            showError(`参数组${exposureItem.setId || i+1}的曝光剂量数据格式不正确`);
+            return;
+        }
+    }
+    
+    for (let i = 0; i < data.thicknesses.length; i++) {
+        const thicknessItem = data.thicknesses[i];
+        if (!thicknessItem.data || !Array.isArray(thicknessItem.data) || thicknessItem.data.length !== data.x.length) {
+            console.error(`厚度数据组${i+1}格式错误:`, thicknessItem);
+            showError(`参数组${thicknessItem.setId || i+1}的厚度数据格式不正确`);
+            return;
+        }
+    }
+    
+    console.log('数据验证通过，开始显示图表');
+
     // 统一所有模型都用交互式Plotly图表
     document.getElementById('car-comparison-results').style.display = 'none';
     // 隐藏静态图像
@@ -691,8 +850,16 @@ function displayInteractiveComparisonResults(data) {
     thicknessPlotContainer.style.display = 'block';
 
     // 创建交互式图表
-    createExposureComparisonPlot(exposurePlotContainer, data);
-    createThicknessComparisonPlot(thicknessPlotContainer, data);
+    try {
+        createExposureComparisonPlot(exposurePlotContainer, data);
+        createThicknessComparisonPlot(thicknessPlotContainer, data);
+        
+        console.log('图表创建成功');
+    } catch (error) {
+        console.error('创建图表时发生错误:', error);
+        showError('创建图表时发生错误: ' + error.message);
+        return;
+    }
 
     // 初始化阈值控制器
     setTimeout(() => {
@@ -708,12 +875,39 @@ function displayInteractiveComparisonResults(data) {
 }
 
 /**
+ * 显示错误消息的辅助函数
+ */
+function showError(message) {
+    const errorMessage = document.getElementById('error-message');
+    const loading = document.getElementById('loading');
+    
+    // 隐藏加载动画
+    loading.classList.remove('active');
+    
+    // 显示错误消息
+    errorMessage.textContent = message;
+    errorMessage.classList.add('visible');
+    
+    // 添加摇晃动画
+    errorMessage.classList.add('shake');
+    setTimeout(() => {
+        errorMessage.classList.remove('shake');
+    }, 800);
+}
+
+/**
  * 创建曝光剂量比较图表
  * 
  * @param {HTMLElement} container 容器元素
  * @param {Object} data 数据
  */
 function createExposureComparisonPlot(container, data) {
+    // 数据验证
+    if (!data || !data.exposure_doses || !Array.isArray(data.exposure_doses)) {
+        console.error('曝光剂量数据无效:', data);
+        throw new Error('曝光剂量数据格式错误');
+    }
+    
     // 定义颜色
     const colors = [
         'rgb(31, 119, 180)', 'rgb(255, 127, 14)', 'rgb(44, 160, 44)', 
@@ -725,8 +919,15 @@ function createExposureComparisonPlot(container, data) {
     // 准备数据
     const traces = data.exposure_doses.map((item, index) => {
         console.log(`处理曝光剂量数据组 ${index+1}:`, item);
-        const setName = item.params.customName && item.params.customName !== '' 
-            ? item.params.customName 
+        
+        // 验证数据项格式
+        if (!item || !item.data || !Array.isArray(item.data)) {
+            console.error(`数据组${index+1}格式错误:`, item);
+            throw new Error(`参数组${index+1}的数据格式不正确`);
+        }
+        
+        const setName = item.name && item.name !== '' 
+            ? item.name 
             : `参数组 ${item.setId}`;
             
         return {
@@ -1010,6 +1211,12 @@ function createExposureComparisonPlot(container, data) {
  * @param {Object} data 数据
  */
 function createThicknessComparisonPlot(container, data) {
+    // 数据验证
+    if (!data || !data.thicknesses || !Array.isArray(data.thicknesses)) {
+        console.error('厚度数据无效:', data);
+        throw new Error('厚度数据格式错误');
+    }
+    
     // 定义颜色
     const colors = [
         'rgb(31, 119, 180)', 'rgb(255, 127, 14)', 'rgb(44, 160, 44)', 
@@ -1021,8 +1228,15 @@ function createThicknessComparisonPlot(container, data) {
     // 准备数据
     const traces = data.thicknesses.map((item, index) => {
         console.log(`处理厚度数据组 ${index+1}:`, item);
-        const setName = item.params.customName && item.params.customName !== '' 
-            ? item.params.customName 
+        
+        // 验证数据项格式
+        if (!item || !item.data || !Array.isArray(item.data)) {
+            console.error(`厚度数据组${index+1}格式错误:`, item);
+            throw new Error(`参数组${index+1}的厚度数据格式不正确`);
+        }
+        
+        const setName = item.name && item.name !== '' 
+            ? item.name 
             : `参数组 ${item.setId}`;
 
         return {
@@ -1715,163 +1929,149 @@ function updatePlotWithThreshold(plotType, thresholdIndex, value, isVisible) {
     console.log(`Plot has layout:`, plotDiv && plotDiv.layout ? 'Yes' : 'No');
     console.log(`Plot has data:`, plotDiv && plotDiv.data ? 'Yes' : 'No');
     console.log(`Data length:`, plotDiv && plotDiv.data ? plotDiv.data.length : 'N/A');
-    console.log(`Threshold index data exists:`, plotDiv && plotDiv.data && plotDiv.data[thresholdIndex] ? 'Yes' : 'No');
-
+    
     if (plotDiv && plotDiv.layout && plotDiv.data) {
         const shapeName = `threshold_line_${plotType}_${thresholdIndex}`;
         let shapes = plotDiv.layout.shapes || [];
-        let annotations = plotDiv.layout.annotations || [];
         
-        console.log(`Current shapes count: ${shapes.length}`);
-        console.log(`Current annotations count: ${annotations.length}`);
+        // 移除现有的阈值线
+        shapes = shapes.filter(shape => shape.name !== shapeName);
         
-        // 清除所有与此阈值相关的元素（包括交点标记）
-        shapes = shapes.filter(s => {
-            if (!s.name) return true;
-            return !s.name.startsWith(`threshold_line_${plotType}_${thresholdIndex}`);
-        });
-        
-        // 清除所有与此阈值相关的注释
-        annotations = annotations.filter(a => {
-            if (!a.name) return true;
-            return !a.name.startsWith(`threshold_${plotType}_${thresholdIndex}`);
-        });
-        
-        console.log(`After cleanup - shapes: ${shapes.length}, annotations: ${annotations.length}`);
-
-        if (isVisible && plotDiv.data[thresholdIndex]) {
+        if (isVisible) {
             console.log(`Adding threshold line for visible threshold`);
-            // 获取对应参数组的数据
-            const traceData = plotDiv.data[thresholdIndex];
-            const xData = traceData.x;
-            const yData = traceData.y;
             
-            if (xData && yData) {
-                console.log(`Data available - xData length: ${xData.length}, yData length: ${yData.length}`);
-                // 获取x轴范围
-                const xMin = Math.min(...xData);
-                const xMax = Math.max(...xData);
+            // 修正：正确获取参数组数据
+            // 过滤掉阈值线等非参数组traces，只获取实际的参数组数据traces
+            const parameterTraces = plotDiv.data.filter(trace => {
+                // 过滤掉阈值线（通常name包含"阈值"）和其他辅助traces
+                return !trace.name.includes('阈值') && !trace.name.includes('threshold');
+            });
+            
+            console.log(`Filtered parameter traces count: ${parameterTraces.length}`);
+            console.log(`Looking for parameter trace at index: ${thresholdIndex}`);
+            
+            if (thresholdIndex < parameterTraces.length) {
+                const traceData = parameterTraces[thresholdIndex];
+                const xData = traceData.x;
+                const yData = traceData.y;
                 
-                // 获取线条颜色
-                let lineColor = traceData.line ? traceData.line.color : '#666';
-                
-                // 添加阈值线
-                const thresholdLine = {
-                    type: 'line',
-                    name: shapeName,
-                    x0: xMin,
-                    y0: value,
-                    x1: xMax,
-                    y1: value,
-                    line: {
-                        color: lineColor,
-                        width: 2,
-                        dash: 'dashdot'
-                    },
-                    layer: 'below'
-                };
-                shapes.push(thresholdLine);
-                console.log(`Added threshold line:`, thresholdLine);
-                
-                // 分析阈值与数据的关系
-                const analysis = analyzeThresholdIntersection(xData, yData, value, plotType);
-                console.log(`Analysis result:`, analysis);
-                
-                // 添加交点标记
-                if (analysis.intersections.length > 0) {
-                    analysis.intersections.forEach((intersection, idx) => {
-                        shapes.push({
-                            type: 'circle',
-                            name: `${shapeName}_intersection_${idx}`,
-                            x0: intersection.x - 0.05,
-                            y0: intersection.y - (plotType === 'exposure' ? 2 : 0.02),
-                            x1: intersection.x + 0.05,
-                            y1: intersection.y + (plotType === 'exposure' ? 2 : 0.02),
-                            fillcolor: lineColor,
-                            line: {
-                                color: lineColor,
-                                width: 2
-                            },
-                            layer: 'above'
-                        });
+                if (xData && yData) {
+                    console.log(`Data available - xData length: ${xData.length}, yData length: ${yData.length}`);
+                    // 获取x轴范围
+                    const xMin = Math.min(...xData);
+                    const xMax = Math.max(...xData);
+                    
+                    // 获取线条颜色
+                    let lineColor = traceData.line ? traceData.line.color : '#666';
+                    
+                    // 添加阈值线
+                    const thresholdLine = {
+                        type: 'line',
+                        name: shapeName,
+                        x0: xMin,
+                        y0: value,
+                        x1: xMax,
+                        y1: value,
+                        line: {
+                            color: lineColor,
+                            width: 2,
+                            dash: 'dashdot'
+                        },
+                        layer: 'below'
+                    };
+                    shapes.push(thresholdLine);
+                    console.log(`Added threshold line:`, thresholdLine);
+                    
+                    // 分析阈值与数据的关系
+                    const analysis = analyzeThresholdIntersection(xData, yData, value, plotType);
+                    console.log(`Analysis result:`, analysis);
+                    
+                    // 创建阈值分析注释
+                    const unit = plotType === 'exposure' ? 'mJ/cm²' : '';
+                    const analysisText = createThresholdAnalysisText(analysis, value, unit, plotType);
+                    
+                    // 添加标题注释（可点击展开详情）
+                    const titleName = `threshold_${plotType}_${thresholdIndex}_title`;
+                    const detailsName = `threshold_${plotType}_${thresholdIndex}_details`;
+                    
+                    // 移除旧的注释
+                    let annotations = plotDiv.layout.annotations || [];
+                    annotations = annotations.filter(ann => 
+                        ann.name !== titleName && ann.name !== detailsName
+                    );
+                    
+                    // 添加标题注释
+                    const titleY = 0.95 - thresholdIndex * 0.08;
+                    annotations.push({
+                        text: `▼ 参数组 ${thresholdIndex + 1} 阈值分析 (${value}${unit})`,
+                        x: 0.02,
+                        y: titleY,
+                        xref: 'paper',
+                        yref: 'paper',
+                        xanchor: 'left',
+                        yanchor: 'top',
+                        showarrow: false,
+                        font: {
+                            color: lineColor,
+                            size: 12,
+                            family: 'Arial, sans-serif'
+                        },
+                        bgcolor: 'rgba(255, 255, 255, 0.9)',
+                        bordercolor: lineColor,
+                        borderwidth: 1,
+                        name: titleName,
+                        clicktoshow: false
                     });
-                    console.log(`Added ${analysis.intersections.length} intersection markers`);
+                    
+                    // 添加详细信息注释（初始隐藏）
+                    annotations.push({
+                        text: analysisText,
+                        x: 0.02,
+                        y: titleY - 0.15,
+                        xref: 'paper',
+                        yref: 'paper',
+                        xanchor: 'left',
+                        yanchor: 'top',
+                        showarrow: false,
+                        font: {
+                            color: '#333',
+                            size: 10,
+                            family: 'Arial, sans-serif'
+                        },
+                        bgcolor: 'rgba(255, 255, 255, 0.95)',
+                        bordercolor: '#ccc',
+                        borderwidth: 1,
+                        name: detailsName,
+                        visible: false
+                    });
+                    
+                    // 更新布局
+                    Plotly.relayout(plotDiv, {
+                        shapes: shapes,
+                        annotations: annotations
+                    });
+                } else {
+                    console.log(`No x or y data available for trace at index ${thresholdIndex}`);
                 }
-                
-                // 添加分析信息注释 - 改为可展开的气泡样式
-                const unit = plotType === 'exposure' ? 'mJ/cm²' : '';
-                const analysisText = createThresholdAnalysisText(analysis, value, unit, plotType);
-                
-                // 创建简化的标题文本
-                const titleText = `阈值: ${value.toFixed(2)}${unit} 交点: ${analysis.intersections.length}个 ▼`;
-                
-                // 添加标题注释（始终可见）
-                annotations.push({
-                    name: `threshold_${plotType}_${thresholdIndex}_title`,
-                    text: titleText,
-                    x: 0.02,
-                    y: 0.98 - (thresholdIndex * 0.12), // 与详细信息保持一致的间距
-                    xref: 'paper',
-                    yref: 'paper',
-                    xanchor: 'left',
-                    yanchor: 'top',
-                    showarrow: false,
-                    font: {
-                        color: lineColor,
-                        size: 12,
-                        family: 'Arial, sans-serif',
-                        weight: 'bold'
-                    },
-                    bgcolor: 'rgba(255, 255, 255, 0.95)',
-                    bordercolor: lineColor,
-                    borderwidth: 2,
-                    borderpad: 6,
-                    clicktoshow: false,
-                    captureevents: true
-                });
-                
-                // 添加详细信息注释（可点击展开）- 使用纯文本，避免HTML显示
-                annotations.push({
-                    name: `threshold_${plotType}_${thresholdIndex}_details`,
-                    text: analysisText, // 直接使用纯文本，不包含HTML标签
-                    x: 0.02,
-                    y: 0.94 - (thresholdIndex * 0.12), // 增加垂直间距，为多行内容留出空间
-                    xref: 'paper',
-                    yref: 'paper',
-                    xanchor: 'left',
-                    yanchor: 'top',
-                    showarrow: false,
-                    font: {
-                        color: lineColor,
-                        size: 10,
-                        family: 'monospace'
-                    },
-                    bgcolor: 'rgba(255, 255, 255, 0.98)',
-                    bordercolor: lineColor,
-                    borderwidth: 1,
-                    borderpad: 10, // 增加内边距
-                    visible: false, // 默认隐藏详细信息
-                    clicktoshow: false,
-                    width: 320, // 增加宽度
-                    align: 'left' // 左对齐文本
-                });
-                
-                console.log(`Added annotations - total count: ${annotations.length}`);
             } else {
-                console.log(`No data available for threshold line`);
+                console.log(`Threshold index ${thresholdIndex} is out of range for available parameter traces`);
             }
         } else {
-            console.log(`Threshold not visible or no data for index ${thresholdIndex}`);
+            console.log(`Hiding threshold line`);
+            // 移除相关注释
+            let annotations = plotDiv.layout.annotations || [];
+            const titleName = `threshold_${plotType}_${thresholdIndex}_title`;
+            const detailsName = `threshold_${plotType}_${thresholdIndex}_details`;
+            annotations = annotations.filter(ann => 
+                ann.name !== titleName && ann.name !== detailsName
+            );
+            
+            // 更新布局
+            Plotly.relayout(plotDiv, {
+                shapes: shapes,
+                annotations: annotations
+            });
         }
-        
-        console.log(`Final shapes count: ${shapes.length}, annotations count: ${annotations.length}`);
-        
-        Plotly.relayout(plotDiv, { 
-            shapes: shapes,
-            annotations: annotations 
-        });
-        
-        console.log(`Threshold analysis for ${plotType} plot ${isVisible ? 'shown' : 'hidden'} at value ${value}`);
     } else {
         console.log(`Cannot update plot - missing plotDiv, layout, or data`);
     }
@@ -3391,4 +3591,520 @@ function updatePhiExprUI(parameterSet) {
             });
         }
     });
+}
+
+/**
+ * 添加Dill模型参数组
+ * 
+ * @param {String} customName 自定义名称
+ * @param {Object} params 参数对象
+ */
+function addDillParameterSet(customName, params) {
+    const template = document.getElementById('dill-parameter-set-template');
+    const clone = template.content.cloneNode(true);
+    
+    const setId = getNextSetId();
+    const parameterSet = clone.querySelector('.parameter-set');
+    parameterSet.dataset.setId = setId;
+    
+    // 设置标题
+    const title = parameterSet.querySelector('.parameter-set-title');
+    title.textContent = customName || `参数组 ${setId}`;
+    
+    // 设置自定义名称输入框
+    const nameInput = parameterSet.querySelector('.parameter-set-name-input');
+    if (customName && !customName.startsWith('参数组')) {
+        nameInput.value = customName;
+    }
+    
+    // 设置参数值
+    if (params) {
+        Object.keys(params).forEach(key => {
+            const slider = parameterSet.querySelector(`.slider.${key}`);
+            const numberInput = parameterSet.querySelector(`.parameter-item:has(.slider.${key}) .number-input`);
+            const parameterValue = parameterSet.querySelector(`.parameter-item:has(.slider.${key}) .parameter-value`);
+            
+            if (slider) {
+                slider.value = params[key];
+                if (numberInput) numberInput.value = params[key];
+                if (parameterValue) parameterValue.textContent = params[key];
+            }
+        });
+    }
+    
+    const container = document.getElementById('parameter-sets-container');
+    container.appendChild(parameterSet);
+    
+    initParameterSet(parameterSet);
+}
+
+/**
+ * 添加增强Dill模型参数组
+ * 
+ * @param {String} customName 自定义名称
+ * @param {Object} params 参数对象
+ */
+function addEnhancedDillParameterSet(customName, params) {
+    const template = document.getElementById('enhanced-dill-parameter-set-template');
+    const clone = template.content.cloneNode(true);
+    
+    const setId = getNextSetId();
+    const parameterSet = clone.querySelector('.parameter-set');
+    parameterSet.dataset.setId = setId;
+    
+    // 设置标题
+    const title = parameterSet.querySelector('.parameter-set-title');
+    title.textContent = customName || `参数组 ${setId}`;
+    
+    // 设置自定义名称输入框
+    const nameInput = parameterSet.querySelector('.parameter-set-name-input');
+    if (customName && !customName.startsWith('参数组')) {
+        nameInput.value = customName;
+    }
+    
+    // 设置参数值
+    if (params) {
+        Object.keys(params).forEach(key => {
+            let sliderClass = key;
+            if (key === 't_exp') sliderClass = 't_exp_enhanced';
+            if (key === 'K') sliderClass = 'K_enhanced';
+            if (key === 'V') sliderClass = 'V_enhanced';
+            
+            const slider = parameterSet.querySelector(`.slider.${sliderClass}`);
+            const numberInput = parameterSet.querySelector(`.parameter-item:has(.slider.${sliderClass}) .number-input`);
+            const parameterValue = parameterSet.querySelector(`.parameter-item:has(.slider.${sliderClass}) .parameter-value`);
+            
+            if (slider) {
+                slider.value = params[key];
+                if (numberInput) numberInput.value = params[key];
+                if (parameterValue) parameterValue.textContent = params[key];
+            }
+        });
+    }
+    
+    const container = document.getElementById('parameter-sets-container');
+    container.appendChild(parameterSet);
+    
+    initParameterSet(parameterSet);
+}
+
+/**
+ * 添加CAR模型参数组
+ * 
+ * @param {String} customName 自定义名称
+ * @param {Object} params 参数对象
+ */
+function addCarParameterSet(customName, params) {
+    const template = document.getElementById('car-parameter-set-template');
+    const clone = template.content.cloneNode(true);
+    
+    const setId = getNextSetId();
+    const parameterSet = clone.querySelector('.parameter-set');
+    parameterSet.dataset.setId = setId;
+    
+    // 设置标题
+    const title = parameterSet.querySelector('.parameter-set-title');
+    title.textContent = customName || `参数组 ${setId}`;
+    
+    // 设置自定义名称输入框
+    const nameInput = parameterSet.querySelector('.parameter-set-name-input');
+    if (customName && !customName.startsWith('参数组')) {
+        nameInput.value = customName;
+    }
+    
+    // 设置参数值
+    if (params) {
+        Object.keys(params).forEach(key => {
+            const sliderClass = `car_${key}`;
+            const slider = parameterSet.querySelector(`.slider.${sliderClass}`);
+            const numberInput = parameterSet.querySelector(`.parameter-item:has(.slider.${sliderClass}) .number-input`);
+            const parameterValue = parameterSet.querySelector(`.parameter-item:has(.slider.${sliderClass}) .parameter-value`);
+            
+            if (slider) {
+                slider.value = params[key];
+                if (numberInput) numberInput.value = params[key];
+                if (parameterValue) parameterValue.textContent = params[key];
+            }
+        });
+    }
+    
+    const container = document.getElementById('parameter-sets-container');
+    container.appendChild(parameterSet);
+    
+    initParameterSet(parameterSet);
+}
+
+/**
+ * 初始化加载期间日志功能
+ */
+function initLoadingLogs() {
+    // 获取DOM元素
+    loadingLogsPanel = document.getElementById('loading-logs-panel');
+    loadingLogsContainer = document.getElementById('loading-logs-container');
+    loadingProgressText = document.getElementById('loading-progress-text');
+    loadingTimeText = document.getElementById('loading-time-text');
+    
+    // 绑定按钮事件
+    const loadingLogsBtn = document.getElementById('loading-logs-btn');
+    const loadingLogsClose = document.getElementById('loading-logs-close');
+    const loadingLogsMinimize = document.getElementById('loading-logs-minimize');
+    
+    // 显示/隐藏日志面板
+    if (loadingLogsBtn) {
+        loadingLogsBtn.addEventListener('click', () => {
+            toggleLoadingLogsPanel();
+        });
+    }
+    
+    // 关闭日志面板
+    if (loadingLogsClose) {
+        loadingLogsClose.addEventListener('click', () => {
+            hideLoadingLogsPanel();
+        });
+    }
+    
+    // 最小化/还原日志面板
+    if (loadingLogsMinimize) {
+        loadingLogsMinimize.addEventListener('click', () => {
+            toggleLoadingLogsPanelMinimize();
+        });
+    }
+}
+
+/**
+ * 显示/隐藏加载期间日志面板
+ */
+function toggleLoadingLogsPanel() {
+    if (!loadingLogsPanel) return;
+    
+    if (loadingLogsPanel.classList.contains('visible')) {
+        hideLoadingLogsPanel();
+    } else {
+        showLoadingLogsPanel();
+    }
+}
+
+/**
+ * 显示加载期间日志面板
+ */
+function showLoadingLogsPanel() {
+    if (!loadingLogsPanel) return;
+    
+    loadingLogsPanel.classList.add('visible');
+    
+    // 开始获取实时日志
+    startLoadingLogsUpdate();
+}
+
+/**
+ * 隐藏加载期间日志面板
+ */
+function hideLoadingLogsPanel() {
+    if (!loadingLogsPanel) return;
+    
+    loadingLogsPanel.classList.remove('visible');
+    loadingLogsPanel.classList.remove('minimized');
+    
+    // 停止获取实时日志
+    stopLoadingLogsUpdate();
+}
+
+/**
+ * 最小化/还原日志面板
+ */
+function toggleLoadingLogsPanelMinimize() {
+    if (!loadingLogsPanel) return;
+    
+    loadingLogsPanel.classList.toggle('minimized');
+}
+
+/**
+ * 开始加载期间日志更新
+ */
+function startLoadingLogsUpdate() {
+    // 如果系统化日志管理器可用，使用新系统
+    if (window.systematicLogManager) {
+        window.systematicLogManager.startLogUpdates();
+    } else {
+        // 记录开始时间
+        loadingStartTime = Date.now();
+        
+        // 开始时间计时器
+        loadingTimeInterval = setInterval(() => {
+            updateLoadingTime();
+        }, 100);
+        
+        // 开始日志获取
+        updateLoadingLogs();
+        
+        // 定期更新日志
+        window.loadingLogsUpdateInterval = setInterval(() => {
+            updateLoadingLogs();
+        }, 1000);
+    }
+}
+
+/**
+ * 停止加载期间日志更新
+ */
+function stopLoadingLogsUpdate() {
+    // 如果系统化日志管理器可用，使用新系统
+    if (window.systematicLogManager) {
+        window.systematicLogManager.stopLogUpdates();
+    } else {
+        if (loadingTimeInterval) {
+            clearInterval(loadingTimeInterval);
+            loadingTimeInterval = null;
+        }
+        
+        if (window.loadingLogsUpdateInterval) {
+            clearInterval(window.loadingLogsUpdateInterval);
+            window.loadingLogsUpdateInterval = null;
+        }
+    }
+}
+
+/**
+ * 更新加载时间显示
+ */
+function updateLoadingTime() {
+    if (!loadingStartTime || !loadingTimeText) return;
+    
+    const elapsed = Date.now() - loadingStartTime;
+    const seconds = (elapsed / 1000).toFixed(1);
+    loadingTimeText.textContent = `${seconds}s`;
+}
+
+/**
+ * 获取并更新加载期间日志
+ */
+async function updateLoadingLogs() {
+    try {
+        const response = await fetch('/api/logs?limit=50');
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const logs = await response.json();
+        displayLoadingLogs(logs);
+        
+    } catch (error) {
+        console.error('获取加载日志失败:', error);
+        // 显示错误信息
+        if (loadingLogsContainer) {
+            const errorItem = createLoadingLogItem('error', '获取日志失败: ' + error.message);
+            prependLoadingLogItem(errorItem);
+        }
+    }
+}
+
+/**
+ * 显示加载期间日志
+ */
+function displayLoadingLogs(logs) {
+    if (!loadingLogsContainer || !logs || logs.length === 0) return;
+    
+    // 清除占位符
+    const placeholder = loadingLogsContainer.querySelector('.loading-logs-placeholder');
+    if (placeholder) {
+        placeholder.remove();
+    }
+    
+    // 获取当前显示的日志条目数
+    const currentItems = loadingLogsContainer.querySelectorAll('.loading-log-item').length;
+    
+    // 只显示新的日志条目
+    if (logs.length > currentItems) {
+        const newLogs = logs.slice(currentItems);
+        
+        newLogs.forEach(log => {
+            const logItem = createLoadingLogItem(
+                getLogType(log.message),
+                log.message,
+                new Date(log.timestamp)
+            );
+            prependLoadingLogItem(logItem);
+        });
+        
+        // 更新进度显示
+        updateLoadingProgress(logs);
+    }
+}
+
+/**
+ * 创建加载日志条目
+ */
+function createLoadingLogItem(type, message, timestamp) {
+    const item = document.createElement('div');
+    item.className = `loading-log-item ${type}`;
+    
+    const timeStr = timestamp ? formatTime(timestamp) : formatTime(new Date());
+    
+    item.innerHTML = `
+        <span class="loading-log-timestamp">[${timeStr}]</span>
+        <span class="loading-log-message">${escapeHtml(message)}</span>
+    `;
+    
+    return item;
+}
+
+/**
+ * 在日志列表顶部添加日志条目
+ */
+function prependLoadingLogItem(item) {
+    if (!loadingLogsContainer) return;
+    
+    // 添加进入动画
+    item.style.opacity = '0';
+    item.style.transform = 'translateY(-10px)';
+    
+    loadingLogsContainer.insertBefore(item, loadingLogsContainer.firstChild);
+    
+    // 触发动画
+    setTimeout(() => {
+        item.style.transition = 'all 0.3s ease';
+        item.style.opacity = '1';
+        item.style.transform = 'translateY(0)';
+    }, 10);
+    
+    // 限制显示的日志条目数量
+    const maxItems = 20;
+    const items = loadingLogsContainer.querySelectorAll('.loading-log-item');
+    if (items.length > maxItems) {
+        for (let i = maxItems; i < items.length; i++) {
+            items[i].remove();
+        }
+    }
+}
+
+/**
+ * 根据日志消息确定日志类型
+ */
+function getLogType(message) {
+    if (!message) return 'info';
+    
+    message = message.toLowerCase();
+    
+    if (message.includes('error') || message.includes('失败') || message.includes('错误')) {
+        return 'error';
+    } else if (message.includes('warning') || message.includes('警告')) {
+        return 'warning';
+    } else if (message.includes('进度:') || message.includes('progress:') || message.includes('计算完成') || message.includes('开始计算')) {
+        return 'progress';
+    } else if (message.includes('完成') || message.includes('成功') || message.includes('success')) {
+        return 'success';
+    }
+    
+    return 'info';
+}
+
+/**
+ * 更新加载进度显示
+ */
+function updateLoadingProgress(logs) {
+    if (!loadingProgressText || !logs || logs.length === 0) return;
+    
+    // 寻找最新的进度信息
+    for (let i = logs.length - 1; i >= 0; i--) {
+        const log = logs[i];
+        if (log.message && log.message.includes('进度:')) {
+            // 提取进度信息
+            const match = log.message.match(/进度:\s*(\d+)\/(\d+)/);
+            if (match) {
+                const current = parseInt(match[1]);
+                const total = parseInt(match[2]);
+                const percentage = ((current / total) * 100).toFixed(1);
+                loadingProgressText.textContent = `${current}/${total} (${percentage}%)`;
+                return;
+            }
+        }
+    }
+    
+    // 如果没有找到具体进度，显示状态信息
+    if (logs.length > 0) {
+        const latestLog = logs[logs.length - 1];
+        if (latestLog.message.includes('计算完成')) {
+            loadingProgressText.textContent = '计算完成';
+        } else if (latestLog.message.includes('开始计算')) {
+            loadingProgressText.textContent = '计算中...';
+        }
+    }
+}
+
+/**
+ * 格式化时间戳
+ */
+function formatTime(date) {
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+    return `${hours}:${minutes}:${seconds}`;
+}
+
+/**
+ * HTML转义
+ */
+function escapeHtml(unsafe) {
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+/**
+ * 执行从加载页到主页面的日志过渡动画
+ */
+function transitionLogsFromLoadingToMain() {
+    if (!loadingLogsPanel) return;
+    
+    const mainLogsModal = document.getElementById('logs-modal');
+    
+    // 如果加载期间日志面板可见，执行过渡动画
+    if (loadingLogsPanel.classList.contains('visible')) {
+        // 添加过渡动画类
+        loadingLogsPanel.classList.add('loading-to-main-transition');
+        
+        // 停止日志更新
+        stopLoadingLogsUpdate();
+        
+        // 延迟显示主页面日志
+        setTimeout(() => {
+            hideLoadingLogsPanel();
+            
+            if (mainLogsModal) {
+                mainLogsModal.classList.add('main-logs-transition');
+                showLogsModal();
+                
+                // 移除过渡动画类
+                setTimeout(() => {
+                    mainLogsModal.classList.remove('main-logs-transition');
+                }, 800);
+            }
+        }, 400);
+    }
+}
+
+/**
+ * 滑动到页面最底部并刷新日志系统
+ */
+function scrollToBottomAndRefreshLogs() {
+    // 滑动到页面最底部
+    window.scrollTo({
+        top: document.body.scrollHeight,
+        behavior: 'smooth'
+    });
+    
+    // 延迟一点时间后自动刷新日志
+    setTimeout(() => {
+        // 检查是否有刷新日志的按钮并点击它
+        const refreshBtn = document.getElementById('refresh-logs-btn');
+        if (refreshBtn && typeof refreshBtn.onclick === 'function') {
+            refreshBtn.onclick();
+        } else if (typeof loadLogs === 'function') {
+            // 如果没有找到按钮或按钮的点击事件，直接调用加载日志函数
+            loadLogs();
+        }
+    }, 500); // 等待滚动开始后再刷新日志
 }

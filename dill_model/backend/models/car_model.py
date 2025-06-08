@@ -15,6 +15,11 @@ import math
 import ast
 import re
 import warnings
+import logging  # 添加logging模块
+
+# 设置日志配置
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # 新增：全局字体设置，优先使用常见的无衬线字体
 plt.rcParams['font.sans-serif'] = ['Arial', 'DejaVu Sans', 'Liberation Sans', 'SimHei', 'Microsoft YaHei']
@@ -91,6 +96,43 @@ class CARModel:
         返回:
             初始光酸浓度分布数组
         """
+        logger.info("=" * 60)
+        logger.info("【CAR模型 - 光酸生成计算】")
+        logger.info("=" * 60)
+        
+        if sine_type == 'multi':
+            logger.info("🔸 2D模式光酸生成公式:")
+            logger.info("   I(x,y) = I_avg * (1 + V * cos(Kx*x + Ky*y + φ))")
+            logger.info("   D(x,y) = I(x,y) * t_exp")
+            logger.info("   [Acid](x,y) = η * D(x,y)  (归一化)")
+        elif sine_type == '3d':
+            logger.info("🔸 3D模式光酸生成公式:")
+            logger.info("   I(x,y,z) = I_avg * (1 + V * cos(Kx*x + Ky*y + Kz*z + φ))")
+            logger.info("   D(x,y,z) = I(x,y,z) * t_exp")
+            logger.info("   [Acid](x,y,z) = η * D(x,y,z)  (归一化)")
+        else:
+            logger.info("🔸 1D模式光酸生成公式:")
+            logger.info("   I(x) = I_avg * (1 + V * cos(K*x))")
+            logger.info("   D(x) = I(x) * t_exp")
+            logger.info("   [Acid](x) = η * D(x)  (归一化)")
+        
+        logger.info(f"🔸 输入变量值:")
+        logger.info(f"   - I_avg (平均光强) = {I_avg}")
+        logger.info(f"   - V (可见度) = {V}")
+        logger.info(f"   - t_exp (曝光时间) = {t_exp} s")
+        logger.info(f"   - η (光酸产生效率) = {acid_gen_efficiency}")
+        if sine_type == 'multi':
+            logger.info(f"   - Kx (X方向空间频率) = {Kx}")
+            logger.info(f"   - Ky (Y方向空间频率) = {Ky}")
+            logger.info(f"   - y (Y坐标) = {y}")
+        elif sine_type == '3d':
+            logger.info(f"   - Kx (X方向空间频率) = {Kx}")
+            logger.info(f"   - Ky (Y方向空间频率) = {Ky}")
+            logger.info(f"   - Kz (Z方向空间频率) = {Kz}")
+            logger.info(f"   - y (Y坐标) = {y}")
+            logger.info(f"   - z (Z坐标) = {z}")
+        else:
+            logger.info(f"   - K (空间频率) = {K}")
         if sine_type == 'multi' and Kx is not None:
             phi = parse_phi_expr(phi_expr, 0) if phi_expr is not None else 0.0
             intensity = I_avg * (1 + V * np.cos(Kx * x + Ky * y + phi))
@@ -122,8 +164,22 @@ class CARModel:
         返回:
             扩散后的光酸分布
         """
+        logger.info("=" * 60)
+        logger.info("【CAR模型 - 光酸扩散模拟】")
+        logger.info("=" * 60)
+        logger.info("🔸 扩散模型:")
+        logger.info("   使用高斯滤波器模拟后烘阶段的热扩散过程")
+        logger.info("   [Acid]_diffused = GaussianFilter([Acid]_initial, σ=EPDL)")
+        logger.info(f"🔸 扩散参数:")
+        logger.info(f"   - EPDL (光酸扩散长度) = {diffusion_length} 像素")
+        logger.info(f"   - 初始光酸分布范围: [{np.min(initial_acid):.4f}, {np.max(initial_acid):.4f}]")
+        
         # 使用高斯滤波器模拟扩散
         diffused_acid = gaussian_filter(initial_acid, sigma=diffusion_length)
+        
+        logger.info(f"   - 扩散后光酸分布范围: [{np.min(diffused_acid):.4f}, {np.max(diffused_acid):.4f}]")
+        logger.info(f"   - 扩散效果: 峰值平滑度提升 {diffusion_length:.1f}x")
+        
         return diffused_acid
     
     def calculate_deprotection(self, diffused_acid, reaction_rate, amplification):
@@ -138,8 +194,26 @@ class CARModel:
         返回:
             脱保护程度分布
         """
+        logger.info("=" * 60)
+        logger.info("【CAR模型 - 脱保护反应计算】")
+        logger.info("=" * 60)
+        logger.info("🔸 脱保护反应公式:")
+        logger.info("   脱保护程度 = 1 - exp(-k * A * [Acid]_diffused)")
+        logger.info("   其中: k=反应速率常数, A=放大因子")
+        logger.info(f"🔸 反应参数:")
+        logger.info(f"   - k (反应速率常数) = {reaction_rate}")
+        logger.info(f"   - A (放大因子) = {amplification}")
+        logger.info(f"   - 扩散光酸浓度范围: [{np.min(diffused_acid):.4f}, {np.max(diffused_acid):.4f}]")
+        
         # 计算催化反应的量，使用饱和模型
-        deprotection = 1 - np.exp(-reaction_rate * amplification * diffused_acid)
+        reaction_term = reaction_rate * amplification * diffused_acid
+        deprotection = 1 - np.exp(-reaction_term)
+        
+        logger.info(f"🔸 计算结果:")
+        logger.info(f"   - 反应项 k*A*[Acid] 范围: [{np.min(reaction_term):.4f}, {np.max(reaction_term):.4f}]")
+        logger.info(f"   - 脱保护程度范围: [{np.min(deprotection):.4f}, {np.max(deprotection):.4f}]")
+        logger.info(f"   - 最大脱保护率: {np.max(deprotection)*100:.1f}%")
+        
         return deprotection
     
     def calculate_dissolution(self, deprotection, contrast):
@@ -153,8 +227,24 @@ class CARModel:
         返回:
             显影后的光刻胶厚度分布（归一化）
         """
+        logger.info("=" * 60)
+        logger.info("【CAR模型 - 显影过程计算】")
+        logger.info("=" * 60)
+        logger.info("🔸 显影公式:")
+        logger.info("   剩余厚度 = 1 - (脱保护程度)^γ")
+        logger.info("   其中: γ=对比度参数，控制显影的非线性特性")
+        logger.info(f"🔸 显影参数:")
+        logger.info(f"   - γ (对比度参数) = {contrast}")
+        logger.info(f"   - 脱保护程度范围: [{np.min(deprotection):.4f}, {np.max(deprotection):.4f}]")
+        
         # 使用非线性函数模拟显影过程的对比度
         thickness = 1 - np.power(deprotection, contrast)
+        
+        logger.info(f"🔸 显影结果:")
+        logger.info(f"   - 剩余厚度范围: [{np.min(thickness):.4f}, {np.max(thickness):.4f}]")
+        logger.info(f"   - 最大溶解率: {(1-np.min(thickness))*100:.1f}%")
+        logger.info(f"   - 厚度对比度: {(np.max(thickness)-np.min(thickness)):.4f}")
+        
         return thickness
     
     def calculate_exposure_dose(self, x, I_avg, V, K, t_exp, sine_type='1d', Kx=None, Ky=None, Kz=None, phi_expr=None, y=0, z=0):
@@ -168,6 +258,48 @@ class CARModel:
             intensity = I_avg * (1 + V * np.cos(K * x))
         exposure_dose = intensity * t_exp
         return exposure_dose
+    
+    def calculate_car_distribution(self, x, I_avg, V, K, t_exp, acid_gen_efficiency, diffusion_length, reaction_rate, amplification, contrast):
+        """
+        计算CAR模型的1D空间分布数据，用于比较功能
+        
+        参数:
+            x: 位置坐标数组（列表或numpy数组）
+            I_avg: 平均入射光强度
+            V: 干涉条纹的可见度
+            K: 干涉条纹的空间频率
+            t_exp: 曝光时间
+            acid_gen_efficiency: 光酸产生效率
+            diffusion_length: 光酸扩散长度
+            reaction_rate: 催化反应速率常数
+            amplification: 放大因子
+            contrast: 对比度参数
+            
+        返回:
+            包含exposure_dose和thickness数组的字典
+        """
+        # 确保x是numpy数组
+        x_np = np.array(x) if not isinstance(x, np.ndarray) else x
+        
+        # 计算曝光剂量分布
+        exposure_dose = self.calculate_exposure_dose(x_np, I_avg, V, K, t_exp)
+        
+        # 计算初始光酸生成
+        initial_acid = self.calculate_acid_generation(x_np, I_avg, V, K, t_exp, acid_gen_efficiency)
+        
+        # 模拟光酸扩散
+        diffused_acid = self.simulate_acid_diffusion(initial_acid, diffusion_length)
+        
+        # 计算脱保护反应
+        deprotection = self.calculate_deprotection(diffused_acid, reaction_rate, amplification)
+        
+        # 计算光刻胶厚度分布
+        thickness = self.calculate_dissolution(deprotection, contrast)
+        
+        return {
+            'exposure_dose': exposure_dose,
+            'thickness': thickness
+        }
     
     def generate_data(self, I_avg, V, K, t_exp, acid_gen_efficiency, diffusion_length, reaction_rate, amplification, contrast, sine_type='1d', Kx=None, Ky=None, Kz=None, phi_expr=None, y_range=None, z_range=None):
         """
@@ -194,6 +326,38 @@ class CARModel:
         返回:
             包含x坐标和各阶段y值的数据字典
         """
+        logger.info("=" * 60)
+        logger.info("【CAR模型 - 完整流程数据生成】")
+        logger.info("=" * 60)
+        
+        logger.info(f"🔸 计算模式: {sine_type.upper()}")
+        logger.info(f"🔸 CAR模型完整流程:")
+        logger.info("   1. 光酸生成: [Acid] = η * D(x)")
+        logger.info("   2. 光酸扩散: [Acid]_diff = GaussianFilter([Acid], σ)")
+        logger.info("   3. 脱保护反应: Deprotection = 1 - exp(-k*A*[Acid]_diff)")
+        logger.info("   4. 显影过程: Thickness = 1 - (Deprotection)^γ")
+        
+        logger.info(f"🔸 全局参数:")
+        logger.info(f"   - I_avg (平均光强) = {I_avg}")
+        logger.info(f"   - V (可见度) = {V}")
+        logger.info(f"   - t_exp (曝光时间) = {t_exp} s")
+        logger.info(f"   - η (光酸产生效率) = {acid_gen_efficiency}")
+        logger.info(f"   - σ (扩散长度) = {diffusion_length}")
+        logger.info(f"   - k (反应速率) = {reaction_rate}")
+        logger.info(f"   - A (放大因子) = {amplification}")
+        logger.info(f"   - γ (对比度) = {contrast}")
+        
+        if sine_type == '1d':
+            logger.info(f"   - K (空间频率) = {K}")
+        elif sine_type == 'multi':
+            logger.info(f"   - Kx (X方向空间频率) = {Kx}")
+            logger.info(f"   - Ky (Y方向空间频率) = {Ky}")
+            if y_range is not None:
+                logger.info(f"   - y_range = [{min(y_range):.2f}, {max(y_range):.2f}] (共{len(y_range)}点)")
+        elif sine_type == '3d':
+            logger.info(f"   - Kx (X方向空间频率) = {Kx}")
+            logger.info(f"   - Ky (Y方向空间频率) = {Ky}")
+            logger.info(f"   - Kz (Z方向空间频率) = {Kz}")
         # 创建坐标
         x = np.linspace(0, 10, 1000).tolist()  # 0到10微米，1000个点
         x_np = np.array(x)

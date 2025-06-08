@@ -2,6 +2,20 @@
  * Dill模型Web应用 - 主逻辑脚本
  */
 
+// === 加载期间日志相关状态 ===
+let loadingLogsPanel = null;
+let loadingLogsContainer = null;
+let loadingProgressText = null;
+let loadingTimeText = null;
+let loadingStartTime = null;
+let loadingTimeInterval = null;
+
+// 全局变量，用于存储当前计算的模型和维度信息
+window.currentCalculationInfo = {
+    model: 'dill',
+    dimension: '1D'
+};
+
 // 文档加载完成后执行
 document.addEventListener('DOMContentLoaded', function() {
     // 初始化波形类型标题国际化
@@ -67,6 +81,21 @@ function initWaveTypeTitles() {
  * 初始化应用
  */
 function initApp() {
+    console.log('🔍 [DEBUG] initApp 开始执行');
+    
+    // 强制初始化系统化日志管理器
+    console.log('🔍 [DEBUG] 强制初始化系统化日志管理器...');
+    try {
+        if (typeof initSystematicLogs === 'function') {
+            window.systematicLogManager = initSystematicLogs();
+            console.log('✅ 系统化日志管理器初始化成功:', window.systematicLogManager);
+        } else {
+            console.error('❌ initSystematicLogs 函数未找到');
+        }
+    } catch (error) {
+        console.error('❌ 系统化日志管理器初始化失败:', error);
+    }
+    
     // 初始化界面元素
     initWaveTypeTitles();
     initSineWaveTypeSelectors();
@@ -85,9 +114,24 @@ function initApp() {
     
     // 为计算按钮绑定事件
     calculateBtn.addEventListener('click', function() {
+        // 首先滑动到页面最底部
+        scrollToBottomAndRefreshLogs();
+        
         let modelType = modelSelect.value;
         let postData = getParameterValues(); // 使用 getParameterValues 获取所有参数
         
+        // 更新当前计算信息
+        let dimension = '1D';
+        if (postData.sine_type === 'multi') {
+            dimension = '2D';
+        } else if (postData.sine_type === '3d') {
+            dimension = '3D';
+        }
+        window.currentCalculationInfo = {
+            model: modelType,
+            dimension: dimension
+        };
+
         // 显示加载动画
         loading.classList.add('active');
         // 修复：只修改动画里的文字部分，不覆盖整个动画结构
@@ -107,6 +151,14 @@ function initApp() {
         errorMessage.classList.remove('visible');
         // 隐藏结果区域
         resultsSection.classList.remove('visible');
+        
+        // 开始加载期间日志更新
+        startLoadingLogsUpdate();
+        
+        // 自动刷新系统化日志
+        if (window.systematicLogManager) {
+            window.systematicLogManager.autoRefreshLogsOnCalculation();
+        }
         
         // 调用API获取数据(使用交互式图表)
         calculateDillModelData(postData)
@@ -132,10 +184,16 @@ function initApp() {
                 
                 // 添加动画效果
                 resultsSection.classList.add('visible');
+                
+                // 执行日志过渡动画
+                transitionLogsFromLoadingToMain();
             })
             .catch(error => {
                 // 隐藏加载动画
                 loading.classList.remove('active');
+                
+                // 停止加载期间日志更新
+                stopLoadingLogsUpdate();
                 
                 // 改进错误信息提取
                 let msg = '';
@@ -3902,4 +3960,460 @@ function resetModelSpecificComponents() {
             container.style.display = 'none';
         }
     });
+}
+
+/**
+ * 初始化加载期间日志功能
+ */
+function initLoadingLogs() {
+    // 获取DOM元素
+    loadingLogsPanel = document.getElementById('loading-logs-panel');
+    loadingLogsContainer = document.getElementById('loading-logs-container');
+    loadingProgressText = document.getElementById('loading-progress-text');
+    loadingTimeText = document.getElementById('loading-time-text');
+    
+    // 绑定按钮事件
+    const loadingLogsBtn = document.getElementById('loading-logs-btn');
+    const loadingLogsClose = document.getElementById('loading-logs-close');
+    const loadingLogsMinimize = document.getElementById('loading-logs-minimize');
+    
+    // 显示/隐藏日志面板
+    if (loadingLogsBtn) {
+        loadingLogsBtn.addEventListener('click', () => {
+            toggleLoadingLogsPanel();
+        });
+    }
+    
+    // 关闭日志面板
+    if (loadingLogsClose) {
+        loadingLogsClose.addEventListener('click', () => {
+            hideLoadingLogsPanel();
+        });
+    }
+    
+    // 最小化/还原日志面板
+    if (loadingLogsMinimize) {
+        loadingLogsMinimize.addEventListener('click', () => {
+            toggleLoadingLogsPanelMinimize();
+        });
+    }
+}
+
+/**
+ * 显示/隐藏加载期间日志面板
+ */
+function toggleLoadingLogsPanel() {
+    console.log('🔍 [DEBUG] toggleLoadingLogsPanel 被调用');
+    console.log('🔍 [DEBUG] window.systematicLogManager 存在:', !!window.systematicLogManager);
+    
+    // 如果系统化日志管理器可用，使用新系统
+    if (window.systematicLogManager) {
+        console.log('🔍 [DEBUG] 使用新的系统化日志管理器');
+        window.systematicLogManager.togglePanel();
+    } else {
+        console.log('🔍 [DEBUG] 回退到旧的日志系统');
+        if (!loadingLogsPanel) return;
+        
+        if (loadingLogsPanel.classList.contains('visible')) {
+            hideLoadingLogsPanel();
+        } else {
+            showLoadingLogsPanel();
+        }
+    }
+}
+
+/**
+ * 显示加载期间日志面板
+ */
+function showLoadingLogsPanel() {
+    const loadingLogsPanel = document.getElementById('loading-logs-panel');
+    if (loadingLogsPanel) {
+        loadingLogsPanel.style.display = 'block';
+        setTimeout(() => {
+            loadingLogsPanel.classList.add('visible');
+            // 新增：滚动到日志面板
+            loadingLogsPanel.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }, 10);
+    }
+}
+
+/**
+ * 隐藏加载期间日志面板
+ */
+function hideLoadingLogsPanel() {
+    if (!loadingLogsPanel) return;
+    
+    loadingLogsPanel.classList.remove('visible');
+    loadingLogsPanel.classList.remove('minimized');
+    
+    // 等待动画完成后再隐藏
+    setTimeout(() => {
+        if (!loadingLogsPanel.classList.contains('visible')) {
+            loadingLogsPanel.style.display = 'none';
+        }
+    }, 400); // 与CSS动画时间保持一致
+    
+    // 停止获取实时日志
+    stopLoadingLogsUpdate();
+}
+
+/**
+ * 最小化/还原日志面板
+ */
+function toggleLoadingLogsPanelMinimize() {
+    if (!loadingLogsPanel) return;
+    
+    loadingLogsPanel.classList.toggle('minimized');
+}
+
+/**
+ * 开始加载期间日志更新
+ */
+function startLoadingLogsUpdate() {
+    // 如果系统化日志管理器可用，使用新系统
+    if (window.systematicLogManager) {
+        window.systematicLogManager.startLogUpdates();
+    } else {
+        // 记录开始时间
+        loadingStartTime = Date.now();
+        
+        // 开始时间计时器
+        loadingTimeInterval = setInterval(() => {
+            updateLoadingTime();
+        }, 100);
+        
+        // 开始日志获取
+        updateLoadingLogs();
+        
+        // 定期更新日志
+        window.loadingLogsUpdateInterval = setInterval(() => {
+            updateLoadingLogs();
+        }, 1000);
+    }
+}
+
+/**
+ * 停止加载期间日志更新
+ */
+function stopLoadingLogsUpdate() {
+    // 如果系统化日志管理器可用，使用新系统
+    if (window.systematicLogManager) {
+        window.systematicLogManager.stopLogUpdates();
+    } else {
+        if (loadingTimeInterval) {
+            clearInterval(loadingTimeInterval);
+            loadingTimeInterval = null;
+        }
+        
+        if (window.loadingLogsUpdateInterval) {
+            clearInterval(window.loadingLogsUpdateInterval);
+            window.loadingLogsUpdateInterval = null;
+        }
+    }
+}
+
+/**
+ * 更新加载时间显示
+ */
+function updateLoadingTime() {
+    if (!loadingStartTime || !loadingTimeText) return;
+    
+    const elapsed = Date.now() - loadingStartTime;
+    const seconds = (elapsed / 1000).toFixed(1);
+    loadingTimeText.textContent = `${seconds}s`;
+}
+
+/**
+ * 获取并更新加载期间日志
+ */
+async function updateLoadingLogs() {
+    try {
+        const response = await fetch('/api/logs?limit=50');
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const logs = await response.json();
+        displayLoadingLogs(logs);
+        
+    } catch (error) {
+        console.error('获取加载日志失败:', error);
+        // 显示错误信息
+        if (loadingLogsContainer) {
+            const errorItem = createLoadingLogItem('error', '获取日志失败: ' + error.message);
+            prependLoadingLogItem(errorItem);
+        }
+    }
+}
+
+/**
+ * 显示加载期间日志
+ */
+function displayLoadingLogs(logs) {
+    if (!loadingLogsContainer || !logs || logs.length === 0) return;
+    
+    // 清除占位符
+    const placeholder = loadingLogsContainer.querySelector('.loading-logs-placeholder');
+    if (placeholder) {
+        placeholder.remove();
+    }
+    
+    // 获取当前显示的日志条目数
+    const currentItems = loadingLogsContainer.querySelectorAll('.loading-log-item').length;
+    
+    // 只显示新的日志条目
+    if (logs.length > currentItems) {
+        const newLogs = logs.slice(currentItems);
+        
+        newLogs.forEach(log => {
+            const logItem = createLoadingLogItem(
+                getLogType(log.message),
+                log.message,
+                new Date(log.timestamp)
+            );
+            prependLoadingLogItem(logItem);
+        });
+        
+        // 更新进度显示
+        updateLoadingProgress(logs);
+    }
+}
+
+/**
+ * 创建加载日志条目
+ */
+function createLoadingLogItem(type, message, timestamp) {
+    const item = document.createElement('div');
+    item.className = `loading-log-item ${type}`;
+    
+    const timeStr = timestamp ? formatTime(timestamp) : formatTime(new Date());
+
+    let displayMessage = escapeHtml(message);
+    
+    // 获取当前计算信息
+    const calcInfo = window.currentCalculationInfo;
+    
+    if (calcInfo && calcInfo.model) {
+        // 模型名称映射，用于日志匹配
+        const modelNameMap = {
+            dill: 'Dill',
+            enhanced_dill: '增强Dill',
+            car: 'CAR'
+        };
+        
+        const modelDisplayName = modelNameMap[calcInfo.model];
+        
+        // 只有当日志类型与当前计算模型匹配时，才添加维度信息
+        if (modelDisplayName && message.includes(`[${modelDisplayName}]`)) {
+            const newTag = `[${modelDisplayName}: ${calcInfo.dimension}]`;
+            displayMessage = escapeHtml(message.replace(`[${modelDisplayName}]`, newTag));
+        }
+    }
+    
+    item.innerHTML = `
+        <span class="loading-log-timestamp">[${timeStr}]</span>
+        <span class="loading-log-message">${displayMessage}</span>
+    `;
+    
+    return item;
+}
+
+/**
+ * 在日志列表顶部添加日志条目
+ */
+function prependLoadingLogItem(item) {
+    if (!loadingLogsContainer) return;
+    
+    // 添加进入动画
+    item.style.opacity = '0';
+    item.style.transform = 'translateY(-10px)';
+    
+    loadingLogsContainer.insertBefore(item, loadingLogsContainer.firstChild);
+    
+    // 触发动画
+    setTimeout(() => {
+        item.style.transition = 'all 0.3s ease';
+        item.style.opacity = '1';
+        item.style.transform = 'translateY(0)';
+    }, 10);
+    
+    // 限制显示的日志条目数量
+    const maxItems = 20;
+    const items = loadingLogsContainer.querySelectorAll('.loading-log-item');
+    if (items.length > maxItems) {
+        for (let i = maxItems; i < items.length; i++) {
+            items[i].remove();
+        }
+    }
+}
+
+/**
+ * 根据日志消息确定日志类型
+ */
+function getLogType(message) {
+    if (!message) return 'info';
+    
+    message = message.toLowerCase();
+    
+    if (message.includes('error') || message.includes('失败') || message.includes('错误')) {
+        return 'error';
+    } else if (message.includes('warning') || message.includes('警告')) {
+        return 'warning';
+    } else if (message.includes('进度:') || message.includes('progress:') || message.includes('计算完成') || message.includes('开始计算')) {
+        return 'progress';
+    } else if (message.includes('完成') || message.includes('成功') || message.includes('success')) {
+        return 'success';
+    }
+    
+    return 'info';
+}
+
+/**
+ * 更新加载进度显示
+ */
+function updateLoadingProgress(logs) {
+    if (!loadingProgressText || !logs || logs.length === 0) return;
+    
+    // 寻找最新的进度信息
+    for (let i = logs.length - 1; i >= 0; i--) {
+        const log = logs[i];
+        if (log.message && log.message.includes('进度:')) {
+            // 提取进度信息
+            const match = log.message.match(/进度:\s*(\d+)\/(\d+)/);
+            if (match) {
+                const current = parseInt(match[1]);
+                const total = parseInt(match[2]);
+                const percentage = ((current / total) * 100).toFixed(1);
+                loadingProgressText.textContent = `${current}/${total} (${percentage}%)`;
+                return;
+            }
+        }
+    }
+    
+    // 如果没有找到具体进度，显示状态信息
+    if (logs.length > 0) {
+        const latestLog = logs[logs.length - 1];
+        if (latestLog.message.includes('计算完成')) {
+            loadingProgressText.textContent = '计算完成';
+        } else if (latestLog.message.includes('开始计算')) {
+            loadingProgressText.textContent = '计算中...';
+        }
+    }
+}
+
+/**
+ * 格式化时间戳
+ */
+function formatTime(date) {
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+    return `${hours}:${minutes}:${seconds}`;
+}
+
+/**
+ * HTML转义
+ */
+function escapeHtml(unsafe) {
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+/**
+ * 执行从加载页到主页面的日志过渡动画
+ */
+function transitionLogsFromLoadingToMain() {
+    if (!loadingLogsPanel) return;
+    
+    const mainLogsModal = document.getElementById('logs-modal');
+    
+    // 如果加载期间日志面板可见，执行过渡动画
+    if (loadingLogsPanel.classList.contains('visible')) {
+        // 添加过渡动画类
+        loadingLogsPanel.classList.add('loading-to-main-transition');
+        
+        // 停止日志更新
+        stopLoadingLogsUpdate();
+        
+        // 延迟显示主页面日志
+        setTimeout(() => {
+            hideLoadingLogsPanel();
+            
+            if (mainLogsModal && typeof showLogsModal === 'function') {
+                mainLogsModal.classList.add('main-logs-transition');
+                showLogsModal();
+                
+                // 移除过渡动画类
+                setTimeout(() => {
+                    mainLogsModal.classList.remove('main-logs-transition');
+                }, 800);
+            }
+        }, 400);
+    }
+}
+
+/**
+ * 测试新日志系统
+ */
+function testNewLogSystem() {
+    console.log('🧪 [TEST] 开始测试新日志系统');
+    
+    if (!window.systematicLogManager) {
+        console.error('❌ [TEST] 系统化日志管理器不存在');
+        return false;
+    }
+    
+    console.log('✅ [TEST] 系统化日志管理器存在');
+    
+    // 强制显示面板
+    try {
+        window.systematicLogManager.showPanel();
+        console.log('✅ [TEST] 强制显示面板成功');
+    } catch (error) {
+        console.error('❌ [TEST] 强制显示面板失败:', error);
+        return false;
+    }
+    
+    // 添加测试日志
+    try {
+        window.systematicLogManager.addLog('info', '这是一条测试日志信息', '2d', '详细信息测试');
+        window.systematicLogManager.addLog('progress', '这是一条测试进度信息', '3d');
+        window.systematicLogManager.addLog('success', '这是一条测试成功信息', '1d');
+        console.log('✅ [TEST] 添加测试日志成功');
+    } catch (error) {
+        console.error('❌ [TEST] 添加测试日志失败:', error);
+        return false;
+    }
+    
+    return true;
+}
+
+// 暴露测试函数到全局作用域，便于在控制台调用
+window.testNewLogSystem = testNewLogSystem;
+
+/**
+ * 滑动到页面最底部并刷新日志系统
+ */
+function scrollToBottomAndRefreshLogs() {
+    // 滑动到页面最底部
+    window.scrollTo({
+        top: document.body.scrollHeight,
+        behavior: 'smooth'
+    });
+    
+    // 延迟一点时间后自动刷新日志
+    setTimeout(() => {
+        // 检查是否有刷新日志的按钮并点击它
+        const refreshBtn = document.getElementById('refresh-logs-btn');
+        if (refreshBtn && typeof refreshBtn.onclick === 'function') {
+            refreshBtn.onclick();
+        } else if (typeof loadLogs === 'function') {
+            // 如果没有找到按钮或按钮的点击事件，直接调用加载日志函数
+            loadLogs();
+        }
+    }, 500); // 等待滚动开始后再刷新日志
 }

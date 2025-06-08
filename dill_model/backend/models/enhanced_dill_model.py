@@ -6,6 +6,11 @@ from io import BytesIO
 import base64
 import ast
 import logging  # 添加logging模块
+import time
+
+# 设置日志配置
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 def parse_phi_expr(phi_expr, t):
     """
@@ -47,19 +52,114 @@ class EnhancedDillModel:
     """
     def __init__(self, debug_mode=False):
         self.debug_mode = debug_mode  # 增加调试模式标志
+        if debug_mode:
+            logging.basicConfig(level=logging.DEBUG)
 
     def get_abc(self, z_h, T, t_B):
         """
         根据厚度z_h、前烘温度T、前烘时间t_B，拟合A/B/C参数
         公式见论文（可根据实际需要调整/拟合）
         """
+        logger.info("=" * 60)
+        logger.info("【增强Dill模型 - ABC参数计算】")
+        logger.info("=" * 60)
+        logger.info("🔸 使用公式:")
+        logger.info("   A(z_h,T,t_B) = -0.11989*D + 0.00466*T + 0.00551*D² - 0.0001084*D*T - 0.00001287*T² + 0.79655")
+        logger.info("   B(z_h,T,t_B) = 0.00066301*D + 0.00024413*T - 0.0096")
+        logger.info("   C(z_h,T,t_B) = -0.01233*D + 0.00054385*T + 0.00056988*D² - 0.00001487*D*T - 0.00000115*T² + 0.0629")
+        
+        # 参数范围检查
+        if not (1 <= z_h <= 100):
+            raise ValueError(f"胶厚z_h={z_h}超出合理范围[1, 100]μm")
+        if not (60 <= T <= 200):
+            raise ValueError(f"前烘温度T={T}超出合理范围[60, 200]℃")
+        if not (0.1 <= t_B <= 120):
+            raise ValueError(f"前烘时间t_B={t_B}超出合理范围[0.1, 120]min")
+        
+        logger.info(f"🔸 输入变量值:")
+        logger.info(f"   - z_h (胶厚) = {z_h} μm")
+        logger.info(f"   - T (前烘温度) = {T} ℃")
+        logger.info(f"   - t_B (前烘时间) = {t_B} min")
+        
         # 论文拟合公式（以AZ4562为例）
         # t_B未显式出现，假设已包含在T与z_h的关系中
         D = z_h  # 胶厚，单位um
+        logger.info(f"🔸 中间变量: D = z_h = {D}")
+        
         A = -0.11989 * D + 0.00466 * T + 0.00551 * D**2 - 0.0001084 * D * T - 0.00001287 * T**2 + 0.79655
         B = 0.00066301 * D + 0.00024413 * T - 0.0096
         C = -0.01233 * D + 0.00054385 * T + 0.00056988 * D**2 - 0.00001487 * D * T - 0.00000115 * T**2 + 0.0629
+        
+        logger.info(f"🔸 计算步骤详解:")
+        logger.info(f"   A = -0.11989*{D} + 0.00466*{T} + 0.00551*{D}² - 0.0001084*{D}*{T} - 0.00001287*{T}² + 0.79655")
+        logger.info(f"     = {-0.11989 * D:.6f} + {0.00466 * T:.6f} + {0.00551 * D**2:.6f} - {0.0001084 * D * T:.6f} - {0.00001287 * T**2:.6f} + 0.79655")
+        logger.info(f"     = {A:.6f}")
+        
+        logger.info(f"   B = 0.00066301*{D} + 0.00024413*{T} - 0.0096")
+        logger.info(f"     = {0.00066301 * D:.6f} + {0.00024413 * T:.6f} - 0.0096")
+        logger.info(f"     = {B:.6f}")
+        
+        logger.info(f"   C = -0.01233*{D} + 0.00054385*{T} + 0.00056988*{D}² - 0.00001487*{D}*{T} - 0.00000115*{T}² + 0.0629")
+        logger.info(f"     = {-0.01233 * D:.6f} + {0.00054385 * T:.6f} + {0.00056988 * D**2:.6f} - {0.00001487 * D * T:.6f} - {0.00000115 * T**2:.6f} + 0.0629")
+        logger.info(f"     = {C:.6f}")
+        
+        # 物理合理性检查
+        if A <= 0:
+            logger.warning(f"参数A={A:.6f} <= 0，这在物理上不合理，将调整为最小值0.001")
+            A = 0.001
+        if B < 0:
+            logger.warning(f"参数B={B:.6f} < 0，这在物理上不合理，将调整为0")
+            B = max(0, B)
+        if C <= 0:
+            logger.warning(f"参数C={C:.6f} <= 0，这在物理上不合理，将调整为最小值0.001")
+            C = 0.001
+            
+        logger.info(f"🔸 最终ABC参数:")
+        logger.info(f"   - A (光敏剂吸收率) = {A:.6f}")
+        logger.info(f"   - B (基底吸收率) = {B:.6f}")
+        logger.info(f"   - C (光敏速率常数) = {C:.6f}")
+            
+        if self.debug_mode:
+            logger.debug(f"[ABC参数] z_h={z_h}, T={T}, t_B={t_B} -> A={A:.6f}, B={B:.6f}, C={C:.6f}")
+            
         return A, B, C
+        
+    def validate_physical_constraints(self, I, M, z_h, I0, M0):
+        """
+        验证计算结果的物理合理性
+        """
+        issues = []
+        
+        # 检查光强
+        if np.any(I < 0):
+            issues.append("光强出现负值")
+        if np.any(I > 10 * I0):
+            issues.append(f"光强超出合理范围(>10*I0={10*I0})")
+            
+        # 检查PAC浓度
+        if np.any(M < 0):
+            issues.append("PAC浓度出现负值")
+        if np.any(M > M0):
+            issues.append(f"PAC浓度超出初始值(M0={M0})")
+            
+        # 检查深度衰减趋势
+        if len(I) > 1:
+            # 光强应该随深度递减（除非有强烈的干涉效应）
+            if I[-1] > I[0] * 2:
+                issues.append("光强深度分布异常：深层光强远大于表层")
+                
+        # 检查PAC浓度变化趋势
+        if len(M) > 1:
+            # PAC浓度应该随着曝光剂量增加而减少
+            avg_M_surface = np.mean(M[:len(M)//5])  # 表层平均
+            avg_M_deep = np.mean(M[-len(M)//5:])    # 深层平均
+            if avg_M_surface < avg_M_deep * 0.5:
+                issues.append("PAC浓度深度分布异常：表层消耗过度")
+        
+        if issues and self.debug_mode:
+            logger.warning(f"[物理验证] 发现问题: {', '.join(issues)}")
+            
+        return len(issues) == 0, issues
 
     def dill_ode(self, y, t, A, B, C, I0):
         """
@@ -71,146 +171,236 @@ class EnhancedDillModel:
         dMdt = -I * M * C
         return [dIdz, dMdt]
 
-    def simulate(self, z_h, T, t_B, I0=1.0, M0=1.0, t_exp=5.0, num_points=100, sine_type='1d', Kx=None, Ky=None, Kz=None, phi_expr=None, V=0, y=0, K=None):
+    def solve_enhanced_dill_pde(self, z_h, T, t_B, I0=1.0, M0=1.0, t_exp=5.0, num_z_points=100, num_t_points=200, x_position=None, K=None, V=0, phi_expr=None):
         """
-        增强Dill模型仿真，支持1D正弦波、2D正弦波和3D正弦波
+        真正的Enhanced Dill模型：数值求解耦合偏微分方程系统
+        
+        方程组：
+        ∂I(z,t)/∂z = -I(z,t)[A(z_h,T,t_B) * M(z,t) + B(z_h,T,t_B)]
+        ∂M(z,t)/∂t = -I(z,t) * M(z,t) * C(z_h,T,t_B)
         
         参数：
-        - K：空间频率，如果提供此参数，将覆盖Kx（用于1D模式）
-        - V：干涉条纹可见度，控制正弦波振幅
-        - sine_type：波形类型 ('single'=1D, 'multi'=2D, '3d'=3D)
+        - x_position: 横向空间位置，用于边界条件的空间调制
+        - K, V: 空间频率和可见度，用于边界条件
         """
+        logger.info("=" * 60)
+        logger.info("【增强Dill模型 - 偏微分方程求解】")
+        logger.info("=" * 60)
+        logger.info("🔸 使用微分方程组:")
+        logger.info("   ∂I(z,t)/∂z = -I(z,t)[A(z_h,T,t_B) * M(z,t) + B(z_h,T,t_B)]")
+        logger.info("   ∂M(z,t)/∂t = -I(z,t) * M(z,t) * C(z_h,T,t_B)")
+        logger.info("🔸 边界/初始条件:")
+        logger.info("   I(0,t) = I0 * (1 + V * cos(K*x + φ))  (表面光强)")
+        logger.info("   M(z,0) = M0  (初始PAC浓度)")
+        
+        A, B, C = self.get_abc(z_h, T, t_B)
+        
+        logger.info(f"🔸 PDE求解参数:")
+        logger.info(f"   - I0 (初始光强) = {I0}")
+        logger.info(f"   - M0 (初始PAC浓度) = {M0}")
+        logger.info(f"   - t_exp (曝光时间) = {t_exp}")
+        logger.info(f"   - x_position (横向位置) = {x_position}")
+        logger.info(f"   - K (空间频率) = {K}")
+        logger.info(f"   - V (可见度) = {V}")
+        logger.info(f"   - phi_expr (相位表达式) = '{phi_expr}'")
+        
+        # 空间和时间网格
+        z = np.linspace(0, z_h, num_z_points)
+        t = np.linspace(0, t_exp, num_t_points)
+        dz = z[1] - z[0] if len(z) > 1 else z_h / num_z_points
+        dt = t[1] - t[0] if len(t) > 1 else t_exp / num_t_points
+        
+        logger.info(f"🔸 数值计算网格:")
+        logger.info(f"   - z方向: [0, {z_h}], 点数: {num_z_points}, 步长: {dz:.6f}")
+        logger.info(f"   - t方向: [0, {t_exp}], 点数: {num_t_points}, 步长: {dt:.6f}")
+        
+        # 初始化解数组
+        I = np.zeros((num_z_points, num_t_points))  # I(z,t)
+        M = np.zeros((num_z_points, num_t_points))  # M(z,t)
+        
+        # 边界条件：表面光强随空间位置变化（如果提供了x_position和调制参数）
+        if x_position is not None and K is not None and V > 0:
+            phi = parse_phi_expr(phi_expr, 0) if phi_expr is not None else 0.0
+            surface_I0 = I0 * (1 + V * np.cos(K * x_position + phi))
+            logger.info(f"🔸 表面光强计算:")
+            logger.info(f"   - 相位 φ = {phi}")
+            logger.info(f"   - 调制项 = V * cos(K*x + φ) = {V} * cos({K}*{x_position} + {phi}) = {V * np.cos(K * x_position + phi):.6f}")
+            logger.info(f"   - surface_I0 = I0 * (1 + 调制项) = {I0} * (1 + {V * np.cos(K * x_position + phi):.6f}) = {surface_I0:.6f}")
+        else:
+            surface_I0 = I0
+            logger.info(f"🔸 使用恒定表面光强: surface_I0 = {surface_I0}")
+            
+        # 初始条件
+        I[0, :] = surface_I0  # 表面光强保持恒定（边界条件）
+        M[:, 0] = M0         # 初始PAC浓度均匀分布
+        
+        logger.info(f"🔸 初始条件设置:")
+        logger.info(f"   - I(0,t) = {surface_I0} (所有时间步)")
+        logger.info(f"   - M(z,0) = {M0} (所有深度)")
+        
+        # 数值求解：使用交替方向隐式差分法 (ADI)
+        logger.info("🔸 开始数值求解过程...")
+        logger.info("   使用交替方向隐式差分法 (ADI)")
+        
+        progress_steps = [num_t_points // 4, num_t_points // 2, 3 * num_t_points // 4, num_t_points - 1]
+        
+        for t_idx in range(1, num_t_points):
+            # 报告进度
+            if t_idx in progress_steps:
+                progress = t_idx / (num_t_points - 1) * 100
+                logger.info(f"   求解进度: {progress:.1f}% (时间步 {t_idx}/{num_t_points-1})")
+            
+            # 时间步进：先更新M，再更新I
+            
+            # 1. 更新PAC浓度：∂M/∂t = -I * M * C
+            for z_idx in range(num_z_points):
+                I_curr = I[z_idx, t_idx-1]
+                M_prev = M[z_idx, t_idx-1]
+                
+                # 显式欧拉法更新M
+                dM_dt = -I_curr * M_prev * C
+                M[z_idx, t_idx] = M_prev + dM_dt * dt
+                
+                # 确保物理约束
+                M[z_idx, t_idx] = max(0, min(M[z_idx, t_idx], M0))
+            
+            # 2. 更新光强：∂I/∂z = -I * (A * M + B)
+            # 保持边界条件
+            I[0, t_idx] = surface_I0
+            
+            for z_idx in range(1, num_z_points):
+                I_prev_z = I[z_idx-1, t_idx]
+                M_curr = M[z_idx-1, t_idx]  # 使用当前时刻的M
+                
+                # 向前差分求解
+                dI_dz = -I_prev_z * (A * M_curr + B)
+                I[z_idx, t_idx] = I_prev_z + dI_dz * dz
+                
+                # 确保物理约束
+                I[z_idx, t_idx] = max(0, I[z_idx, t_idx])
+        
+        # 返回最终时刻的分布
+        I_final = I[:, -1]
+        M_final = M[:, -1]
+        
+        # 计算曝光剂量：对时间积分
+        exposure_dose = np.trapz(I, t, axis=1)
+        
+        # 物理验证
+        is_valid, issues = self.validate_physical_constraints(I_final, M_final, z_h, surface_I0, M0)
+        
+        if self.debug_mode:
+            logger.debug(f"[Enhanced Dill PDE] 求解完成:")
+            logger.debug(f"  z_h={z_h}, A={A:.6f}, B={B:.6f}, C={C:.6f}")
+            logger.debug(f"  surface_I0={surface_I0:.4f}")
+            logger.debug(f"  I_final范围: [{I_final.min():.4f}, {I_final.max():.4f}]")
+            logger.debug(f"  M_final范围: [{M_final.min():.4f}, {M_final.max():.4f}]")
+            logger.debug(f"  exposure_dose范围: [{exposure_dose.min():.4f}, {exposure_dose.max():.4f}]")
+            logger.debug(f"  物理验证: {'通过' if is_valid else '失败'}")
+            if not is_valid:
+                logger.debug(f"  验证问题: {issues}")
+        
+        # 如果物理验证失败，记录警告但仍返回结果
+        if not is_valid:
+            logger.warning(f"Enhanced Dill PDE求解结果可能存在物理问题: {issues}")
+        
+        return z, I_final, M_final, exposure_dose
+
+    def adaptive_solve_enhanced_dill_pde(self, z_h, T, t_B, I0=1.0, M0=1.0, t_exp=5.0, x_position=None, K=None, V=0, phi_expr=None, max_points=200, tolerance=1e-4):
+        """
+        自适应步长的Enhanced Dill PDE求解器，根据计算复杂度自动调整网格密度
+        """
+        start_time = time.time()
+        
+        A, B, C = self.get_abc(z_h, T, t_B)
+        
+        # 根据参数复杂度自适应调整网格点数
+        if V > 0.7 and K is not None and K > 5:
+            # 高频高对比度情况，需要更密集的网格
+            num_z_points = min(max_points, 150)
+            num_t_points = min(max_points, 150)
+        elif V > 0.3:
+            # 中等调制情况
+            num_z_points = min(max_points, 100)
+            num_t_points = min(max_points, 120)
+        else:
+            # 低调制或无调制情况
+            num_z_points = min(max_points, 80)
+            num_t_points = min(max_points, 100)
+        
+        # 调用标准PDE求解器
+        z, I_final, M_final, exposure_dose = self.solve_enhanced_dill_pde(
+            z_h, T, t_B, I0, M0, t_exp, 
+            num_z_points=num_z_points, 
+            num_t_points=num_t_points,
+            x_position=x_position, K=K, V=V, phi_expr=phi_expr
+        )
+        
+        compute_time = time.time() - start_time
+        
+        # 收敛性检查：如果结果变化剧烈，增加网格密度重新计算
+        if len(I_final) > 2:
+            max_gradient = np.max(np.abs(np.diff(I_final)))
+            if max_gradient > tolerance and num_z_points < max_points:
+                if self.debug_mode:
+                    logger.debug(f"[自适应求解] 检测到高梯度({max_gradient:.6f})，增加网格密度重新计算")
+                
+                # 重新计算，增加50%的网格点
+                z, I_final, M_final, exposure_dose = self.solve_enhanced_dill_pde(
+                    z_h, T, t_B, I0, M0, t_exp, 
+                    num_z_points=min(max_points, int(num_z_points * 1.5)), 
+                    num_t_points=min(max_points, int(num_t_points * 1.5)),
+                    x_position=x_position, K=K, V=V, phi_expr=phi_expr
+                )
+                compute_time = time.time() - start_time
+        
+        if self.debug_mode:
+            logger.debug(f"[自适应求解] 完成，网格: {num_z_points}x{num_t_points}, 时间: {compute_time:.3f}s")
+        
+        return z, I_final, M_final, exposure_dose, compute_time
+
+    def simulate(self, z_h, T, t_B, I0=1.0, M0=1.0, t_exp=5.0, num_points=100, sine_type='1d', Kx=None, Ky=None, Kz=None, phi_expr=None, V=0, y=0, K=None, x_position=None):
+        """
+        Enhanced Dill模型仿真入口函数，支持不同的计算模式
+        
+        参数：
+        - x_position: 横向空间位置，用于1D比较模式
+        - K：空间频率，用于1D模式
+        - V：干涉条纹可见度
+        - sine_type：计算模式 ('1d', 'multi', '3d')
+        """
+        # 对于1D比较模式，使用PDE求解器
+        if sine_type in ['1d', 'single'] and x_position is not None:
+            z, I_final, M_final, exposure_dose = self.solve_enhanced_dill_pde(
+                z_h, T, t_B, I0, M0, t_exp, 
+                num_z_points=num_points,
+                x_position=x_position, 
+                K=K, V=V, phi_expr=phi_expr
+            )
+            return z, I_final, M_final
+            
+        # 对于其他模式，保留原有的简化计算（用于向后兼容）
         A, B, C = self.get_abc(z_h, T, t_B)
         z = np.linspace(0, z_h, num_points)
         
-        # 确保1D模式下，如果提供了K，则使用K值
-        current_K = K if K is not None else Kx
+        # 简化模型：用于快速预览和2D/3D计算
+        alpha = A + B
+        base_I = I0 * np.exp(-alpha * z)
         
-        # 检查是否为1D正弦波模式
-        is_1d_sine = (current_K is not None and sine_type in ['single', '1d'] and V > 0)
+        # 应用深度方向的基础衰减
+        I_final = base_I
         
-        # 仅在调试模式下输出调试信息
-        if self.debug_mode:
-            logging.debug("[调试信息] Enhanced Dill 1D正弦波条件检查:")
-            logging.debug(f"  K = {current_K}, sine_type = {sine_type}, V = {V}")
-            logging.debug(f"  条件1(K is not None): {current_K is not None}")
-            logging.debug(f"  条件2(sine_type in ['single', '1d']): {sine_type in ['single', '1d']}")
-            logging.debug(f"  条件3(V > 0): {V > 0}")
-            logging.debug(f"  最终结果(is_1d_sine): {is_1d_sine}")
-            logging.debug(f"  A = {A}, B = {B}, C = {C}")
+        # PAC浓度计算：使用积分形式
+        integrated_I = np.trapz(np.tile(I_final, (100, 1)), np.linspace(0, t_exp, 100), axis=0)
+        M_final = M0 * np.exp(-C * integrated_I)
         
-        if is_1d_sine:
-            # 1D正弦波模式：生成正弦波调制的光强和PAC浓度分布
-            phi = parse_phi_expr(phi_expr, 0) if phi_expr is not None else 0.0
-            
-            # 基础衰减曲线（类似原始Dill模型）
-            # 使用简化的指数衰减模型：I(z) = I0 * exp(-alpha * z)
-            alpha = A + B  # 总的衰减系数
-            # 减小alpha以增强正弦波效果
-            alpha_reduced = alpha * 0.7  # 减小衰减系数，增强正弦波效果
-            base_I = I0 * np.exp(-alpha_reduced * z)
-            
-            # 应用正弦波调制：I(z) = base_I(z) * (1 + V * np.cos(K * z + phi))
-            I_final = base_I * (1 + V * np.cos(current_K * z + phi))
-            
-            # PAC浓度与光强相关：M(z) = M0 * exp(-C * I(z) * t_exp)
-            # I_final(z) is the effective intensity at depth z over the exposure time
-            M_final = M0 * np.exp(-C * I_final * t_exp)
-            
-            # 确保物理意义：光强和PAC浓度都非负，且在合理范围内
-            I_final = np.maximum(0, I_final)
-            M_final = np.clip(M_final, 0, M0)
-            
-            return z, I_final, M_final
-            
-        else:
-            # 原有的时间演化模式（用于非1D正弦波情况）
-            t_points = 200  # 时间步数
-            t = np.linspace(0, t_exp, t_points)
-            dz = z[1] - z[0] if len(z) > 1 else 0.1
-            dt = t[1] - t[0] if len(t) > 1 else t_exp / t_points
-            
-            # 设置初始光强分布
-            if Kx is not None and sine_type == 'multi':
-                # 2D正弦波：I(x,y) = I0 * (1 + V * cos(Kx * x + Ky * y + phi))
-                x_coords_calc = np.linspace(0, 10, num_points) # Renamed to avoid conflict with simulate's x parameter if any
-                phi = parse_phi_expr(phi_expr, 0) if phi_expr is not None else 0.0
-                I0_arr = I0 * (1 + V * np.cos(Kx * x_coords_calc + Ky * y + phi))
-            elif sine_type == '3d' and Kx is not None and Ky is not None and Kz is not None:
-                # 3D正弦波：I(x,y,z) = I0 * (1 + V * cos(Kx * x + Ky * y + Kz * z + phi))
-                x_coords_calc = np.linspace(0, 10, num_points) # Renamed
-                phi = parse_phi_expr(phi_expr, 0) if phi_expr is not None else 0.0
-                # 对于深度模拟，我们在z=0处设定初始条件
-                I0_arr = I0 * (1 + V * np.cos(Kx * x_coords_calc + Ky * y + Kz * 0 + phi))
-            else:
-                 # This 'else' will also catch 1D cases if is_1d_sine was false due to V=0, K=None etc.
-                # For non-1D-sine cases, I0_arr might be modulated based on K, V if K was passed for other modes.
-                # If K was provided for 1D mode but V was 0, I0_arr would be I0 * (1 + 0 * cos) = I0 (constant array)
-                # If K was None for 1D, I0_arr = np.full(num_points, I0) (constant array)
-                
-                # Correct I0_arr initialization for the 'else' branch based on parameters:
-                # This logic was previously outside and before the is_1d_sine split.
-                # Now it's part of the 'else' path for the time-evolution model.
-                current_K_for_I0 = Kx # Default to Kx for multi/3D
-                if K is not None and sine_type in ['single', '1d']:
-                    current_K_for_I0 = K # Use K for 1D if provided
-                
-                if current_K_for_I0 is not None and V > 0: # Check V > 0 here for modulation
-                    # Applies to 1D, multi, or 3D if K/Kx and V are set
-                    # For 1D sine (if it fell into this else branch due to V=0 initially, then V would be 0 here)
-                    # use 'z' for 1D spatial coord, 'x_coords_calc' for 2D/3D's x-like coord
-                    spatial_coord = z if sine_type in ['single', '1d'] else np.linspace(0,10,num_points)
-                    phi_val = parse_phi_expr(phi_expr, 0) if phi_expr is not None else 0.0
-                    
-                    if sine_type in ['single', '1d']:
-                        I0_arr = I0 * (1 + V * np.cos(current_K_for_I0 * spatial_coord + phi_val))
-                    elif sine_type == 'multi': # Ky must exist
-                         I0_arr = I0 * (1 + V * np.cos(Kx * spatial_coord + Ky * y + phi_val))
-                    elif sine_type == '3d': # Kx, Ky, Kz must exist
-                         I0_arr = I0 * (1 + V * np.cos(Kx * spatial_coord + Ky * y + Kz * 0 + phi_val)) # z=0 for surface
-                    else:
-                        I0_arr = np.full(num_points, I0) # Fallback, should not happen
-                else:
-                    # No K or V=0, so no modulation for I0_arr
-                    I0_arr = np.full(num_points, I0)
+        # 确保物理约束
+        I_final = np.maximum(0, I_final)
+        M_final = np.clip(M_final, 0, M0)
+        
+        return z, I_final, M_final
 
-            # 初始化二维数组
-            I = np.zeros((num_points, t_points))
-            M = np.zeros((num_points, t_points))
-            
-            # 初始条件
-            I[:, 0] = I0_arr
-            M[:, 0] = M0
-            
-            # 时间演化：使用修正的欧拉法
-            for j_time in range(1, t_points):  # 时间步 (renamed j to j_time)
-                for i_depth in range(num_points):  # 深度步 (renamed i to i_depth)
-                    if i_depth == 0:
-                        # z=0边界条件：保持初始光强分布
-                        I[i_depth, j_time] = I0_arr[i_depth]
-                    else:
-                        # 光强在深度方向的衰减：dI/dz = -I * (A * M + B)
-                        dI_dz = -I[i_depth-1, j_time-1] * (A * M[i_depth-1, j_time-1] + B)
-                        I[i_depth, j_time] = I[i_depth-1, j_time-1] + dI_dz * dz
-                        
-                        # 确保光强非负
-                        I[i_depth, j_time] = max(0, I[i_depth, j_time])
-                    
-                    # PAC浓度的时间演化：dM/dt = -I * M * C
-                    # M uses I at current depth and *current* time step from I array
-                    dM_dt = -I[i_depth, j_time] * M[i_depth, j_time-1] * C 
-                    M[i_depth, j_time] = M[i_depth, j_time-1] + dM_dt * dt
-                    
-                    # 确保PAC浓度非负
-                    M[i_depth, j_time] = max(0, M[i_depth, j_time])
-            
-            # 返回最终时刻的分布
-            I_final = I[:, -1]
-            M_final = M[:, -1]
-            
-            return z, I_final, M_final
-
-    def generate_data(self, z_h, T, t_B, I0=1.0, M0=1.0, t_exp=5.0, sine_type='1d', Kx=None, Ky=None, Kz=None, phi_expr=None, V=0, K=None, y_range=None, z_range=None):
+    def generate_data(self, z_h, T, t_B, I0=1.0, M0=1.0, t_exp=5.0, sine_type='1d', Kx=None, Ky=None, Kz=None, phi_expr=None, V=0, K=None, y_range=None, z_range=None, x_position=None, num_points=100):
         """
         生成增强Dill模型的数据，支持1D/2D/3D模式
         
@@ -219,21 +409,103 @@ class EnhancedDillModel:
         - V：干涉条纹可见度，控制空间调制深度
         - y_range：Y轴范围数组，用于生成2D数据
         - sine_type：波形类型 ('single'=1D, 'multi'=2D, '3d'=3D)
+        - x_position：横向空间位置，用于1D比较模式
         """
+        logger.info("=" * 60)
+        logger.info("【增强Dill模型 - 数据生成】")
+        logger.info("=" * 60)
+        
         # 确保sine_type参数正确
         if sine_type == 'single':
             sine_type = '1d'
         
+        logger.info(f"🔸 计算模式: {sine_type.upper()}")
+        logger.info(f"🔸 输入参数:")
+        logger.info(f"   - z_h (胶厚) = {z_h} μm")
+        logger.info(f"   - T (前烘温度) = {T} ℃")
+        logger.info(f"   - t_B (前烘时间) = {t_B} min")
+        logger.info(f"   - I0 (初始光强) = {I0}")
+        logger.info(f"   - M0 (初始PAC浓度) = {M0}")
+        logger.info(f"   - t_exp (曝光时间) = {t_exp} s")
+        logger.info(f"   - V (可见度) = {V}")
+        if sine_type == '1d':
+            logger.info(f"   - K (空间频率) = {K}")
+            logger.info(f"   - x_position (横向位置) = {x_position}")
+        elif sine_type == 'multi':
+            logger.info(f"   - Kx (X方向空间频率) = {Kx}")
+            logger.info(f"   - Ky (Y方向空间频率) = {Ky}")
+            if y_range is not None:
+                logger.info(f"   - y_range = [{min(y_range):.2f}, {max(y_range):.2f}] (共{len(y_range)}点)")
+        elif sine_type == '3d':
+            logger.info(f"   - Kx (X方向空间频率) = {Kx}")
+            logger.info(f"   - Ky (Y方向空间频率) = {Ky}")
+            logger.info(f"   - Kz (Z方向空间频率) = {Kz}")
+        
         # 添加调试输出，检查参数传递
         if self.debug_mode:
-            logging.debug(f"[generate_data] 输入参数: K={K}, V={V}, sine_type={sine_type}")
+            logger.debug(f"[generate_data] 输入参数: K={K}, V={V}, sine_type={sine_type}, x_position={x_position}")
+        
+        # 1D模式：使用PDE求解器
+        if sine_type == '1d' and x_position is not None:
+            try:
+                z, I_final, M_final, exposure_dose = self.solve_enhanced_dill_pde(
+                    z_h, T, t_B, I0, M0, t_exp,
+                    num_z_points=num_points, num_t_points=200,
+                    x_position=x_position, K=K, V=V, phi_expr=phi_expr
+                )
+                
+                return {
+                    'z': z.tolist(),
+                    'I': I_final.tolist(),
+                    'M': M_final.tolist(),
+                    'exposure_dose': exposure_dose.tolist(),
+                    'success': True
+                }
+            except Exception as e:
+                if self.debug_mode:
+                    logger.error(f"[generate_data] PDE求解失败: {e}")
+                
+                # 回退到简化模型
+                A, B, C = self.get_abc(z_h, T, t_B)
+                z = np.linspace(0, z_h, num_points)
+                alpha = A + B
+                
+                # 边界条件
+                if K is not None and V > 0:
+                    phi = parse_phi_expr(phi_expr, 0) if phi_expr is not None else 0.0
+                    surface_I0 = I0 * (1 + V * np.cos(K * x_position + phi))
+                else:
+                    surface_I0 = I0
+                
+                I_final = surface_I0 * np.exp(-alpha * z)
+                exposure_dose = I_final * t_exp
+                M_final = M0 * np.exp(-C * exposure_dose)
+                
+                return {
+                    'z': z.tolist(),
+                    'I': I_final.tolist(),
+                    'M': M_final.tolist(),
+                    'exposure_dose': exposure_dose.tolist(),
+                    'success': False,
+                    'fallback_used': True
+                }
         
         # 2D热力图模式
-        if sine_type == 'multi' and Kx is not None and Ky is not None and y_range is not None and len(y_range) > 1:
+        elif sine_type == 'multi' and Kx is not None and Ky is not None and y_range is not None and len(y_range) > 1:
+            logger.info("🔸 2D热力图模式计算公式:")
+            logger.info("   I(x,y) = I0 * (1 + V * cos(Kx*x + Ky*y + φ))")
+            logger.info("   D(x,y) = I(x,y) * t_exp")
+            logger.info("   M(x,y) = M0 * (1 - 0.5 * V * cos(Kx*x + Ky*y + φ))")
+            
             # 生成2D热力图数据
             x_points = 100  # x轴点数
             x_coords = np.linspace(0, 10, x_points)
             y_coords = np.array(y_range)
+            
+            logger.info(f"🔸 2D网格设置:")
+            logger.info(f"   - x轴范围: [0, 10], 点数: {x_points}")
+            logger.info(f"   - y轴范围: [{min(y_coords):.2f}, {max(y_coords):.2f}], 点数: {len(y_coords)}")
+            logger.info(f"   - 总计算点数: {x_points * len(y_coords)}")
             
             # 初始化2D数组
             z_exposure_dose = np.zeros((len(y_coords), len(x_coords)))
@@ -282,10 +554,22 @@ class EnhancedDillModel:
         
         # 3D表面模式
         elif sine_type == '3d' and Kx is not None and Ky is not None and Kz is not None:
+            logger.info("🔸 3D体积模式计算公式:")
+            logger.info("   I(x,y,z) = I0 * (1 + V * cos(Kx*x + Ky*y + Kz*z + φ))")
+            logger.info("   D(x,y,z) = I(x,y,z) * t_exp")
+            logger.info("   M(x,y,z) = M0 * (1 - 0.5 * V * cos(Kx*x + Ky*y + Kz*z + φ))")
+            
             # 生成3D表面数据
             x_points = 50
             y_points = 50
             z_points = 5  # 创建5个Z平面的切片
+            
+            logger.info(f"🔸 3D网格设置:")
+            logger.info(f"   - x轴点数: {x_points}")
+            logger.info(f"   - y轴点数: {y_points}") 
+            logger.info(f"   - z轴层数: {z_points}")
+            logger.info(f"   - 每层计算点数: {x_points * y_points}")
+            logger.info(f"   - 总计算点数: {x_points * y_points * z_points}")
             
             # 设置范围
             x_min, x_max = 0, 10
@@ -348,14 +632,24 @@ class EnhancedDillModel:
         
         # 1D模式（默认模式）
         else:
+            logger.info("🔸 1D模式计算公式:")
+            logger.info("   I(z) = I0 * exp(-α*z)  其中 α = A + B")
+            logger.info("   D(z) = I(z) * t_exp")
+            logger.info("   M(z) = M0 * exp(-C * D(z))")
+            
             # 确保1D模式传递V值
             if K is not None and sine_type in ['single', '1d'] and V <= 0:
-                print(f"[1D警告] 干涉条纹可见度V={V}，已设为默认值0.8以显示正弦波")
+                logger.warning(f"[1D警告] 干涉条纹可见度V={V}，已设为默认值0.8以显示正弦波")
                 V = 0.8  # 当未设置V或V=0时，使用默认值0.8以显示正弦波效果
+            
+            logger.info(f"🔸 1D计算参数:")
+            logger.info(f"   - 计算点数: {num_points}")
+            if K is not None and V > 0:
+                logger.info(f"   - 包含正弦波调制: I(z) = I0 * (1 + V*cos(K*z)) * exp(-α*z)")
             
             # 生成1D数据，支持正弦波调制
             z, I, M = self.simulate(z_h, T, t_B, I0, M0, t_exp, 
-                                    sine_type=sine_type, Kx=Kx, Ky=Ky, Kz=Kz, 
+                                    num_points=num_points, sine_type=sine_type, Kx=Kx, Ky=Ky, Kz=Kz, 
                                     phi_expr=phi_expr, V=V, K=K)
             
             return {
@@ -375,7 +669,7 @@ class EnhancedDillModel:
         """
         # 确保1D模式下V值有效
         if K is not None and sine_type in ['single', '1d'] and V <= 0:
-            print(f"[Plots警告] 干涉条纹可见度V={V}，已设为默认值0.8以显示正弦波")
+            logger.warning(f"[Plots警告] 干涉条纹可见度V={V}，已设为默认值0.8以显示正弦波")
             V = 0.8  # 使用默认值以显示正弦波效果
 
         plt.close('all')

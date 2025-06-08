@@ -3771,3 +3771,214 @@ div[data-i18n="car_formula_ref"] {
         max-width: 220px;
     }
 }
+
+/* 结果区域头部样式 */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.view-logs-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(52, 152, 219, 0.2);
+}
+
+.view-logs-btn:hover {
+    background: linear-gradient(135deg, #2980b9, #1f5f8b);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+}
+
+.view-logs-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(52, 152, 219, 0.2);
+}
+
+.view-logs-btn i {
+    font-size: 1rem;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .view-logs-btn {
+        align-self: flex-end;
+        padding: 8px 12px;
+        font-size: 0.85rem;
+    }
+}
+
+/* 日志弹窗样式 */
+.logs-modal-content {
+    max-width: 95vw;
+    max-height: 90vh;
+    width: 95%;
+    height: 85vh;
+    display: flex;
+    flex-direction: column;
+    margin: 2.5vh auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #e0e0e0;
+    background: #f8f9fa;
+}
+
+.modal-title {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.modal-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.log-filter-select {
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    background: white;
+}
+
+/* 确保日志弹窗默认隐藏 */
+#logs-modal {
+    display: none;
+}
+
+.log-control-btn, .close-modal-btn {
+    padding: 8px 10px;
+    border: none;
+    border-radius: 4px;
+    background: #3498db;
+    color: white;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
+}
+
+.log-control-btn:hover, .close-modal-btn:hover {
+    background: #2980b9;
+}
+
+.close-modal-btn {
+    background: #e74c3c;
+}
+
+.close-modal-btn:hover {
+    background: #c0392b;
+}
+
+.modal-body {
+    padding: 20px;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* 确保子元素不会溢出 */
+}
+
+.logs-container {
+    background-color: #f4f4f4;
+    border-radius: 5px;
+    padding: 15px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.9em;
+    border: 1px solid #ddd;
+    flex-grow: 1; /* 占据可用空间 */
+    overflow-y: auto; /* 关键：当内容溢出时显示滚动条 */
+}
+
+.log-entry {
+    padding: 4px 8px;
+    border-bottom: 1px solid #e7e7e7;
+    white-space: pre-wrap; /* 允许长消息换行 */
+    word-break: break-all;
+}
+
+.log-timestamp {
+    color: #7f8c8d;
+    font-weight: normal;
+}
+
+.log-type {
+    font-weight: bold;
+    margin: 0 5px;
+}
+
+.log-type.info { color: #3498db; }
+.log-type.progress { color: #27ae60; }
+.log-type.stats { color: #8e44ad; }
+.log-type.warning { color: #f39c12; }
+.log-type.error { color: #e74c3c; }
+
+.log-model {
+    background: #ecf0f1;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.8rem;
+    margin: 0 5px;
+}
+
+.log-model.dill { background: #d5dbdb; }
+.log-model.enhanced_dill { background: #aed6f1; }
+.log-model.car { background: #f9e79f; }
+.log-model.system { background: #d5d5d5; }
+
+.log-message {
+    color: #2c3e50;
+}
+
+.logs-empty {
+    text-align: center;
+    padding: 40px;
+    color: #7f8c8d;
+}
+
+.logs-empty i {
+    font-size: 2rem;
+    margin-bottom: 10px;
+    opacity: 0.5;
+}
+
+.logs-loading {
+    text-align: center;
+    padding: 20px;
+    color: #7f8c8d;
+}
+
+.logs-stats {
+    padding: 10px;
+    border-top: 1px solid #e0e0e0;
+    background: #f8f9fa;
+    font-size: 0.9rem;
+    color: #7f8c8d;
+    flex-shrink: 0;
+}
