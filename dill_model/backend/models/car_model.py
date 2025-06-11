@@ -301,7 +301,7 @@ class CARModel:
             'thickness': thickness
         }
     
-    def generate_data(self, I_avg, V, K, t_exp, acid_gen_efficiency, diffusion_length, reaction_rate, amplification, contrast, sine_type='1d', Kx=None, Ky=None, Kz=None, phi_expr=None, y_range=None, z_range=None):
+    def generate_data(self, I_avg, V, K, t_exp, acid_gen_efficiency, diffusion_length, reaction_rate, amplification, contrast, sine_type='1d', Kx=None, Ky=None, Kz=None, phi_expr=None, y_range=None, z_range=None, enable_4d_animation=False, t_start=0, t_end=5, time_steps=20):
         """
         生成模型数据用于交互式图表
         
@@ -380,60 +380,140 @@ class CARModel:
             # 创建网格点 (用于2D表面)
             X, Y = np.meshgrid(x_coords, y_coords)
             
-            # 计算相位
-            phi = parse_phi_expr(phi_expr, 0) if phi_expr is not None else 0.0
+            # 检查是否启用4D动画
+            if enable_4d_animation:
+                logger.info(f"🔸 4D动画参数:")
+                logger.info(f"   - 时间范围: {t_start}s ~ {t_end}s")
+                logger.info(f"   - 时间步数: {time_steps}")
+                
+                # 生成时间序列数据
+                time_array = np.linspace(t_start, t_end, time_steps)
+                
+                # 存储每个时间步的数据
+                animation_data = {
+                    'x_coords': x_coords.tolist(),
+                    'y_coords': y_coords.tolist(),
+                    'time_array': time_array.tolist(),
+                    'time_steps': time_steps,
+                    'initial_acid_frames': [],
+                    'diffused_acid_frames': [],
+                    'deprotection_frames': [],
+                    'thickness_frames': [],
+                    'enable_4d_animation': True,
+                    'sine_type': '3d',
+                    'is_3d': True
+                }
+                
+                for t_idx, t in enumerate(time_array):
+                    # 计算当前时间的相位
+                    phi_t = parse_phi_expr(phi_expr, t) if phi_expr is not None else 0.0
+                    
+                    # 1. 增大频率系数使波纹更加明显
+                    Kx_scaled = Kx * 2.0
+                    Ky_scaled = Ky * 2.0
+                    
+                    # 2. 增加振幅，确保波动很明显
+                    amplitude = 0.8 if V < 0.2 else V
+                    
+                    # 3. 生成当前时间的正弦波形状
+                    modulation_t = np.cos(Kx_scaled * X + Ky_scaled * Y + phi_t)
+                    
+                    # 4. 计算各阶段数据
+                    # 曝光剂量与光强成正比
+                    base_exposure = I_avg * t_exp
+                    variation = amplitude * base_exposure * 0.5
+                    exposure_dose_t = base_exposure + variation * modulation_t
+                    
+                    # 初始光酸生成与曝光剂量成正比
+                    acid_base = acid_gen_efficiency * base_exposure
+                    acid_variation = acid_gen_efficiency * variation
+                    initial_acid_t = acid_base + acid_variation * modulation_t
+                    initial_acid_t = initial_acid_t / np.max(initial_acid_t)  # 归一化
+                    
+                    # 模拟光酸扩散 - 使用高斯滤波
+                    diffused_acid_t = gaussian_filter(initial_acid_t, sigma=diffusion_length)
+                    
+                    # 计算脱保护反应
+                    deprotection_t = 1 - np.exp(-reaction_rate * amplification * diffused_acid_t)
+                    
+                    # 计算光刻胶厚度分布
+                    thickness_t = 1 - np.power(deprotection_t, contrast)
+                    
+                    # 确保数组维度正确
+                    if exposure_dose_t.shape != (y_points, x_points):
+                        exposure_dose_t = exposure_dose_t.T
+                        initial_acid_t = initial_acid_t.T
+                        diffused_acid_t = diffused_acid_t.T
+                        deprotection_t = deprotection_t.T
+                        thickness_t = thickness_t.T
+                    
+                    # 存储当前帧数据
+                    animation_data['initial_acid_frames'].append(initial_acid_t.tolist())
+                    animation_data['diffused_acid_frames'].append(diffused_acid_t.tolist())
+                    animation_data['deprotection_frames'].append(deprotection_t.tolist())
+                    animation_data['thickness_frames'].append(thickness_t.tolist())
+                    
+                    logger.info(f"   - 时间步 {t_idx+1}/{time_steps} (t={t:.2f}s) 计算完成")
+                
+                logger.info(f"🔸 4D动画数据生成完成，共{time_steps}帧")
+                return animation_data
             
-            # 1. 增大频率系数使波纹更加明显
-            Kx_scaled = Kx * 2.0
-            Ky_scaled = Ky * 2.0
-            
-            # 2. 增加振幅，确保波动很明显
-            amplitude = 0.8 if V < 0.2 else V
-            
-            # 3. 生成真正的正弦波形状
-            modulation = np.cos(Kx_scaled * X + Ky_scaled * Y + phi)  # 纯正弦波
-            
-            # 4. 计算各阶段数据
-            # 曝光剂量与光强成正比
-            base_exposure = I_avg * t_exp
-            variation = amplitude * base_exposure * 0.5
-            exposure_dose = base_exposure + variation * modulation
-            
-            # 初始光酸生成与曝光剂量成正比
-            acid_base = acid_gen_efficiency * base_exposure
-            acid_variation = acid_gen_efficiency * variation
-            initial_acid = acid_base + acid_variation * modulation
-            initial_acid = initial_acid / np.max(initial_acid)  # 归一化
-            
-            # 模拟光酸扩散 - 使用高斯滤波
-            diffused_acid = gaussian_filter(initial_acid, sigma=diffusion_length)
-            
-            # 计算脱保护反应
-            deprotection = 1 - np.exp(-reaction_rate * amplification * diffused_acid)
-            
-            # 计算光刻胶厚度分布
-            thickness = 1 - np.power(deprotection, contrast)
-            
-            # 确保数组维度正确
-            if exposure_dose.shape != (y_points, x_points):
-                exposure_dose = exposure_dose.T
-                initial_acid = initial_acid.T
-                diffused_acid = diffused_acid.T
-                deprotection = deprotection.T
-                thickness = thickness.T
-            
-            # 返回3D数据
-            return {
-                'x_coords': x_coords.tolist(),
-                'y_coords': y_coords.tolist(),
-                'exposure_dose': exposure_dose.tolist(),
-                'initial_acid': initial_acid.tolist(),
-                'diffused_acid': diffused_acid.tolist(),
-                'deprotection': deprotection.tolist(),
-                'thickness': thickness.tolist(),
-                'sine_type': '3d',
-                'is_3d': True
-            }
+            else:
+                # 原有的静态3D数据生成
+                # 计算相位
+                phi = parse_phi_expr(phi_expr, 0) if phi_expr is not None else 0.0
+                
+                # 1. 增大频率系数使波纹更加明显
+                Kx_scaled = Kx * 2.0
+                Ky_scaled = Ky * 2.0
+                
+                # 2. 增加振幅，确保波动很明显
+                amplitude = 0.8 if V < 0.2 else V
+                
+                # 3. 生成真正的正弦波形状
+                modulation = np.cos(Kx_scaled * X + Ky_scaled * Y + phi)  # 纯正弦波
+                
+                # 4. 计算各阶段数据
+                # 曝光剂量与光强成正比
+                base_exposure = I_avg * t_exp
+                variation = amplitude * base_exposure * 0.5
+                exposure_dose = base_exposure + variation * modulation
+                
+                # 初始光酸生成与曝光剂量成正比
+                acid_base = acid_gen_efficiency * base_exposure
+                acid_variation = acid_gen_efficiency * variation
+                initial_acid = acid_base + acid_variation * modulation
+                initial_acid = initial_acid / np.max(initial_acid)  # 归一化
+                
+                # 模拟光酸扩散 - 使用高斯滤波
+                diffused_acid = gaussian_filter(initial_acid, sigma=diffusion_length)
+                
+                # 计算脱保护反应
+                deprotection = 1 - np.exp(-reaction_rate * amplification * diffused_acid)
+                
+                # 计算光刻胶厚度分布
+                thickness = 1 - np.power(deprotection, contrast)
+                
+                # 确保数组维度正确
+                if exposure_dose.shape != (y_points, x_points):
+                    exposure_dose = exposure_dose.T
+                    initial_acid = initial_acid.T
+                    diffused_acid = diffused_acid.T
+                    deprotection = deprotection.T
+                    thickness = thickness.T
+                
+                # 返回3D数据
+                return {
+                    'x_coords': x_coords.tolist(),
+                    'y_coords': y_coords.tolist(),
+                    'exposure_dose': exposure_dose.tolist(),
+                    'initial_acid': initial_acid.tolist(),
+                    'diffused_acid': diffused_acid.tolist(),
+                    'deprotection': deprotection.tolist(),
+                    'thickness': thickness.tolist(),
+                    'sine_type': '3d',
+                    'is_3d': True
+                }
         # 二维正弦波
         elif sine_type == 'multi' and Kx is not None and Ky is not None:
             if y_range is not None and len(y_range) > 1:
@@ -464,7 +544,7 @@ class CARModel:
                     'z_initial_acid': initial_acid_2d.tolist(),   # 为前端提供完整的2D热力图数据
                     'z_diffused_acid': diffused_acid_2d.tolist(), # 为前端提供完整的2D热力图数据
                     'z_deprotection': deprotection_2d.tolist(),   # 为前端提供完整的2D热力图数据
-                    'initial_acid': initial_acid_2d.flatten().tolist(),
+                    'initial_acid': initial_acid_2d.flatten().tolist(),  # 保留这些，确保与其他功能兼容
                     'diffused_acid': diffused_acid_2d.flatten().tolist(),
                     'deprotection': deprotection_2d.flatten().tolist(),
                     'thickness': thickness_2d.flatten().tolist(),

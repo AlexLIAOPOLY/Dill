@@ -1,0 +1,1812 @@
+/**
+ * CAR模型功能实现
+ */
+
+// 初始CAR模型参数
+const defaultCarParams = {
+    I_avg: 10,
+    V: 0.8,
+    K: 2,
+    t_exp: 5,
+    acid_gen_efficiency: 0.5,
+    diffusion_length: 3,
+    reaction_rate: 0.3,
+    amplification: 10,
+    contrast: 3
+};
+
+// 当前CAR模型参数
+let currentCarParams = {...defaultCarParams};
+
+// CAR模型参数范围和步长
+const carParamRanges = {
+    I_avg: { min: 1, max: 100, step: 0.1 },
+    V: { min: 0, max: 1, step: 0.01 },
+    K: { min: 0.1, max: 10, step: 0.1 },
+    t_exp: { min: 0.1, max: 20, step: 0.1 },
+    acid_gen_efficiency: { min: 0.01, max: 1, step: 0.01 },
+    diffusion_length: { min: 0, max: 20, step: 0.1 },
+    reaction_rate: { min: 0.01, max: 1, step: 0.01 },
+    amplification: { min: 1, max: 50, step: 0.5 },
+    contrast: { min: 0.1, max: 10, step: 0.1 }
+};
+
+// 初始化CAR模型界面
+function initCarModel() {
+    // 绑定参数滑块事件
+    Object.keys(defaultCarParams).forEach(param => {
+        const slider = document.getElementById(`car_${param}`);
+        
+        // 添加检查确保slider不是null
+        if (!slider) {
+            console.warn(`未找到ID为car_${param}的滑块元素`);
+            return; // 跳过当前迭代
+        }
+        
+        const numInput = slider.parentElement ? slider.parentElement.querySelector('input[type="number"]') : null;
+        const valueDisplay = slider.parentElement && slider.parentElement.parentElement ? 
+                            slider.parentElement.parentElement.querySelector('.parameter-value') : null;
+        
+        if (slider && numInput) {
+            // 设置初始值
+            slider.value = defaultCarParams[param];
+            numInput.value = defaultCarParams[param];
+            if (valueDisplay) {
+                valueDisplay.textContent = defaultCarParams[param];
+            }
+            
+            // 绑定滑块事件
+            slider.addEventListener('input', function() {
+                numInput.value = this.value;
+                if (valueDisplay) {
+                    valueDisplay.textContent = this.value;
+                }
+                currentCarParams[param] = parseFloat(this.value);
+            });
+            
+            // 绑定数字输入框事件
+            numInput.addEventListener('change', function() {
+                const range = carParamRanges[param];
+                let value = parseFloat(this.value);
+                
+                // 验证范围
+                if (value < range.min) value = range.min;
+                if (value > range.max) value = range.max;
+                
+                this.value = value;
+                slider.value = value;
+                if (valueDisplay) {
+                    valueDisplay.textContent = value;
+                }
+                currentCarParams[param] = value;
+            });
+        }
+    });
+    
+    // 绑定计算按钮事件（使用全局计算按钮）
+    const calculateBtn = document.getElementById('calculate-btn');
+    if (calculateBtn) {
+        // 检查是否已经绑定了事件
+        if (!calculateBtn.hasAttribute('data-car-bound')) {
+            calculateBtn.setAttribute('data-car-bound', 'true');
+            calculateBtn.addEventListener('click', function() {
+                const modelType = document.getElementById('model-select').value;
+                if (modelType === 'car') {
+                    calculateCarModel();
+                }
+            });
+        }
+    }
+    
+    // 绑定4D动画启用复选框事件
+    const enable4dCheckbox = document.getElementById('car_enable_4d_animation');
+    const car4dParams = document.getElementById('car-4d-params');
+    if (enable4dCheckbox && car4dParams) {
+        // 初始状态
+        car4dParams.style.display = enable4dCheckbox.checked ? 'block' : 'none';
+        
+        // 绑定变化事件
+        enable4dCheckbox.addEventListener('change', function() {
+            car4dParams.style.display = this.checked ? 'block' : 'none';
+        });
+    }
+    
+    // 显示工艺流程图 (未创建时不执行)
+    renderCarProcessFlow();
+}
+
+// 渲染CAR工艺流程图
+function renderCarProcessFlow() {
+    const processContainer = document.getElementById('car-process-flow');
+    if (!processContainer) return;
+    
+    const steps = [
+        { icon: '☀️', desc: '曝光产生光酸' },
+        { icon: '🔥', desc: '后烘扩散' },
+        { icon: '⚛️', desc: '脱保护反应' },
+        { icon: '💧', desc: '显影溶解' }
+    ];
+    
+    let html = '<div class="car-process-diagram">';
+    
+    steps.forEach((step, index) => {
+        html += `
+            <div class="car-process-step">
+                <div class="car-step-icon">${step.icon}</div>
+                <div class="car-step-description">${step.desc}</div>
+            </div>
+        `;
+        
+        if (index < steps.length - 1) {
+            html += '<div class="car-process-arrow">→</div>';
+        }
+    });
+    
+    html += '</div>';
+    processContainer.innerHTML = html;
+}
+
+// 计算CAR模型
+function calculateCarModel() {
+    // 显示加载动画
+    document.getElementById('loading').style.display = 'flex';
+    
+    // 自动刷新系统化日志
+    if (window.systematicLogManager) {
+        window.systematicLogManager.autoRefreshLogsOnCalculation();
+    }
+    
+    // 获取4D动画参数
+    const enable4dAnimation = document.getElementById('car_enable_4d_animation').checked;
+    const sineType = document.getElementById('car-sine-type').value;
+    
+    // 准备API请求数据
+    const requestData = {
+        model_type: 'car',
+        ...currentCarParams
+    };
+    
+    // 添加4D动画参数（仅在3D模式下且启用4D动画时）
+    if (enable4dAnimation && sineType === '3d') {
+        requestData.enable_4d_animation = true;
+        requestData.t_start = parseFloat(document.getElementById('car_t_start').value) || 0;
+        requestData.t_end = parseFloat(document.getElementById('car_t_end').value) || 5;
+        requestData.time_steps = parseInt(document.getElementById('car_time_steps').value) || 20;
+        requestData.animation_speed = parseInt(document.getElementById('car_animation_speed').value) || 500;
+        
+        // 获取3D参数
+        requestData.sine_type = '3d';
+        requestData.Kx = parseFloat(document.getElementById('car_Kx_3d').value) || 2;
+        requestData.Ky = parseFloat(document.getElementById('car_Ky_3d').value) || 1;
+        requestData.Kz = parseFloat(document.getElementById('car_Kz_3d').value) || 1;
+        requestData.phi_expr = document.getElementById('car_phi_expr_3d').value || 'sin(t)';
+        
+        // 获取3D范围参数
+        const x_min = parseFloat(document.getElementById('car_x_min_3d').value) || 0;
+        const x_max = parseFloat(document.getElementById('car_x_max_3d').value) || 10;
+        const y_min = parseFloat(document.getElementById('car_y_min_3d').value) || 0;
+        const y_max = parseFloat(document.getElementById('car_y_max_3d').value) || 10;
+        const z_min = parseFloat(document.getElementById('car_z_min_3d').value) || 0;
+        const z_max = parseFloat(document.getElementById('car_z_max_3d').value) || 10;
+        
+        requestData.x_range = [x_min, x_max];
+        requestData.y_range = [y_min, y_max];
+        requestData.z_range = [z_min, z_max];
+    }
+    
+    // 发送API请求
+    fetch('/api/calculate', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            displayCarResults(data.data);
+        } else {
+            showErrorMessage(data.message || '计算失败');
+        }
+    })
+    .catch(error => {
+        showErrorMessage(`请求错误: ${error.message}`);
+    })
+    .finally(() => {
+        // 隐藏加载动画
+        document.getElementById('loading').style.display = 'none';
+    });
+    
+    // 同时请求交互式数据
+    fetch('/api/calculate_data', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // 检查是否是4D动画数据
+            if (data.data && data.data.enable_4d_animation) {
+                render4DAnimation(data.data);
+            } else {
+                renderCarInteractivePlots(data.data);
+            }
+        }
+    })
+    .catch(error => {
+        console.error('获取交互式数据失败:', error);
+    });
+}
+
+// 显示CAR模型结果
+function displayCarResults(results) {
+    // 显示结果图
+    const resultsContainer = document.getElementById('car-results');
+    if (!resultsContainer) return;
+    
+    let html = '<div class="car-results-container">';
+    
+    // 显示初始光酸分布图
+    if (results.initial_acid_plot) {
+        html += `
+            <div class="car-result-card">
+                <div class="car-result-title">初始光酸分布</div>
+                <img class="car-result-image" src="data:image/png;base64,${results.initial_acid_plot}" alt="初始光酸分布">
+                <p>曝光后产生的初始光酸空间分布</p>
+            </div>
+        `;
+    }
+    
+    // 显示光酸扩散对比图
+    if (results.acid_diffusion_plot) {
+        html += `
+            <div class="car-result-card">
+                <div class="car-result-title">光酸扩散过程</div>
+                <img class="car-result-image" src="data:image/png;base64,${results.acid_diffusion_plot}" alt="光酸扩散过程">
+                <p>后烘过程中光酸扩散效果对比</p>
+            </div>
+        `;
+    }
+    
+    // 显示脱保护程度图
+    if (results.deprotection_plot) {
+        html += `
+            <div class="car-result-card">
+                <div class="car-result-title">脱保护反应分布</div>
+                <img class="car-result-image" src="data:image/png;base64,${results.deprotection_plot}" alt="脱保护反应分布">
+                <p>光酸催化的树脂脱保护反应程度分布</p>
+            </div>
+        `;
+    }
+    
+    // 显示光刻胶厚度图
+    if (results.thickness_plot) {
+        html += `
+            <div class="car-result-card">
+                <div class="car-result-title">显影后光刻胶厚度</div>
+                <img class="car-result-image" src="data:image/png;base64,${results.thickness_plot}" alt="显影后光刻胶厚度">
+                <p>显影后的光刻胶厚度分布</p>
+            </div>
+        `;
+    }
+    
+    html += '</div>';
+    resultsContainer.innerHTML = html;
+}
+
+// 通用导出图片和数据函数
+function addExportButtonsForPlot(plotDiv, plotName, xData, yData) {
+    // 创建按钮容器
+    const btnContainer = document.createElement('div');
+    btnContainer.className = 'plot-export-btns';
+    btnContainer.style.textAlign = 'center';
+    btnContainer.style.margin = '10px 0 20px 0';
+    // 导出图片按钮
+    const exportImgBtn = document.createElement('button');
+    exportImgBtn.textContent = '导出图片';
+    exportImgBtn.onclick = function() {
+        Plotly.downloadImage(plotDiv, {format: 'png', filename: plotName});
+    };
+    // 导出数据按钮
+    const exportDataBtn = document.createElement('button');
+    exportDataBtn.textContent = '导出数据';
+    exportDataBtn.onclick = function() {
+        let csv = 'x,y\n';
+        for (let i = 0; i < xData.length; i++) {
+            csv += `${xData[i]},${yData[i]}\n`;
+        }
+        let blob = new Blob([csv], {type: 'text/csv'});
+        let link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = plotName + '.csv';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+    btnContainer.appendChild(exportImgBtn);
+    btnContainer.appendChild(exportDataBtn);
+    // 插入到图表下方
+    plotDiv.parentNode.insertBefore(btnContainer, plotDiv.nextSibling);
+}
+
+// 渲染交互式图表
+function renderCarInteractivePlots(data, dimensionInfo = null) {
+    // 准备容器
+    const plotContainer = document.getElementById('car-interactive-plots');
+    if (!plotContainer || !data) return;
+    plotContainer.innerHTML = '';
+
+    // 配置选项：添加willReadFrequently优化Canvas性能
+    const plotlyConfig = {
+        responsive: true,
+        toImageButtonOptions: {
+            format: 'png',
+            filename: 'car_model_plot',
+            scale: 1,
+            width: 800,
+            height: 600,
+            willReadFrequently: true // 添加Canvas优化属性
+        }
+    };
+
+    // 确定当前数据维度
+    let is1D, is2D, is3D;
+    if (dimensionInfo) {
+        // 使用传入的维度信息
+        is1D = dimensionInfo.is1D;
+        is2D = dimensionInfo.is2D;
+        is3D = dimensionInfo.is3D;
+    } else {
+        // 回退到原有的检测逻辑
+        is3D = data.is_3d || data.sine_type === '3d';
+        is2D = data.is_2d === true && data.x_coords && data.y_coords;
+        is1D = !is3D && !is2D;
+    }
+
+    console.log(`CAR模型图表渲染 - 维度: 1D=${is1D}, 2D=${is2D}, 3D=${is3D}`);
+    
+    // 根据维度只显示对应的图表
+    if (is3D) {
+        renderCar3DPlots(plotContainer, data, plotlyConfig);
+    } else if (is2D) {
+        renderCar2DPlots(plotContainer, data, plotlyConfig);
+    } else if (is1D) {
+        renderCar1DPlots(plotContainer, data, plotlyConfig);
+    } else {
+        plotContainer.innerHTML = '<div style="color:red;padding:20px;">无法确定CAR模型数据维度</div>';
+    }
+}
+
+// 渲染CAR模型3D图表
+function renderCar3DPlots(plotContainer, data, plotlyConfig) {
+    // 处理三维图表数据
+    console.log('CAR模型：渲染3D图表');
+    
+    // 创建3D展示的容器标题和样式
+    const title3D = document.createElement('h2');
+    title3D.className = 'section-title';
+    title3D.textContent = 'CAR模型三维分布图';
+    plotContainer.appendChild(title3D);
+    
+    // 创建图表网格容器
+    const gridContainer = document.createElement('div');
+    gridContainer.className = 'car-3d-grid';
+    gridContainer.style.display = 'grid';
+    gridContainer.style.gridTemplateColumns = 'repeat(2, 1fr)';
+    gridContainer.style.gap = '20px';
+    gridContainer.style.marginBottom = '30px';
+    plotContainer.appendChild(gridContainer);
+    
+    // 创建4个3D图表容器，添加唯一ID
+    const plot3DContainers = [
+        { id: 'car-initial-acid-3d', title: '初始光酸分布 (3D)', dataField: 'initial_acid_3d' },
+        { id: 'car-diffused-acid-3d', title: '扩散后光酸分布 (3D)', dataField: 'diffused_acid_3d' },
+        { id: 'car-deprotection-3d', title: '脱保护程度分布 (3D)', dataField: 'deprotection_3d' },
+        { id: 'car-thickness-3d', title: '显影后光刻胶厚度 (3D)', dataField: 'thickness_3d' }
+    ];
+    
+    plot3DContainers.forEach(plotInfo => {
+        const plotDiv = document.createElement('div');
+        plotDiv.className = 'car-3d-plot-container';
+        plotDiv.style.height = '400px';
+        plotDiv.innerHTML = `
+            <h3>${plotInfo.title}</h3>
+            <div id="${plotInfo.id}" class="car-3d-plot" style="width:100%; height:350px;"></div>
+        `;
+        gridContainer.appendChild(plotDiv);
+        
+        // 创建对应的3D图表
+        if (data[plotInfo.dataField] || data.x_coords) {
+            create3DSurfacePlot(plotInfo.id, data, plotInfo.dataField, plotInfo.title, plotlyConfig);
+        }
+    });
+}
+
+// 渲染CAR模型2D图表
+function renderCar2DPlots(plotContainer, data, plotlyConfig) {
+    // 处理二维热力图数据
+    console.log('CAR模型：渲染2D热力图');
+    
+    // 创建2D展示的容器标题和样式
+    const title2D = document.createElement('h2');
+    title2D.className = 'section-title';
+    title2D.textContent = 'CAR模型二维分布图';
+    plotContainer.appendChild(title2D);
+    
+    // 创建图表网格容器
+    const gridContainer = document.createElement('div');
+    gridContainer.className = 'car-2d-grid';
+    gridContainer.style.display = 'grid';
+    gridContainer.style.gridTemplateColumns = 'repeat(2, 1fr)';
+    gridContainer.style.gap = '20px';
+    gridContainer.style.marginBottom = '30px';
+    plotContainer.appendChild(gridContainer);
+    
+    // 创建4个2D图表容器，添加唯一ID
+    const plot2DContainers = [
+        { id: 'car-initial-acid-2d', title: '初始光酸分布 (2D)', dataField: 'z_exposure_dose', altField: 'z_initial_acid' },
+        { id: 'car-diffused-acid-2d', title: '扩散后光酸分布 (2D)', dataField: 'z_diffused_acid' },
+        { id: 'car-deprotection-2d', title: '脱保护程度分布 (2D)', dataField: 'z_deprotection' },
+        { id: 'car-thickness-2d', title: '显影后光刻胶厚度 (2D)', dataField: 'z_thickness' }
+    ];
+    
+    plot2DContainers.forEach(plotInfo => {
+        const plotDiv = document.createElement('div');
+        plotDiv.className = 'car-2d-plot-container';
+        plotDiv.style.height = '400px';
+        plotDiv.innerHTML = `
+            <h3>${plotInfo.title}</h3>
+            <div id="${plotInfo.id}" class="car-2d-plot" style="width:100%; height:350px;"></div>
+        `;
+        gridContainer.appendChild(plotDiv);
+        
+        // 创建对应的2D热力图
+        const zData = data[plotInfo.dataField] || (plotInfo.altField && data[plotInfo.altField]);
+        if (zData && data.x_coords && data.y_coords) {
+            create2DHeatmapPlot(plotInfo.id, data, plotInfo.dataField, plotInfo.title, plotlyConfig);
+        }
+    });
+}
+
+// 渲染CAR模型1D图表
+function renderCar1DPlots(plotContainer, data, plotlyConfig) {
+    // 处理一维线图数据
+    console.log('CAR模型：渲染1D线图');
+    
+    // 确保至少有x和某个y序列数据
+    if (!data.x || !data.initial_acid) {
+        console.error('CAR模型：缺少必要的一维数据');
+        return;
+    }
+    
+    // 创建1D展示的容器标题和样式
+    const title1D = document.createElement('h2');
+    title1D.className = 'section-title';
+    title1D.textContent = 'CAR模型一维分布图';
+    plotContainer.appendChild(title1D);
+    
+    // 创建图表网格容器
+    const gridContainer = document.createElement('div');
+    gridContainer.className = 'car-1d-grid';
+    gridContainer.style.display = 'grid';
+    gridContainer.style.gridTemplateColumns = 'repeat(2, 1fr)';
+    gridContainer.style.gap = '20px';
+    gridContainer.style.marginBottom = '30px';
+    plotContainer.appendChild(gridContainer);
+    
+    // 创建4个1D图表容器，添加唯一ID
+    const plot1DContainers = [
+        { id: 'car-initial-acid-1d', title: '初始光酸分布 (1D)', dataField: 'initial_acid', color: '#2ca02c' },
+        { id: 'car-diffused-acid-1d', title: '扩散后光酸分布 (1D)', dataField: 'diffused_acid', color: '#1f77b4' },
+        { id: 'car-deprotection-1d', title: '脱保护程度分布 (1D)', dataField: 'deprotection', color: '#d62728' },
+        { id: 'car-thickness-1d', title: '显影后光刻胶厚度 (1D)', dataField: 'thickness', color: '#9467bd' }
+    ];
+    
+    plot1DContainers.forEach(plotInfo => {
+        const plotDiv = document.createElement('div');
+        plotDiv.className = 'car-1d-plot-container';
+        plotDiv.style.height = '400px';
+        plotDiv.innerHTML = `
+            <h3>${plotInfo.title}</h3>
+            <div id="${plotInfo.id}" class="car-1d-plot" style="width:100%; height:350px;"></div>
+        `;
+        gridContainer.appendChild(plotDiv);
+        
+        // 创建对应的1D线图
+        if (data[plotInfo.dataField] && data.x) {
+            create1DLinePlot(plotInfo.id, data, plotInfo.dataField, plotInfo.title, plotInfo.color, plotlyConfig);
+        }
+    });
+}
+
+// 创建2D热力图
+function create2DHeatmapPlot(containerId, data, dataField, title, plotlyConfig) {
+    const zData = data[dataField] || (dataField === 'z_exposure_dose' && data.z_initial_acid);
+    if (!zData || !data.x_coords || !data.y_coords) return;
+    
+    const trace = {
+        x: data.x_coords,
+        y: data.y_coords,
+        z: zData,
+        type: 'heatmap',
+        colorscale: getColorScale(dataField),
+        colorbar: { title: getColorBarTitle(dataField) },
+        hovertemplate: `X: %{x}<br>Y: %{y}<br>${getColorBarTitle(dataField)}: %{z}<extra></extra>`
+    };
+    
+    const layout = {
+        title: title,
+        xaxis: { title: '位置 (μm)' },
+        yaxis: { title: '位置 (μm)' },
+        margin: { l: 60, r: 20, t: 60, b: 60 }
+    };
+    
+    Plotly.newPlot(containerId, [trace], layout, plotlyConfig);
+    
+    // 添加导出按钮
+    addExportButton(containerId, title.replace(/\s+/g, '_').toLowerCase());
+}
+
+// 创建3D表面图
+function create3DSurfacePlot(containerId, data, dataField, title, plotlyConfig) {
+    if (!data.x_coords || !data.y_coords || !data[dataField]) return;
+    
+    const trace = {
+        type: 'surface',
+        x: data.x_coords,
+        y: data.y_coords,
+        z: data[dataField],
+        colorscale: getColorScale(dataField),
+        contours: {
+            z: {
+                show: true,
+                usecolormap: true,
+                highlightcolor: "#42f462",
+                project: {z: true}
+            }
+        },
+        hovertemplate: `X: %{x}<br>Y: %{y}<br>${getColorBarTitle(dataField)}: %{z}<extra></extra>`
+    };
+    
+    const layout = {
+        title: title,
+        scene: {
+            xaxis: {title: 'X位置(μm)'},
+            yaxis: {title: 'Y位置(μm)'},
+            zaxis: {title: getColorBarTitle(dataField)}
+        },
+        autosize: true,
+        margin: {l: 0, r: 0, b: 0, t: 30}
+    };
+    
+    Plotly.newPlot(containerId, [trace], layout, plotlyConfig);
+    
+    // 添加导出按钮
+    addExportButton(containerId, title.replace(/\s+/g, '_').toLowerCase());
+}
+
+// 创建1D线图
+function create1DLinePlot(containerId, data, dataField, title, color, plotlyConfig) {
+    if (!data[dataField] || !data.x) return;
+    
+    const trace = {
+        x: data.x,
+        y: data[dataField],
+        name: title,
+        type: 'scatter',
+        mode: 'lines',
+        line: { color: color, width: 2 },
+        fill: dataField === 'thickness' ? 'tozeroy' : undefined,
+        fillcolor: dataField === 'thickness' ? `rgba(${hexToRgb(color)}, 0.2)` : undefined
+    };
+    
+    const layout = {
+        title: title,
+        xaxis: { title: '位置 (μm)' },
+        yaxis: { title: getYAxisTitle(dataField) },
+        margin: { t: 40, b: 40, l: 60, r: 10 },
+        hovermode: 'closest'
+    };
+    
+    Plotly.newPlot(containerId, [trace], layout, plotlyConfig);
+    
+    // 添加导出按钮
+    addExportButton(containerId, title.replace(/\s+/g, '_').toLowerCase());
+}
+
+// 辅助函数
+function getColorScale(dataField) {
+    const colorMap = {
+        'z_exposure_dose': 'Viridis',
+        'z_initial_acid': 'Viridis',
+        'z_diffused_acid': 'Viridis',
+        'z_deprotection': 'YlOrRd',
+        'z_thickness': 'Plasma',
+        'initial_acid_3d': 'Viridis',
+        'diffused_acid_3d': 'Viridis',
+        'deprotection_3d': 'YlOrRd',
+        'thickness_3d': 'Plasma'
+    };
+    return colorMap[dataField] || 'Viridis';
+}
+
+function getColorBarTitle(dataField) {
+    const titleMap = {
+        'z_exposure_dose': '光酸浓度',
+        'z_initial_acid': '光酸浓度',
+        'z_diffused_acid': '光酸浓度',
+        'z_deprotection': '脱保护程度',
+        'z_thickness': '归一化厚度',
+        'initial_acid_3d': '光酸浓度',
+        'diffused_acid_3d': '扩散后浓度',
+        'deprotection_3d': '脱保护程度',
+        'thickness_3d': '相对厚度'
+    };
+    return titleMap[dataField] || '数值';
+}
+
+function getYAxisTitle(dataField) {
+    const titleMap = {
+        'initial_acid': '归一化光酸浓度',
+        'diffused_acid': '归一化光酸浓度',
+        'deprotection': '脱保护程度',
+        'thickness': '归一化厚度'
+    };
+    return titleMap[dataField] || '数值';
+}
+
+function addExportButton(containerId, filename) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    const btnContainer = document.createElement('div');
+    btnContainer.className = 'plot-export-btns';
+    btnContainer.style.textAlign = 'center';
+    btnContainer.style.margin = '10px 0';
+    
+    const exportBtn = document.createElement('button');
+    exportBtn.textContent = '导出图片';
+    exportBtn.onclick = function() {
+        Plotly.downloadImage(containerId, {
+            format: 'png',
+            filename: filename,
+            width: 800,
+            height: 600
+        });
+    };
+    
+    btnContainer.appendChild(exportBtn);
+    container.parentNode.appendChild(btnContainer);
+}
+
+function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? 
+        `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : 
+        '148, 103, 189';
+}
+
+// 下面的函数曾是旧的代码，现已重构
+        console.log('CAR模型：渲染3D图表');
+        
+        // 创建3D展示的容器标题和样式
+        const title3D = document.createElement('h2');
+        title3D.className = 'section-title';
+        title3D.textContent = 'CAR模型三维分布图';
+        plotContainer.appendChild(title3D);
+        
+        // 创建图表网格容器
+        const gridContainer = document.createElement('div');
+        gridContainer.className = 'car-3d-grid';
+        gridContainer.style.display = 'grid';
+        gridContainer.style.gridTemplateColumns = 'repeat(2, 1fr)';
+        gridContainer.style.gap = '20px';
+        gridContainer.style.marginBottom = '30px';
+        plotContainer.appendChild(gridContainer);
+        
+        // 1. 初始光酸分布图的容器
+        const initialAcidDiv = document.createElement('div');
+        initialAcidDiv.className = 'car-3d-plot-container';
+        initialAcidDiv.style.height = '400px';
+        initialAcidDiv.innerHTML = `
+            <h3>初始光酸分布 (3D)</h3>
+            <div id="car-initial-acid-3d" class="car-3d-plot" style="width:100%; height:350px;"></div>
+        `;
+        gridContainer.appendChild(initialAcidDiv);
+        
+        // 2. 扩散后光酸分布图的容器
+        const diffusedAcidDiv = document.createElement('div');
+        diffusedAcidDiv.className = 'car-3d-plot-container';
+        diffusedAcidDiv.style.height = '400px';
+        diffusedAcidDiv.innerHTML = `
+            <h3>扩散后光酸分布 (3D)</h3>
+            <div id="car-diffused-acid-3d" class="car-3d-plot" style="width:100%; height:350px;"></div>
+        `;
+        gridContainer.appendChild(diffusedAcidDiv);
+        
+        // 3. 脱保护程度分布图的容器
+        const deprotectionDiv = document.createElement('div');
+        deprotectionDiv.className = 'car-3d-plot-container';
+        deprotectionDiv.style.height = '400px';
+        deprotectionDiv.innerHTML = `
+            <h3>脱保护程度分布 (3D)</h3>
+            <div id="car-deprotection-3d" class="car-3d-plot" style="width:100%; height:350px;"></div>
+        `;
+        gridContainer.appendChild(deprotectionDiv);
+        
+        // 4. 光刻胶厚度分布图的容器
+        const thicknessDiv = document.createElement('div');
+        thicknessDiv.className = 'car-3d-plot-container';
+        thicknessDiv.style.height = '400px';
+        thicknessDiv.innerHTML = `
+            <h3>显影后光刻胶厚度 (3D)</h3>
+            <div id="car-thickness-3d" class="car-3d-plot" style="width:100%; height:350px;"></div>
+        `;
+        gridContainer.appendChild(thicknessDiv);
+        
+        // 确保有正确的3D数据
+        if (data.x_coords && data.y_coords && 
+            (data.initial_acid || data.diffused_acid || data.deprotection || data.thickness)) {
+            
+            // 创建网格数据
+            const x_coords = data.x_coords;
+            const y_coords = data.y_coords;
+            
+            // 为每个3D图表添加交互式Plotly图表
+            
+            // 1. 初始光酸分布
+            if (data.initial_acid) {
+                const initialAcidData = [{
+                    type: 'surface',
+                    x: x_coords,
+                    y: y_coords,
+                    z: data.initial_acid,
+                    colorscale: 'Viridis',
+                    contours: {
+                        z: {
+                            show: true,
+                            usecolormap: true,
+                            highlightcolor: "#42f462",
+                            project: {z: true}
+                        }
+                    },
+                    hovertemplate: 'X: %{x}<br>Y: %{y}<br>光酸浓度: %{z}<extra></extra>'
+                }];
+                
+                const initialAcidLayout = {
+                    title: '初始光酸分布 (3D)',
+                    scene: {
+                        xaxis: {title: 'X位置(μm)'},
+                        yaxis: {title: 'Y位置(μm)'},
+                        zaxis: {title: '浓度'}
+                    },
+                    autosize: true,
+                    margin: {l: 0, r: 0, b: 0, t: 30}
+                };
+                
+                Plotly.newPlot('car-initial-acid-3d', initialAcidData, initialAcidLayout, plotlyConfig);
+                
+                // 添加导出按钮
+                const btnContainer1 = document.createElement('div');
+                btnContainer1.className = 'plot-export-btns';
+                btnContainer1.style.textAlign = 'center';
+                btnContainer1.style.margin = '10px 0';
+                
+                const exportImgBtn1 = document.createElement('button');
+                exportImgBtn1.textContent = '导出图片';
+                exportImgBtn1.onclick = function() {
+                    Plotly.downloadImage('car-initial-acid-3d', {
+                        format: 'png',
+                        filename: 'car_initial_acid_3d',
+                        width: 800,
+                        height: 600
+                    });
+                };
+                
+                btnContainer1.appendChild(exportImgBtn1);
+                document.getElementById('car-initial-acid-3d').parentNode.appendChild(btnContainer1);
+            }
+            
+            // 2. 扩散后光酸分布
+            if (data.diffused_acid) {
+                const diffusedAcidData = [{
+                    type: 'surface',
+                    x: x_coords,
+                    y: y_coords,
+                    z: data.diffused_acid,
+                    colorscale: 'Viridis',
+                    contours: {
+                        z: {
+                            show: true,
+                            usecolormap: true,
+                            highlightcolor: "#42f462",
+                            project: {z: true}
+                        }
+                    },
+                    hovertemplate: 'X: %{x}<br>Y: %{y}<br>扩散后浓度: %{z}<extra></extra>'
+                }];
+                
+                const diffusedAcidLayout = {
+                    title: '扩散后光酸分布 (3D)',
+                    scene: {
+                        xaxis: {title: 'X位置(μm)'},
+                        yaxis: {title: 'Y位置(μm)'},
+                        zaxis: {title: '扩散后浓度'}
+                    },
+                    autosize: true,
+                    margin: {l: 0, r: 0, b: 0, t: 30}
+                };
+                
+                Plotly.newPlot('car-diffused-acid-3d', diffusedAcidData, diffusedAcidLayout, plotlyConfig);
+                
+                // 添加导出按钮
+                const btnContainer2 = document.createElement('div');
+                btnContainer2.className = 'plot-export-btns';
+                btnContainer2.style.textAlign = 'center';
+                btnContainer2.style.margin = '10px 0';
+                
+                const exportImgBtn2 = document.createElement('button');
+                exportImgBtn2.textContent = '导出图片';
+                exportImgBtn2.onclick = function() {
+                    Plotly.downloadImage('car-diffused-acid-3d', {
+                        format: 'png',
+                        filename: 'car_diffused_acid_3d',
+                        width: 800,
+                        height: 600
+                    });
+                };
+                
+                btnContainer2.appendChild(exportImgBtn2);
+                document.getElementById('car-diffused-acid-3d').parentNode.appendChild(btnContainer2);
+            }
+            
+            // 3. 脱保护程度分布
+            if (data.deprotection) {
+                const deprotectionData = [{
+                    type: 'surface',
+                    x: x_coords,
+                    y: y_coords,
+                    z: data.deprotection,
+                    colorscale: 'YlOrRd',
+                    contours: {
+                        z: {
+                            show: true,
+                            usecolormap: true,
+                            highlightcolor: "#42f462",
+                            project: {z: true}
+                        }
+                    },
+                    hovertemplate: 'X: %{x}<br>Y: %{y}<br>脱保护程度: %{z}<extra></extra>'
+                }];
+                
+                const deprotectionLayout = {
+                    title: '脱保护程度分布 (3D)',
+                    scene: {
+                        xaxis: {title: 'X位置(μm)'},
+                        yaxis: {title: 'Y位置(μm)'},
+                        zaxis: {title: '脱保护程度'}
+                    },
+                    autosize: true,
+                    margin: {l: 0, r: 0, b: 0, t: 30}
+                };
+                
+                Plotly.newPlot('car-deprotection-3d', deprotectionData, deprotectionLayout, plotlyConfig);
+                
+                // 添加导出按钮
+                const btnContainer3 = document.createElement('div');
+                btnContainer3.className = 'plot-export-btns';
+                btnContainer3.style.textAlign = 'center';
+                btnContainer3.style.margin = '10px 0';
+                
+                const exportImgBtn3 = document.createElement('button');
+                exportImgBtn3.textContent = '导出图片';
+                exportImgBtn3.onclick = function() {
+                    Plotly.downloadImage('car-deprotection-3d', {
+                        format: 'png',
+                        filename: 'car_deprotection_3d',
+                        width: 800,
+                        height: 600
+                    });
+                };
+                
+                btnContainer3.appendChild(exportImgBtn3);
+                document.getElementById('car-deprotection-3d').parentNode.appendChild(btnContainer3);
+            }
+            
+            // 4. 光刻胶厚度分布
+            if (data.thickness) {
+                const thicknessData = [{
+                    type: 'surface',
+                    x: x_coords,
+                    y: y_coords,
+                    z: data.thickness,
+                    colorscale: 'Plasma',
+                    contours: {
+                        z: {
+                            show: true,
+                            usecolormap: true,
+                            highlightcolor: "#42f462",
+                            project: {z: true}
+                        }
+                    },
+                    hovertemplate: 'X: %{x}<br>Y: %{y}<br>相对厚度: %{z}<extra></extra>'
+                }];
+                
+                const thicknessLayout = {
+                    title: '显影后光刻胶厚度 (3D)',
+                    scene: {
+                        xaxis: {title: 'X位置(μm)'},
+                        yaxis: {title: 'Y位置(μm)'},
+                        zaxis: {title: '相对厚度'}
+                    },
+                    autosize: true,
+                    margin: {l: 0, r: 0, b: 0, t: 30}
+                };
+                
+                Plotly.newPlot('car-thickness-3d', thicknessData, thicknessLayout, plotlyConfig);
+                
+                // 添加导出按钮
+                const btnContainer4 = document.createElement('div');
+                btnContainer4.className = 'plot-export-btns';
+                btnContainer4.style.textAlign = 'center';
+                btnContainer4.style.margin = '10px 0';
+                
+                const exportImgBtn4 = document.createElement('button');
+                exportImgBtn4.textContent = '导出图片';
+                exportImgBtn4.onclick = function() {
+                    Plotly.downloadImage('car-thickness-3d', {
+                        format: 'png',
+                        filename: 'car_thickness_3d',
+                        width: 800,
+                        height: 600
+                    });
+                };
+                
+                btnContainer4.appendChild(exportImgBtn4);
+                document.getElementById('car-thickness-3d').parentNode.appendChild(btnContainer4);
+            }
+        } 
+        // 如果没有获取到3D数据，但有图片数据，作为备用显示图片
+        else if (data.initial_acid_plot || data.acid_diffusion_plot || 
+                data.deprotection_plot || data.thickness_plot) {
+            
+            // 1. 初始光酸分布
+            if (data.initial_acid_plot) {
+                const initialAcidImg = document.createElement('img');
+                initialAcidImg.src = `data:image/png;base64,${data.initial_acid_plot}`;
+                initialAcidImg.alt = '初始光酸分布 (3D)';
+                initialAcidImg.style.width = '100%';
+                initialAcidImg.style.height = '350px';
+                initialAcidImg.style.objectFit = 'contain';
+                document.getElementById('car-initial-acid-3d').appendChild(initialAcidImg);
+                
+                // 添加导出按钮
+                const btnContainer1 = document.createElement('div');
+                btnContainer1.className = 'plot-export-btns';
+                btnContainer1.style.textAlign = 'center';
+                btnContainer1.style.margin = '10px 0';
+                
+                const exportImgBtn1 = document.createElement('button');
+                exportImgBtn1.textContent = '导出图片';
+                exportImgBtn1.onclick = function() {
+                    const link = document.createElement('a');
+                    link.href = initialAcidImg.src;
+                    link.download = 'car_initial_acid_3d.png';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                };
+                
+                btnContainer1.appendChild(exportImgBtn1);
+                document.getElementById('car-initial-acid-3d').parentNode.appendChild(btnContainer1);
+            }
+            
+            // 2. 扩散后光酸分布
+            if (data.acid_diffusion_plot) {
+                const diffusedAcidImg = document.createElement('img');
+                diffusedAcidImg.src = `data:image/png;base64,${data.acid_diffusion_plot}`;
+                diffusedAcidImg.alt = '扩散后光酸分布 (3D)';
+                diffusedAcidImg.style.width = '100%';
+                diffusedAcidImg.style.height = '350px';
+                diffusedAcidImg.style.objectFit = 'contain';
+                document.getElementById('car-diffused-acid-3d').appendChild(diffusedAcidImg);
+                
+                // 添加导出按钮
+                const btnContainer2 = document.createElement('div');
+                btnContainer2.className = 'plot-export-btns';
+                btnContainer2.style.textAlign = 'center';
+                btnContainer2.style.margin = '10px 0';
+                
+                const exportImgBtn2 = document.createElement('button');
+                exportImgBtn2.textContent = '导出图片';
+                exportImgBtn2.onclick = function() {
+                    const link = document.createElement('a');
+                    link.href = diffusedAcidImg.src;
+                    link.download = 'car_diffused_acid_3d.png';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                };
+                
+                btnContainer2.appendChild(exportImgBtn2);
+                document.getElementById('car-diffused-acid-3d').parentNode.appendChild(btnContainer2);
+            }
+            
+            // 3. 脱保护程度分布
+            if (data.deprotection_plot) {
+                const deprotectionImg = document.createElement('img');
+                deprotectionImg.src = `data:image/png;base64,${data.deprotection_plot}`;
+                deprotectionImg.alt = '脱保护程度分布 (3D)';
+                deprotectionImg.style.width = '100%';
+                deprotectionImg.style.height = '350px';
+                deprotectionImg.style.objectFit = 'contain';
+                document.getElementById('car-deprotection-3d').appendChild(deprotectionImg);
+                
+                // 添加导出按钮
+                const btnContainer3 = document.createElement('div');
+                btnContainer3.className = 'plot-export-btns';
+                btnContainer3.style.textAlign = 'center';
+                btnContainer3.style.margin = '10px 0';
+                
+                const exportImgBtn3 = document.createElement('button');
+                exportImgBtn3.textContent = '导出图片';
+                exportImgBtn3.onclick = function() {
+                    const link = document.createElement('a');
+                    link.href = deprotectionImg.src;
+                    link.download = 'car_deprotection_3d.png';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                };
+                
+                btnContainer3.appendChild(exportImgBtn3);
+                document.getElementById('car-deprotection-3d').parentNode.appendChild(btnContainer3);
+            }
+            
+            // 4. 光刻胶厚度分布
+            if (data.thickness_plot) {
+                const thicknessImg = document.createElement('img');
+                thicknessImg.src = `data:image/png;base64,${data.thickness_plot}`;
+                thicknessImg.alt = '显影后光刻胶厚度 (3D)';
+                thicknessImg.style.width = '100%';
+                thicknessImg.style.height = '350px';
+                thicknessImg.style.objectFit = 'contain';
+                document.getElementById('car-thickness-3d').appendChild(thicknessImg);
+                
+                // 添加导出按钮
+                const btnContainer4 = document.createElement('div');
+                btnContainer4.className = 'plot-export-btns';
+                btnContainer4.style.textAlign = 'center';
+                btnContainer4.style.margin = '10px 0';
+                
+                const exportImgBtn4 = document.createElement('button');
+                exportImgBtn4.textContent = '导出图片';
+                exportImgBtn4.onclick = function() {
+                    const link = document.createElement('a');
+                    link.href = thicknessImg.src;
+                    link.download = 'car_thickness_3d.png';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                };
+                
+                btnContainer4.appendChild(exportImgBtn4);
+                document.getElementById('car-thickness-3d').parentNode.appendChild(btnContainer4);
+            }
+        } else {
+            // 如果没有任何数据
+            const errorMsg = document.createElement('div');
+            errorMsg.className = 'error-message';
+            errorMsg.textContent = '无法加载3D数据，请尝试重新计算';
+            plotContainer.appendChild(errorMsg);
+        }
+    }
+    else {
+        // 处理普通的一维线图数据
+        // 确保至少有x和某个y序列数据
+        if (!data.x || !data.initial_acid) {
+            console.error('CAR模型：缺少必要的一维数据');
+            return;
+        }
+        
+        // 创建1D展示的容器标题和样式
+        const title1D = document.createElement('h2');
+        title1D.className = 'section-title';
+        title1D.textContent = 'CAR模型一维分布图';
+        plotContainer.appendChild(title1D);
+        
+        // 创建图表网格容器
+        const gridContainer = document.createElement('div');
+        gridContainer.className = 'car-1d-grid';
+        gridContainer.style.display = 'grid';
+        gridContainer.style.gridTemplateColumns = 'repeat(2, 1fr)';
+        gridContainer.style.gap = '20px';
+        gridContainer.style.marginBottom = '30px';
+        plotContainer.appendChild(gridContainer);
+        
+        // 1. 初始光酸分布图的容器
+        const initialAcidDiv = document.createElement('div');
+        initialAcidDiv.className = 'car-1d-plot-container';
+        initialAcidDiv.style.height = '400px';
+        initialAcidDiv.innerHTML = `
+            <h3>初始光酸分布 (1D)</h3>
+            <div id="car-initial-acid-1d" class="car-1d-plot" style="width:100%; height:350px;"></div>
+        `;
+        gridContainer.appendChild(initialAcidDiv);
+        
+        // 2. 扩散后光酸分布图的容器
+        const diffusedAcidDiv = document.createElement('div');
+        diffusedAcidDiv.className = 'car-1d-plot-container';
+        diffusedAcidDiv.style.height = '400px';
+        diffusedAcidDiv.innerHTML = `
+            <h3>扩散后光酸分布 (1D)</h3>
+            <div id="car-diffused-acid-1d" class="car-1d-plot" style="width:100%; height:350px;"></div>
+        `;
+        gridContainer.appendChild(diffusedAcidDiv);
+        
+        // 3. 脱保护程度分布图的容器
+        const deprotectionDiv = document.createElement('div');
+        deprotectionDiv.className = 'car-1d-plot-container';
+        deprotectionDiv.style.height = '400px';
+        deprotectionDiv.innerHTML = `
+            <h3>脱保护程度分布 (1D)</h3>
+            <div id="car-deprotection-1d" class="car-1d-plot" style="width:100%; height:350px;"></div>
+        `;
+        gridContainer.appendChild(deprotectionDiv);
+        
+        // 4. 光刻胶厚度分布图的容器
+        const thicknessDiv = document.createElement('div');
+        thicknessDiv.className = 'car-1d-plot-container';
+        thicknessDiv.style.height = '400px';
+        thicknessDiv.innerHTML = `
+            <h3>显影后光刻胶厚度 (1D)</h3>
+            <div id="car-thickness-1d" class="car-1d-plot" style="width:100%; height:350px;"></div>
+        `;
+        gridContainer.appendChild(thicknessDiv);
+
+        // 创建初始光酸分布图
+        if (data.initial_acid) {
+            const initialAcidTrace = [{
+                x: data.x,
+                y: data.initial_acid,
+                name: '初始光酸分布',
+                type: 'scatter',
+                mode: 'lines',
+                line: { color: '#2ca02c', width: 2 }
+            }];
+            
+            const initialAcidLayout = {
+                title: '初始光酸分布 (1D)',
+                xaxis: { title: '位置 (μm)' },
+                yaxis: { title: '归一化光酸浓度' },
+                margin: { t: 40, b: 40, l: 60, r: 10 },
+                hovermode: 'closest'
+            };
+            
+            Plotly.newPlot('car-initial-acid-1d', initialAcidTrace, initialAcidLayout, plotlyConfig);
+            
+            // 添加导出按钮
+            const btnContainer1 = document.createElement('div');
+            btnContainer1.className = 'plot-export-btns';
+            btnContainer1.style.textAlign = 'center';
+            btnContainer1.style.margin = '10px 0';
+            
+            const exportImgBtn1 = document.createElement('button');
+            exportImgBtn1.textContent = '导出图片';
+            exportImgBtn1.onclick = function() {
+                Plotly.downloadImage('car-initial-acid-1d', {
+                    format: 'png',
+                    filename: 'car_initial_acid_1d',
+                    width: 800,
+                    height: 600
+                });
+            };
+            
+            btnContainer1.appendChild(exportImgBtn1);
+            document.getElementById('car-initial-acid-1d').parentNode.appendChild(btnContainer1);
+        }
+        
+        // 创建扩散后光酸分布图
+        if (data.diffused_acid) {
+            const diffusedAcidTrace = [{
+                x: data.x,
+                y: data.diffused_acid,
+                name: '扩散后光酸分布',
+                type: 'scatter',
+                mode: 'lines',
+                line: { color: '#1f77b4', width: 2 }
+            }];
+            
+            const diffusedAcidLayout = {
+                title: '扩散后光酸分布 (1D)',
+                xaxis: { title: '位置 (μm)' },
+                yaxis: { title: '归一化光酸浓度' },
+                margin: { t: 40, b: 40, l: 60, r: 10 },
+                hovermode: 'closest'
+            };
+            
+            Plotly.newPlot('car-diffused-acid-1d', diffusedAcidTrace, diffusedAcidLayout, plotlyConfig);
+            
+            // 添加导出按钮
+            const btnContainer2 = document.createElement('div');
+            btnContainer2.className = 'plot-export-btns';
+            btnContainer2.style.textAlign = 'center';
+            btnContainer2.style.margin = '10px 0';
+            
+            const exportImgBtn2 = document.createElement('button');
+            exportImgBtn2.textContent = '导出图片';
+            exportImgBtn2.onclick = function() {
+                Plotly.downloadImage('car-diffused-acid-1d', {
+                    format: 'png',
+                    filename: 'car_diffused_acid_1d',
+                    width: 800,
+                    height: 600
+                });
+            };
+            
+            btnContainer2.appendChild(exportImgBtn2);
+            document.getElementById('car-diffused-acid-1d').parentNode.appendChild(btnContainer2);
+        }
+
+        // 创建树脂脱保护程度图
+        if (data.deprotection) {
+            const deprotectionTrace = [{
+                x: data.x,
+                y: data.deprotection,
+                name: '脱保护程度',
+                type: 'scatter',
+                mode: 'lines',
+                line: { color: '#d62728', width: 2 }
+            }];
+            
+            const deprotectionLayout = {
+                title: '脱保护程度分布 (1D)',
+                xaxis: { title: '位置 (μm)' },
+                yaxis: { title: '脱保护程度' },
+                margin: { t: 40, b: 40, l: 60, r: 10 },
+                hovermode: 'closest'
+            };
+            
+            Plotly.newPlot('car-deprotection-1d', deprotectionTrace, deprotectionLayout, plotlyConfig);
+            
+            // 添加导出按钮
+            const btnContainer3 = document.createElement('div');
+            btnContainer3.className = 'plot-export-btns';
+            btnContainer3.style.textAlign = 'center';
+            btnContainer3.style.margin = '10px 0';
+            
+            const exportImgBtn3 = document.createElement('button');
+            exportImgBtn3.textContent = '导出图片';
+            exportImgBtn3.onclick = function() {
+                Plotly.downloadImage('car-deprotection-1d', {
+                    format: 'png',
+                    filename: 'car_deprotection_1d',
+                    width: 800,
+                    height: 600
+                });
+            };
+            
+            btnContainer3.appendChild(exportImgBtn3);
+            document.getElementById('car-deprotection-1d').parentNode.appendChild(btnContainer3);
+        }
+
+        // 创建最终光刻胶厚度图
+        if (data.thickness) {
+            const thicknessTrace = [{
+                x: data.x,
+                y: data.thickness,
+                name: '光刻胶厚度',
+                type: 'scatter',
+                mode: 'lines',
+                fill: 'tozeroy',
+                fillcolor: 'rgba(148, 103, 189, 0.2)',
+                line: { color: '#9467bd', width: 2 }
+            }];
+            
+            const thicknessLayout = {
+                title: '显影后光刻胶厚度 (1D)',
+                xaxis: { title: '位置 (μm)' },
+                yaxis: { title: '归一化厚度' },
+                margin: { t: 40, b: 40, l: 60, r: 10 },
+                hovermode: 'closest'
+            };
+            
+            Plotly.newPlot('car-thickness-1d', thicknessTrace, thicknessLayout, plotlyConfig);
+            
+            // 添加导出按钮
+            const btnContainer4 = document.createElement('div');
+            btnContainer4.className = 'plot-export-btns';
+            btnContainer4.style.textAlign = 'center';
+            btnContainer4.style.margin = '10px 0';
+            
+            const exportImgBtn4 = document.createElement('button');
+            exportImgBtn4.textContent = '导出图片';
+            exportImgBtn4.onclick = function() {
+                Plotly.downloadImage('car-thickness-1d', {
+                    format: 'png',
+                    filename: 'car_thickness_1d',
+                    width: 800,
+                    height: 600
+                });
+            };
+            
+            btnContainer4.appendChild(exportImgBtn4);
+            document.getElementById('car-thickness-1d').parentNode.appendChild(btnContainer4);
+        }
+    }
+}
+
+// 重置CAR模型参数
+function resetCarParams() {
+    // 重置参数到默认值
+    Object.keys(defaultCarParams).forEach(param => {
+        const slider = document.getElementById(`car_${param}`);
+        const numInput = slider.parentElement.querySelector('input[type="number"]');
+        const valueDisplay = slider.parentElement.parentElement.querySelector('.parameter-value');
+        
+        slider.value = defaultCarParams[param];
+        numInput.value = defaultCarParams[param];
+        if (valueDisplay) {
+            valueDisplay.textContent = defaultCarParams[param];
+        }
+    });
+    
+    // 更新当前参数
+    currentCarParams = {...defaultCarParams};
+    
+    // 清空结果
+    const resultsContainer = document.getElementById('car-results');
+    if (resultsContainer) {
+        resultsContainer.innerHTML = '<div class="empty-results">点击"计算"按钮查看结果</div>';
+    }
+    
+    // 清空交互式图表
+    const plotContainer = document.getElementById('car-interactive-plots');
+    if (plotContainer) {
+        plotContainer.innerHTML = '';
+    }
+}
+
+// 当页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', function() {
+    // 检查是否在CAR模型相关页面
+    if (document.getElementById('car-params')) {
+        initCarModel();
+    }
+});
+
+// 保证 showSinglePointDetailsPopup 全局可用
+if (typeof window.showSinglePointDetailsPopup !== 'function' && typeof showSinglePointDetailsPopup === 'function') {
+    window.showSinglePointDetailsPopup = showSinglePointDetailsPopup;
+}
+
+// ==== 4D动画功能相关函数 ====
+
+// 全局变量存储4D动画数据和状态
+let car4DAnimationData = null;
+let car4DAnimationState = {
+    isPlaying: false,
+    currentFrame: 0,
+    totalFrames: 0,
+    animationSpeed: 500,
+    intervalId: null
+};
+
+/**
+ * 显示错误消息
+ * @param {string} message - 错误消息
+ */
+function showErrorMessage(message) {
+    const errorContainer = document.getElementById('error-message');
+    if (errorContainer) {
+        errorContainer.textContent = message;
+        errorContainer.style.display = 'block';
+        
+        // 3秒后自动隐藏
+        setTimeout(() => {
+            errorContainer.style.display = 'none';
+        }, 3000);
+    } else {
+        // 回退到alert
+        alert(message);
+    }
+}
+
+/**
+ * 渲染4D动画主函数
+ * @param {Object} data - 包含动画数据的对象
+ */
+function render4DAnimation(data) {
+    console.log('CAR模型：开始渲染4D动画');
+    
+    // 保存动画数据
+    car4DAnimationData = data;
+    car4DAnimationState.totalFrames = data.initial_acid_frames ? data.initial_acid_frames.length : 0;
+    car4DAnimationState.animationSpeed = 500; // 固定动画播放速度
+    car4DAnimationState.currentFrame = 0;
+    car4DAnimationState.isPlaying = false;
+    
+    if (car4DAnimationState.totalFrames === 0) {
+        console.error('CAR模型：无有效的4D动画帧数据');
+        return;
+    }
+    
+    console.log(`CAR模型：4D动画数据加载成功，总帧数: ${car4DAnimationState.totalFrames}`);
+    
+    // 显示4D动画区域
+    const animationSection = document.getElementById('car-4d-animation-section');
+    if (animationSection) {
+        animationSection.style.display = 'block';
+    }
+    
+    // 显示4D动画控制界面
+    setupCar4DAnimationUI();
+    
+    // 渲染初始帧（第0帧）
+    updateCar4DAnimationFrame(0);
+    
+    console.log(`CAR模型：4D动画初始化完成，共${car4DAnimationState.totalFrames}帧`);
+}
+
+/**
+ * 设置4D动画界面
+ */
+function setupCar4DAnimationUI() {
+    const plotContainer = document.getElementById('car-4d-animation-container');
+    if (!plotContainer) {
+        console.error('CAR模型：未找到4D动画容器');
+        return;
+    }
+    
+    // 清空容器并设置4D动画界面
+    plotContainer.innerHTML = '';
+    
+    // 创建动画控制区域
+    const controlsContainer = document.createElement('div');
+    controlsContainer.className = 'car-4d-animation-controls';
+    controlsContainer.innerHTML = `
+        <div class="car-4d-controls-row">
+            <button id="car-4d-play-btn" class="car-4d-control-btn">▶️ 播放</button>
+            <button id="car-4d-pause-btn" class="car-4d-control-btn">⏸️ 暂停</button>
+            <button id="car-4d-stop-btn" class="car-4d-control-btn">⏹️ 停止</button>
+            <button id="car-4d-reset-btn" class="car-4d-control-btn">🔄 重置</button>
+        </div>
+        <div class="car-4d-time-controls">
+            <label>时间进度:</label>
+            <input type="range" id="car-4d-time-slider" min="0" max="${car4DAnimationState.totalFrames - 1}" value="0" step="1">
+            <span id="car-4d-time-display">帧 1/${car4DAnimationState.totalFrames} (t=0.00s)</span>
+        </div>
+        <div class="car-4d-status">
+            <span id="car-4d-status-text">动画已就绪</span>
+        </div>
+    `;
+    plotContainer.appendChild(controlsContainer);
+    
+    // 更新时间滑块的最大值和显示（在动画数据加载后）
+    const timeSlider = document.getElementById('car-4d-time-slider');
+    const timeDisplay = document.getElementById('car-4d-time-display');
+    if (timeSlider && timeDisplay) {
+        timeSlider.max = car4DAnimationState.totalFrames - 1;
+        timeDisplay.textContent = `帧 1/${car4DAnimationState.totalFrames} (t=0.00s)`;
+    }
+    
+    // 创建4D动画图表容器
+    const animationContainer = document.createElement('div');
+    animationContainer.className = 'car-4d-animation-plots';
+    animationContainer.innerHTML = `
+        <div class="car-4d-plot-grid">
+            <div class="car-4d-plot-container">
+                <h3>初始光酸分布 (3D+时间)</h3>
+                <div id="car-4d-initial-acid" class="car-4d-plot"></div>
+            </div>
+            <div class="car-4d-plot-container">
+                <h3>扩散后光酸分布 (3D+时间)</h3>
+                <div id="car-4d-diffused-acid" class="car-4d-plot"></div>
+            </div>
+            <div class="car-4d-plot-container">
+                <h3>脱保护程度分布 (3D+时间)</h3>
+                <div id="car-4d-deprotection" class="car-4d-plot"></div>
+            </div>
+            <div class="car-4d-plot-container">
+                <h3>显影后光刻胶厚度 (3D+时间)</h3>
+                <div id="car-4d-thickness" class="car-4d-plot"></div>
+            </div>
+        </div>
+    `;
+    plotContainer.appendChild(animationContainer);
+    
+    // 绑定控制按钮事件
+    setupCar4DControlEvents();
+}
+
+/**
+ * 设置4D动画控制事件
+ */
+function setupCar4DControlEvents() {
+    // 播放按钮
+    document.getElementById('car-4d-play-btn').addEventListener('click', playCar4DAnimation);
+    
+    // 暂停按钮  
+    document.getElementById('car-4d-pause-btn').addEventListener('click', pauseCar4DAnimation);
+    
+    // 停止按钮
+    document.getElementById('car-4d-stop-btn').addEventListener('click', stopCar4DAnimation);
+    
+    // 重置按钮
+    document.getElementById('car-4d-reset-btn').addEventListener('click', resetCar4DAnimation);
+    
+    // 时间滑块
+    document.getElementById('car-4d-time-slider').addEventListener('input', function() {
+        const frameIndex = parseInt(this.value);
+        car4DAnimationState.currentFrame = frameIndex;
+        updateCar4DAnimationFrame(frameIndex);
+    });
+}
+
+/**
+ * 播放4D动画
+ */
+function playCar4DAnimation() {
+    if (car4DAnimationState.isPlaying) return;
+    
+    car4DAnimationState.isPlaying = true;
+    updateCar4DStatusText('动画播放中...');
+    
+    car4DAnimationState.intervalId = setInterval(() => {
+        car4DAnimationState.currentFrame++;
+        
+        if (car4DAnimationState.currentFrame >= car4DAnimationState.totalFrames) {
+            // 动画结束，重新开始
+            car4DAnimationState.currentFrame = 0;
+        }
+        
+        updateCar4DAnimationFrame(car4DAnimationState.currentFrame);
+        
+        // 更新滑块
+        document.getElementById('car-4d-time-slider').value = car4DAnimationState.currentFrame;
+        
+    }, car4DAnimationState.animationSpeed);
+}
+
+/**
+ * 暂停4D动画
+ */
+function pauseCar4DAnimation() {
+    car4DAnimationState.isPlaying = false;
+    if (car4DAnimationState.intervalId) {
+        clearInterval(car4DAnimationState.intervalId);
+        car4DAnimationState.intervalId = null;
+    }
+    updateCar4DStatusText('动画已暂停');
+}
+
+/**
+ * 停止4D动画
+ */
+function stopCar4DAnimation() {
+    pauseCar4DAnimation();
+    car4DAnimationState.currentFrame = 0;
+    updateCar4DAnimationFrame(0);
+    document.getElementById('car-4d-time-slider').value = 0;
+    updateCar4DStatusText('动画已停止');
+}
+
+/**
+ * 重置4D动画
+ */
+function resetCar4DAnimation() {
+    stopCar4DAnimation();
+    updateCar4DStatusText('动画已重置');
+}
+
+/**
+ * 更新4D动画帧
+ * @param {number} frameIndex - 帧索引
+ */
+function updateCar4DAnimationFrame(frameIndex) {
+    if (!car4DAnimationData) {
+        console.error('CAR模型：无4D动画数据');
+        return;
+    }
+    
+    // 检查数据结构 - 后端返回的是frames格式而不是animation_frames
+    const initialAcidFrames = car4DAnimationData.initial_acid_frames;
+    const diffusedAcidFrames = car4DAnimationData.diffused_acid_frames;
+    const deprotectionFrames = car4DAnimationData.deprotection_frames;
+    const thicknessFrames = car4DAnimationData.thickness_frames;
+    const timeArray = car4DAnimationData.time_array;
+    
+    if (!initialAcidFrames || frameIndex >= initialAcidFrames.length) {
+        console.error(`CAR模型：无效的帧索引(${frameIndex})，总帧数: ${initialAcidFrames ? initialAcidFrames.length : 0}`);
+        return;
+    }
+    
+    // 获取当前帧的时间值
+    const timeValue = timeArray ? timeArray[frameIndex] : frameIndex;
+    
+    // 更新时间显示
+    updateCar4DTimeDisplay(frameIndex, timeValue);
+    
+    // 配置Plotly选项
+    const plotlyConfig = {
+        responsive: true,
+        toImageButtonOptions: {
+            format: 'png',
+            filename: `car_4d_frame_${frameIndex}`,
+            scale: 1,
+            width: 800,
+            height: 600
+        }
+    };
+    
+    // 公共3D布局设置
+    const common3DLayout = {
+        scene: {
+            camera: {
+                eye: { x: 1.5, y: 1.5, z: 1.5 }
+            },
+            aspectmode: 'cube'
+        },
+        autosize: true,
+        margin: { l: 0, r: 0, b: 0, t: 40 }
+    };
+    
+    // 1. 更新初始光酸分布图
+    if (initialAcidFrames && car4DAnimationData.x_coords && car4DAnimationData.y_coords) {
+        const initialAcidData = [{
+            type: 'surface',
+            x: car4DAnimationData.x_coords,
+            y: car4DAnimationData.y_coords,
+            z: initialAcidFrames[frameIndex],
+            colorscale: 'Viridis',
+            contours: {
+                z: {
+                    show: true,
+                    usecolormap: true,
+                    highlightcolor: "#42f462",
+                    project: { z: true }
+                }
+            },
+            hovertemplate: 'X: %{x}<br>Y: %{y}<br>光酸浓度: %{z}<extra></extra>'
+        }];
+        
+        const initialAcidLayout = {
+            ...common3DLayout,
+            title: `初始光酸分布 (t=${timeValue.toFixed(2)}s)`,
+            scene: {
+                ...common3DLayout.scene,
+                xaxis: { title: 'X位置(μm)' },
+                yaxis: { title: 'Y位置(μm)' },
+                zaxis: { title: '光酸浓度' }
+            }
+        };
+        
+        Plotly.newPlot('car-4d-initial-acid', initialAcidData, initialAcidLayout, plotlyConfig);
+    }
+    
+    // 2. 更新扩散后光酸分布图
+    if (diffusedAcidFrames && car4DAnimationData.x_coords && car4DAnimationData.y_coords) {
+        const diffusedAcidData = [{
+            type: 'surface',
+            x: car4DAnimationData.x_coords,
+            y: car4DAnimationData.y_coords,
+            z: diffusedAcidFrames[frameIndex],
+            colorscale: 'Viridis',
+            contours: {
+                z: {
+                    show: true,
+                    usecolormap: true,
+                    highlightcolor: "#42f462",
+                    project: { z: true }
+                }
+            },
+            hovertemplate: 'X: %{x}<br>Y: %{y}<br>扩散光酸浓度: %{z}<extra></extra>'
+        }];
+        
+        const diffusedAcidLayout = {
+            ...common3DLayout,
+            title: `扩散后光酸分布 (t=${timeValue.toFixed(2)}s)`,
+            scene: {
+                ...common3DLayout.scene,
+                xaxis: { title: 'X位置(μm)' },
+                yaxis: { title: 'Y位置(μm)' },
+                zaxis: { title: '光酸浓度' }
+            }
+        };
+        
+        Plotly.newPlot('car-4d-diffused-acid', diffusedAcidData, diffusedAcidLayout, plotlyConfig);
+    }
+    
+    // 3. 更新脱保护程度分布图
+    if (deprotectionFrames && car4DAnimationData.x_coords && car4DAnimationData.y_coords) {
+        const deprotectionData = [{
+            type: 'surface',
+            x: car4DAnimationData.x_coords,
+            y: car4DAnimationData.y_coords,
+            z: deprotectionFrames[frameIndex],
+            colorscale: 'YlOrRd',
+            contours: {
+                z: {
+                    show: true,
+                    usecolormap: true,
+                    highlightcolor: "#42f462",
+                    project: { z: true }
+                }
+            },
+            hovertemplate: 'X: %{x}<br>Y: %{y}<br>脱保护程度: %{z}<extra></extra>'
+        }];
+        
+        const deprotectionLayout = {
+            ...common3DLayout,
+            title: `脱保护程度分布 (t=${timeValue.toFixed(2)}s)`,
+            scene: {
+                ...common3DLayout.scene,
+                xaxis: { title: 'X位置(μm)' },
+                yaxis: { title: 'Y位置(μm)' },
+                zaxis: { title: '脱保护程度' }
+            }
+        };
+        
+        Plotly.newPlot('car-4d-deprotection', deprotectionData, deprotectionLayout, plotlyConfig);
+    }
+    
+    // 4. 更新光刻胶厚度分布图
+    if (thicknessFrames && car4DAnimationData.x_coords && car4DAnimationData.y_coords) {
+        const thicknessData = [{
+            type: 'surface',
+            x: car4DAnimationData.x_coords,
+            y: car4DAnimationData.y_coords,
+            z: thicknessFrames[frameIndex],
+            colorscale: 'Plasma',
+            contours: {
+                z: {
+                    show: true,
+                    usecolormap: true,
+                    highlightcolor: "#42f462",
+                    project: { z: true }
+                }
+            },
+            hovertemplate: 'X: %{x}<br>Y: %{y}<br>相对厚度: %{z}<extra></extra>'
+        }];
+        
+        const thicknessLayout = {
+            ...common3DLayout,
+            title: `显影后光刻胶厚度 (t=${timeValue.toFixed(2)}s)`,
+            scene: {
+                ...common3DLayout.scene,
+                xaxis: { title: 'X位置(μm)' },
+                yaxis: { title: 'Y位置(μm)' },
+                zaxis: { title: '相对厚度' }
+            }
+        };
+        
+        Plotly.newPlot('car-4d-thickness', thicknessData, thicknessLayout, plotlyConfig);
+    }
+}
+
+/**
+ * 更新时间显示
+ * @param {number} frameIndex - 当前帧索引
+ * @param {number} timeValue - 当前时间值
+ */
+function updateCar4DTimeDisplay(frameIndex, timeValue) {
+    const timeDisplay = document.getElementById('car-4d-time-display');
+    if (timeDisplay) {
+        timeDisplay.textContent = `帧 ${frameIndex + 1}/${car4DAnimationState.totalFrames} (t=${timeValue.toFixed(2)}s)`;
+    }
+}
+
+/**
+ * 更新状态文本
+ * @param {string} status - 状态文本
+ */
+function updateCar4DStatusText(status) {
+    const statusText = document.getElementById('car-4d-status-text');
+    if (statusText) {
+        statusText.textContent = status;
+    }
+}

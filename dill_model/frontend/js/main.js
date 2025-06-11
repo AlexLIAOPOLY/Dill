@@ -104,6 +104,16 @@ function initApp() {
     bindParamTooltips();
     bindPhiExprUI();
     
+    // 初始化4D动画控制
+    console.log('🔍 [DEBUG] 初始化4D动画控制...');
+    try {
+        setupDill4DAnimationControls();
+        setupEnhancedDill4DAnimationControls();
+        console.log('✅ 4D动画控制初始化成功');
+    } catch (error) {
+        console.error('❌ 4D动画控制初始化失败:', error);
+    }
+    
     // 获取DOM元素
     const calculateBtn = document.getElementById('calculate-btn');
     const resultsSection = document.getElementById('results-section');
@@ -496,6 +506,110 @@ function initApp() {
 
     // 添加phi_expr输入框下方表达式示例和格式提示
     addPhiExprHint();
+
+    // 添加Enhanced DILL层显示模式控制功能
+    function addEnhancedDillLayerModeControl() {
+        // 检查是否已经添加了控制元素
+        if (document.getElementById('enhanced-dill-layer-mode-control')) {
+            return;
+        }
+        
+        // 寻找Enhanced DILL模型的控制面板
+        const enhancedDillContainer = document.querySelector('#enhanced-dill-4d-animation-container') ||
+                                      document.querySelector('.enhanced-dill-controls') ||
+                                      document.querySelector('#enhanced-dill-model-tab');
+        
+        if (!enhancedDillContainer) {
+            console.log('未找到Enhanced DILL控制容器，稍后重试');
+            // 稍后再试
+            setTimeout(addEnhancedDillLayerModeControl, 1000);
+            return;
+        }
+        
+        // 创建层控制元素
+        const layerControlDiv = document.createElement('div');
+        layerControlDiv.id = 'enhanced-dill-layer-mode-control';
+        layerControlDiv.className = 'enhanced-dill-layer-control mb-3 p-2 border rounded';
+        layerControlDiv.innerHTML = `
+            <div class="d-flex align-items-center">
+                <label class="form-label me-2 mb-0">🎭 3D层显示模式:</label>
+                <select id="enhanced-dill-layer-mode-select" class="form-select form-select-sm" style="width: auto;">
+                    <option value="single">🔹 仅表面层</option>
+                    <option value="multi" selected>🔶 多层显示 (表面+中间+底部)</option>
+                    <option value="all">🔷 全部层显示 (最多5层)</option>
+                </select>
+                <small class="text-muted ms-2">影响4D动画的层数显示</small>
+            </div>
+        `;
+        
+        // 插入到容器的开头
+        enhancedDillContainer.insertBefore(layerControlDiv, enhancedDillContainer.firstChild);
+        
+        // 绑定事件处理
+        const layerModeSelect = document.getElementById('enhanced-dill-layer-mode-select');
+        if (layerModeSelect) {
+            layerModeSelect.addEventListener('change', function() {
+                const newMode = this.value;
+                window.enhancedDillLayerMode = newMode;
+                
+                console.log(`Enhanced DILL层显示模式切换为: ${newMode}`);
+                
+                // 显示切换提示
+                showLayerModeChangeNotification(newMode);
+                
+                // 如果动画正在播放，立即更新当前帧
+                if (typeof enhancedDill4DAnimationState !== 'undefined' && 
+                    enhancedDill4DAnimationState.isPlaying && 
+                    typeof enhancedDill4DAnimationData !== 'undefined' && 
+                    enhancedDill4DAnimationData) {
+                    updateEnhancedDill4DAnimationFrame(enhancedDill4DAnimationState.currentFrame);
+                }
+            });
+        }
+        
+        console.log('Enhanced DILL层显示模式控制已添加');
+    }
+
+    // 显示模式切换通知
+    function showLayerModeChangeNotification(mode) {
+        const modeDescriptions = {
+            'single': '仅显示表面层 - 清晰查看表面效应',
+            'multi': '显示3层 (表面+中间+底部) - 均衡的层次展示',
+            'all': '显示全部层 - 完整的深度信息'
+        };
+        
+        const description = modeDescriptions[mode] || '未知模式';
+        
+        // 创建临时通知
+        const notification = document.createElement('div');
+        notification.className = 'alert alert-info alert-dismissible fade show position-fixed';
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 300px;';
+        notification.innerHTML = `
+            <strong>层显示模式已切换</strong><br>
+            ${description}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // 3秒后自动移除
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 3000);
+    }
+
+    // 在页面加载时添加控制元素
+    document.addEventListener('DOMContentLoaded', function() {
+        // 延迟添加，确保页面元素已加载
+        setTimeout(addEnhancedDillLayerModeControl, 2000);
+    });
+
+    // 也在模型切换时尝试添加
+    document.addEventListener('modelTypeChanged', function() {
+        setTimeout(addEnhancedDillLayerModeControl, 500);
+    });
 }
 
 /**
@@ -621,6 +735,24 @@ function getParameterValues() {
             params.y_max = parseFloat(document.getElementById('y_max_3d').value);
             params.z_min = parseFloat(document.getElementById('z_min_3d').value);
             params.z_max = parseFloat(document.getElementById('z_max_3d').value);
+            
+            // 检查4D动画参数
+            const enable4DAnimation = document.getElementById('enable_4d_animation_dill')?.checked || false;
+            if (enable4DAnimation) {
+                params.enable_4d_animation = true;
+                params.t_start = parseFloat(document.getElementById('t_start_dill')?.value) || 0;
+                params.t_end = parseFloat(document.getElementById('t_end_dill')?.value) || 5;
+                params.time_steps = parseInt(document.getElementById('time_steps_dill')?.value) || 20;
+                console.log('DILL模型3D模式启用4D动画:', params.enable_4d_animation, '时间范围:', params.t_start, '-', params.t_end, '步数:', params.time_steps);
+                console.log('4D动画相位表达式:', params.phi_expr);
+                
+                // 检查相位表达式是否包含时间变量
+                if (params.phi_expr && !params.phi_expr.includes('t') && params.phi_expr !== '0') {
+                    console.warn('⚠️ 4D动画提示：相位表达式不包含时间变量t，动画可能不会有变化。建议使用sin(t)、cos(t)等时间相关表达式。');
+                } else if (params.phi_expr === '0') {
+                    console.warn('⚠️ 4D动画提示：相位表达式为常数0，动画不会有变化。建议改为sin(t)等时间相关表达式。');
+                }
+            }
         } else {
             params.K = parseFloat(document.getElementById('K').value);
         }
@@ -634,9 +766,11 @@ function getParameterValues() {
         params.M0 = parseFloat(document.getElementById('M0').value) || 1.0;
         params.t_exp = parseFloat(document.getElementById('t_exp_enhanced').value) || 5.0;
         
+        // 确保V参数在所有模式下都存在，并有合理的默认值
+        params.V = parseFloat(document.getElementById('enhanced_V')?.value) || 0.8;
+        
         // 添加增强Dill模型的干涉条纹可见度(V)参数
         if (sineType === 'single') {
-            params.V = parseFloat(document.getElementById('enhanced_V').value) || 0.8;
             params.K = parseFloat(document.getElementById('enhanced_K').value) || 2.0;
             console.log(`Enhanced Dill 1D模式: V=${params.V}, K=${params.K}`);
         }
@@ -654,6 +788,11 @@ function getParameterValues() {
             params.y_min = parseFloat(document.getElementById('enhanced_y_min').value) || 0.0;
             params.y_max = parseFloat(document.getElementById('enhanced_y_max').value) || 10.0;
             params.y_points = parseInt(document.getElementById('enhanced_y_points').value) || 100;
+            
+            // 确保K参数存在
+            if (!params.K) {
+                params.K = params.Kx;
+            }
         } else if (sineType === '3d') {
             params.Kx = parseFloat(document.getElementById('enhanced_Kx_3d').value) || 2.0;
             params.Ky = parseFloat(document.getElementById('enhanced_Ky_3d').value) || 2.0;
@@ -668,7 +807,43 @@ function getParameterValues() {
             params.y_max = parseFloat(document.getElementById('enhanced_y_max_3d').value) || 10.0;
             params.z_min = parseFloat(document.getElementById('enhanced_z_min_3d').value) || 0.0;
             params.z_max = parseFloat(document.getElementById('enhanced_z_max_3d').value) || 10.0;
+            
+            // 检查增强DILL模型4D动画参数
+            const enable4DAnimation = document.getElementById('enable_4d_animation_enhanced_dill')?.checked || false;
+            if (enable4DAnimation) {
+                params.enable_4d_animation = true;
+                params.t_start = parseFloat(document.getElementById('t_start_enhanced_dill')?.value) || 0;
+                params.t_end = parseFloat(document.getElementById('t_end_enhanced_dill')?.value) || 5;
+                params.time_steps = parseInt(document.getElementById('time_steps_enhanced_dill')?.value) || 20;
+                console.log('Enhanced DILL模型3D模式启用4D动画:', params.enable_4d_animation, '时间范围:', params.t_start, '-', params.t_end, '步数:', params.time_steps);
+                console.log('Enhanced DILL 4D动画相位表达式:', params.phi_expr);
+                
+                // 检查相位表达式是否包含时间变量
+                if (params.phi_expr && !params.phi_expr.includes('t') && params.phi_expr !== '0') {
+                    console.warn('⚠️ Enhanced DILL 4D动画提示：相位表达式不包含时间变量t，动画可能不会有变化。建议使用sin(t)、cos(t)等时间相关表达式。');
+                } else if (params.phi_expr === '0') {
+                    console.warn('⚠️ Enhanced DILL 4D动画提示：相位表达式为常数0，动画不会有变化。建议改为sin(t)等时间相关表达式。');
+                }
+            } else {
+                // 确保4D动画参数不会被传递
+                params.enable_4d_animation = false;
+                console.log('Enhanced DILL模型4D动画已禁用');
+            }
         }
+        
+        // 最后确保关键参数都有值
+        if (!params.K) {
+            params.K = 2.0; // 默认空间频率
+        }
+        
+        console.log('Enhanced DILL模型参数校验:', {
+            sine_type: params.sine_type,
+            V: params.V,
+            K: params.K,
+            Kx: params.Kx,
+            Ky: params.Ky,
+            enable_4d_animation: params.enable_4d_animation
+        });
     } else if (modelType === 'car') {
         const sineType = document.getElementById('car-sine-type').value;
         params.sine_type = sineType;
@@ -909,6 +1084,16 @@ function displayInteractiveResults(data) {
 
     // 调试输出，检查数据结构
     console.log('Received data for display:', data, 'Model type:', currentModelType);
+    console.log('数据字段详情:', {
+        keys: Object.keys(data),
+        is_3d: data.is_3d,
+        has_x_coords: !!data.x_coords,
+        has_y_coords: !!data.y_coords,
+        has_exposure_dose: !!data.exposure_dose,
+        exposure_dose_type: Array.isArray(data.exposure_dose) ? 'array' : typeof data.exposure_dose,
+        exposure_dose_length: data.exposure_dose ? data.exposure_dose.length : 'undefined',
+        exposure_dose_first_element_type: data.exposure_dose && data.exposure_dose[0] ? (Array.isArray(data.exposure_dose[0]) ? '2d_array' : typeof data.exposure_dose[0]) : 'undefined'
+    });
 
     const staticExposurePlot = document.getElementById('exposure-plot');
     const staticThicknessPlot = document.getElementById('thickness-plot');
@@ -933,12 +1118,21 @@ function displayInteractiveResults(data) {
     exposurePlotContainer.style.display = 'block';
     thicknessPlotContainer.style.display = 'block';
 
-    // 检查是否有3D数据
-    const has3DData = data.is_3d || (data.intensity_3d && (data.x_coords && data.y_coords && data.z_coords));
+    // 检查是否有3D数据 - 支持静态3D和4D动画数据
+    const has3DData = data.is_3d === true || 
+                     (data.x_coords && data.y_coords && 
+                      ((data.exposure_dose && Array.isArray(data.exposure_dose) && Array.isArray(data.exposure_dose[0])) ||
+                       (data.exposure_dose_frames && Array.isArray(data.exposure_dose_frames))));
 
     // 检查是否有二维数据
     const has2DData = data.is_2d || (data.z_exposure_dose && data.z_thickness) || 
                      (data.x_coords && data.y_coords && (data.z_exposure_dose || data.z_thickness));
+    
+    console.log('数据维度判断结果:', {
+        has3DData: has3DData,
+        has2DData: has2DData,
+        currentModelType: currentModelType
+    });
 
     // Dynamically set titles based on data dimensions
     if (has3DData) {
@@ -1011,77 +1205,291 @@ function displayInteractiveResults(data) {
                 carInteractivePlotsContainer.style.display = 'none';
             }
         }
+        
+        // 处理CAR模型4D动画数据
+        if (data.animation_frames || data.initial_acid_frames) {
+            console.log('检测到CAR模型4D动画数据，设置4D动画界面');
+            if (typeof render4DAnimation === 'function') {
+                render4DAnimation(data);
+            }
+            
+            // 显示4D动画区域
+            const car4DAnimationSection = document.getElementById('car-4d-animation-section');
+            if (car4DAnimationSection) {
+                car4DAnimationSection.style.display = 'block';
+            }
+        }
     } else if (currentModelType === 'enhanced_dill') {
         // 增强Dill模型处理逻辑
         console.log('增强Dill模型数据处理', {has3DData, has2DData});
         
-        if (has3DData) {
-            // 处理3D数据可视化
-            console.log('显示增强Dill模型3D可视化');
+        // 首先检查是否有Enhanced DILL模型4D动画数据
+        const hasEnhancedDill4DData = currentModelType === 'enhanced_dill' && (
+            data.enable_4d_animation === true || 
+            (data.exposure_dose_frames && Array.isArray(data.exposure_dose_frames) && data.exposure_dose_frames.length > 0) || 
+            (data.thickness_frames && Array.isArray(data.thickness_frames) && data.thickness_frames.length > 0) || 
+            (data.time_array && Array.isArray(data.time_array) && data.time_array.length > 1) ||
+            (data.time_steps && data.time_steps > 1 && (data.exposure_dose_frames || data.thickness_frames))
+        );
+        
+        if (hasEnhancedDill4DData) {
+            console.log('检测到Enhanced DILL模型4D动画数据，首先渲染第一帧作为静态图表');
+            console.log('Enhanced DILL 4D动画数据详情:', {
+                enable_4d_animation: data.enable_4d_animation,
+                has_exposure_dose_frames: !!data.exposure_dose_frames,
+                has_thickness_frames: !!data.thickness_frames,
+                has_time_array: !!data.time_array,
+                time_steps: data.time_steps,
+                sine_type: data.sine_type,
+                exposure_frames_length: data.exposure_dose_frames ? data.exposure_dose_frames.length : 0,
+                thickness_frames_length: data.thickness_frames ? data.thickness_frames.length : 0
+            });
+            
+            // 处理第一帧数据作为静态图表显示
+            if (data.exposure_dose_frames && data.thickness_frames && 
+                data.exposure_dose_frames.length > 0 && data.thickness_frames.length > 0) {
+                
+                try {
+                    // 构造第一帧的静态数据
+                    const firstFrameData = {
+                        ...data,
+                        exposure_dose: data.exposure_dose_frames[0],
+                        thickness: data.thickness_frames[0],
+                        is_3d: true,
+                        sine_type: data.sine_type
+                    };
+                    
+                    console.log('准备渲染Enhanced DILL 4D动画的第一帧作为静态3D图表');
+                    console.log('第一帧数据结构:', {
+                        exposure_dose_type: typeof firstFrameData.exposure_dose,
+                        exposure_dose_length: Array.isArray(firstFrameData.exposure_dose) ? firstFrameData.exposure_dose.length : 'not array',
+                        thickness_type: typeof firstFrameData.thickness,
+                        thickness_length: Array.isArray(firstFrameData.thickness) ? firstFrameData.thickness.length : 'not array',
+                        has_coords: !!(firstFrameData.x_coords && firstFrameData.y_coords && firstFrameData.z_coords)
+                    });
+                    
+                    // 渲染第一帧的3D图表
+                    createExposure3DPlot(exposurePlotContainer, firstFrameData);
+                    createThickness3DPlot(thicknessPlotContainer, firstFrameData);
+                    
+                    console.log('Enhanced DILL 4D动画第一帧静态图表渲染完成');
+                    
+                } catch (error) {
+                    console.error('Enhanced DILL 4D动画第一帧渲染失败:', error);
+                    // 回退到错误显示
+                    exposurePlotContainer.innerHTML = '<div style="color:red;padding:20px;">Enhanced DILL 4D曝光数据第一帧渲染失败: ' + error.message + '</div>';
+                    thicknessPlotContainer.innerHTML = '<div style="color:red;padding:20px;">Enhanced DILL 4D厚度数据第一帧渲染失败: ' + error.message + '</div>';
+                }
+            } else {
+                console.warn('Enhanced DILL 4D动画数据不完整，无法渲染第一帧');
+                exposurePlotContainer.innerHTML = '<div style="color:orange;padding:20px;">Enhanced DILL 4D动画数据不完整</div>';
+                thicknessPlotContainer.innerHTML = '<div style="color:orange;padding:20px;">Enhanced DILL 4D动画数据不完整</div>';
+            }
+            
+            // 存储4D动画数据
+            enhancedDill4DAnimationData = data;
+            
+            // 设置总帧数
+            if (enhancedDill4DAnimationData.exposure_dose_frames) {
+                enhancedDill4DAnimationState.totalFrames = enhancedDill4DAnimationData.exposure_dose_frames.length;
+            } else if (enhancedDill4DAnimationData.time_steps) {
+                enhancedDill4DAnimationState.totalFrames = enhancedDill4DAnimationData.time_steps;
+            } else {
+                enhancedDill4DAnimationState.totalFrames = 20; // 默认帧数
+            }
+            
+            console.log('Enhanced DILL 4D动画总帧数:', enhancedDill4DAnimationState.totalFrames);
+            
+            // 确保总帧数有效
+            if (enhancedDill4DAnimationState.totalFrames <= 0) {
+                console.warn('Enhanced DILL 4D动画总帧数无效，设置为默认值20');
+                enhancedDill4DAnimationState.totalFrames = 20;
+            }
+            
+            // 设置4D动画界面
+            setupEnhancedDill4DAnimationUI();
+            
+            // 显示4D动画区域
+            const enhancedDill4DAnimationSection = document.getElementById('enhanced-dill-4d-animation-section');
+            if (enhancedDill4DAnimationSection) {
+                enhancedDill4DAnimationSection.style.display = 'block';
+                console.log('Enhanced DILL 4D动画区域已显示');
+            } else {
+                console.error('未找到Enhanced DILL 4D动画区域元素 #enhanced-dill-4d-animation-section');
+            }
+            
+            // 延迟初始化4D动画第一帧（避免与静态图表冲突）
+            console.log('延迟初始化Enhanced DILL 4D动画第一帧');
+            setTimeout(() => {
+                updateEnhancedDill4DAnimationFrame(0);
+            }, 300);
+            
+        } else if (has3DData) {
+            // 处理静态3D数据可视化
+            console.log('显示增强Dill模型静态3D可视化');
             createExposure3DPlot(exposurePlotContainer, data);
             createThickness3DPlot(thicknessPlotContainer, data);
         } else if (has2DData) {
-            // 处理2D数据可视化
-            console.log('显示增强Dill模型2D热图'); 
-            createExposureHeatmap(exposurePlotContainer, data);
-            createThicknessHeatmap(thicknessPlotContainer, data);
-            
-            // 显示XY平面热力图容器
-            const exposureXyPlotItem = document.getElementById('exposure-xy-plot-item');
-            const thicknessXyPlotItem = document.getElementById('thickness-xy-plot-item');
-            if (exposureXyPlotItem) exposureXyPlotItem.style.display = 'block';
-            if (thicknessXyPlotItem) thicknessXyPlotItem.style.display = 'block';
-            
-            // 创建XY平面热力图
-            const exposureXyContainer = document.getElementById('exposure-xy-plot-container');
-            const thicknessXyContainer = document.getElementById('thickness-xy-plot-container');
-            
-            if (exposureXyContainer) {
-                exposureXyContainer.innerHTML = '';
-                // 确保有XY平面数据
-                            if (data.xy_exposure || data.exposure_xy) {
-                createExposureXYHeatmap(exposureXyContainer, data);
-            } else {
-                console.log('没有(X, Y)平面曝光数据，生成模拟数据');
-                    // 如果没有真实XY平面数据，使用相同的数据源但改变显示标题和轴标签
-                    createExposureXYHeatmap(exposureXyContainer, data);
+            // Enhanced Dill模型2D数据的特殊处理 - 显示4张图表
+            if (currentModelType === 'enhanced_dill' && data.has_yz_data && data.has_xy_data) {
+                console.log('显示Enhanced Dill模型4图热图分布');
+                console.log('Enhanced Dill 2D数据检查:', {
+                    has_z_exposure_dose: !!data.z_exposure_dose,
+                    has_z_thickness: !!data.z_thickness,
+                    has_yz_data: !!data.has_yz_data,
+                    has_xy_data: !!data.has_xy_data,
+                    y_coords_length: data.y_coords ? data.y_coords.length : 0,
+                    z_coords_length: data.z_coords ? data.z_coords.length : 0,
+                    x_coords_length: data.x_coords ? data.x_coords.length : 0
+                });
+                
+                // 创建4图布局容器
+                const resultsContainer = document.querySelector('.results-container');
+                if (resultsContainer) {
+                    // 清空容器
+                    resultsContainer.innerHTML = '';
+                    
+                    // 创建4图布局
+                    const fourPlotContainer = document.createElement('div');
+                    fourPlotContainer.className = 'enhanced-dill-four-plot-container';
+                    fourPlotContainer.innerHTML = `
+                        <div class="four-plot-grid">
+                            <div class="plot-item">
+                                <h3>YZ平面曝光剂量分布 (深度方向)</h3>
+                                <div id="yz-exposure-plot" class="plot-container"></div>
+                            </div>
+                            <div class="plot-item">
+                                <h3>YZ平面厚度分布 (深度方向)</h3>
+                                <div id="yz-thickness-plot" class="plot-container"></div>
+                            </div>
+                            <div class="plot-item">
+                                <h3>XY平面曝光剂量分布 (表面)</h3>
+                                <div id="xy-exposure-plot" class="plot-container"></div>
+                            </div>
+                            <div class="plot-item">
+                                <h3>XY平面厚度分布 (表面)</h3>
+                                <div id="xy-thickness-plot" class="plot-container"></div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // 添加CSS样式
+                    if (!document.getElementById('enhanced-dill-4plot-styles')) {
+                        const style = document.createElement('style');
+                        style.id = 'enhanced-dill-4plot-styles';
+                        style.textContent = `
+                            .enhanced-dill-four-plot-container {
+                                width: 100%;
+                                padding: 20px;
+                            }
+                            .four-plot-grid {
+                                display: grid;
+                                grid-template-columns: 1fr 1fr;
+                                gap: 20px;
+                                width: 100%;
+                            }
+                            .plot-item {
+                                background: white;
+                                border: 1px solid #ddd;
+                                border-radius: 8px;
+                                padding: 15px;
+                                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                            }
+                            .plot-item h3 {
+                                margin: 0 0 15px 0;
+                                text-align: center;
+                                color: #333;
+                                font-size: 14px;
+                                font-weight: 600;
+                            }
+                            .plot-container {
+                                width: 100%;
+                                height: 400px;
+                                min-height: 300px;
+                            }
+                        `;
+                        document.head.appendChild(style);
+                    }
+                    
+                    resultsContainer.appendChild(fourPlotContainer);
+                    
+                    // 获取4个图表容器
+                    const yzExposureContainer = document.getElementById('yz-exposure-plot');
+                    const yzThicknessContainer = document.getElementById('yz-thickness-plot');
+                    const xyExposureContainer = document.getElementById('xy-exposure-plot');
+                    const xyThicknessContainer = document.getElementById('xy-thickness-plot');
+                    
+                    // 渲染YZ平面图表（使用兼容性数据）
+                    console.log('渲染YZ平面图表...');
+                    if (yzExposureContainer && data.z_exposure_dose) {
+                        createExposureHeatmap(yzExposureContainer, data);
+                    }
+                    if (yzThicknessContainer && data.z_thickness) {
+                        createThicknessHeatmap(yzThicknessContainer, data);
+                    }
+                    
+                    // 渲染XY平面图表（使用扩展数据）
+                    console.log('渲染XY平面图表...');
+                    if (xyExposureContainer && data.xy_exposure) {
+                        createEnhancedDillXYExposureHeatmap(xyExposureContainer, data);
+                    }
+                    if (xyThicknessContainer && data.xy_thickness) {
+                        createEnhancedDillXYThicknessHeatmap(xyThicknessContainer, data);
+                    }
+                    
+                    console.log('Enhanced Dill模型4图显示完成');
+                } else {
+                    console.error('未找到results-container，回退到双图显示');
+                    createExposureHeatmap(exposurePlotContainer, data);
+                    createThicknessHeatmap(thicknessPlotContainer, data);
                 }
-            }
-            
-            if (thicknessXyContainer) {
-                thicknessXyContainer.innerHTML = '';
-                // 确保有XY平面数据
-                            if (data.xy_thickness || data.thickness_xy) {
-                createThicknessXYHeatmap(thicknessXyContainer, data);
             } else {
-                console.log('没有(X, Y)平面厚度数据，生成模拟数据');
-                    // 如果没有真实XY平面数据，使用相同的数据源但改变显示标题和轴标签
-                    createThicknessXYHeatmap(thicknessXyContainer, data);
-                }
+                // 统一处理所有模型的二维数据 - 使用热图
+                console.log('Displaying 2D Heatmap for model:', currentModelType);
+                createExposureHeatmap(exposurePlotContainer, data);
+                createThicknessHeatmap(thicknessPlotContainer, data);
             }
         } else {
-            // 默认1D处理，确保兼容性
-            console.log('显示增强Dill模型1D图表');
-            if (data.z && (data.I !== undefined || data.M !== undefined)) {
-                createExposurePlot(exposurePlotContainer, { x: data.z, exposure_dose: data.I });
-                createThicknessPlot(thicknessPlotContainer, { x: data.z, thickness: data.M });
-            } else {
-                console.error('增强Dill模型1D数据不完整，无法渲染线图');
-                exposurePlotContainer.innerHTML = '<div style="color:red;padding:20px;">增强Dill模型1D曝光数据不完整</div>';
-                thicknessPlotContainer.innerHTML = '<div style="color:red;padding:20px;">增强Dill模型1D厚度数据不完整</div>';
-            }
-            
-            // 隐藏XY平面热力图容器
-            const exposureXyPlotItem = document.getElementById('exposure-xy-plot-item');
-            const thicknessXyPlotItem = document.getElementById('thickness-xy-plot-item');
-            if (exposureXyPlotItem) exposureXyPlotItem.style.display = 'none';
-            if (thicknessXyPlotItem) thicknessXyPlotItem.style.display = 'none';
+            // 默认1D线图，适用于Dill的1D情况
+            createExposurePlot(exposurePlotContainer, data);
+            createThicknessPlot(thicknessPlotContainer, data);
         }
     } else if (has3DData) {
         // 处理3D数据可视化
         console.log('Displaying 3D visualization for model:', currentModelType);
-        createExposure3DPlot(exposurePlotContainer, data);
-        createThickness3DPlot(thicknessPlotContainer, data);
+        
+        // 如果是4D动画数据，使用第一帧进行初始显示
+        if (data.exposure_dose_frames && data.thickness_frames && data.exposure_dose_frames.length > 0) {
+            console.log('检测到4D动画数据，使用第一帧显示3D图表');
+            console.log('4D数据结构检查:', {
+                exposure_frames_count: data.exposure_dose_frames.length,
+                thickness_frames_count: data.thickness_frames.length,
+                first_frame_shape: data.exposure_dose_frames[0] ? 
+                    `${data.exposure_dose_frames[0].length}×${data.exposure_dose_frames[0][0]?.length}×${data.exposure_dose_frames[0][0]?.[0]?.length}` : 'unknown',
+                x_coords_length: data.x_coords?.length,
+                y_coords_length: data.y_coords?.length,
+                z_coords_length: data.z_coords?.length
+            });
+            
+            const firstFrameData = {
+                ...data,
+                x_coords: data.x_coords,
+                y_coords: data.y_coords,
+                z_coords: data.z_coords,
+                exposure_dose: data.exposure_dose_frames[0],
+                thickness: data.thickness_frames[0],
+                is_3d: true,
+                sine_type: data.sine_type
+            };
+            console.log('准备渲染4D动画的第一帧作为静态3D图表');
+            createExposure3DPlot(exposurePlotContainer, firstFrameData);
+            createThickness3DPlot(thicknessPlotContainer, firstFrameData);
+        } else {
+            // 静态3D数据
+            console.log('渲染静态3D数据');
+            createExposure3DPlot(exposurePlotContainer, data);
+            createThickness3DPlot(thicknessPlotContainer, data);
+        }
     } else if (has2DData) {
         // 统一处理所有模型的二维数据 - 使用热图
         console.log('Displaying 2D Heatmap for model:', currentModelType);
@@ -1091,6 +1499,152 @@ function displayInteractiveResults(data) {
         // 默认1D线图，适用于Dill的1D情况
         createExposurePlot(exposurePlotContainer, data);
         createThicknessPlot(thicknessPlotContainer, data);
+    }
+
+    // 统一处理普通DILL模型4D动画数据（不管是1D、2D还是3D）
+    if (currentModelType === 'dill' && (data.enable_4d_animation || data.exposure_dose_frames || data.thickness_frames || data.time_array)) {
+        console.log('检测到DILL模型4D动画数据，设置4D动画界面');
+        console.log('4D动画数据详情:', {
+            enable_4d_animation: data.enable_4d_animation,
+            has_exposure_dose_frames: !!data.exposure_dose_frames,
+            has_thickness_frames: !!data.thickness_frames,
+            has_time_array: !!data.time_array,
+            time_steps: data.time_steps,
+            exposure_frames_length: data.exposure_dose_frames ? data.exposure_dose_frames.length : 0,
+            thickness_frames_length: data.thickness_frames ? data.thickness_frames.length : 0
+        });
+        
+        dill4DAnimationData = data;
+        
+        // 设置总帧数
+        if (dill4DAnimationData.exposure_dose_frames) {
+            dill4DAnimationState.totalFrames = dill4DAnimationData.exposure_dose_frames.length;
+        } else if (dill4DAnimationData.time_steps) {
+            dill4DAnimationState.totalFrames = dill4DAnimationData.time_steps;
+        }
+        
+        console.log('设置4D动画总帧数:', dill4DAnimationState.totalFrames);
+        
+        // 设置4D动画界面
+        setupDill4DAnimationUI();
+        
+        // 显示4D动画区域
+        const dill4DAnimationSection = document.getElementById('dill-4d-animation-section');
+        if (dill4DAnimationSection) {
+            dill4DAnimationSection.style.display = 'block';
+            console.log('4D动画区域已显示');
+        } else {
+            console.error('未找到4D动画区域元素 #dill-4d-animation-section');
+        }
+        
+        // 初始化显示第一帧
+        console.log('初始化4D动画第一帧 (frameIndex=0)');
+        setTimeout(() => {
+            updateDill4DAnimationFrame(0);
+        }, 100);
+    }
+
+    // 4D动画显示控制 - 严格检查用户是否主动启用了4D动画
+    console.log('4D动画显示控制 - 检查用户设置:', {
+        currentModelType: currentModelType,
+        data_enable_4d_animation: data.enable_4d_animation,
+        has_exposure_dose_frames: !!data.exposure_dose_frames,
+        has_thickness_frames: !!data.thickness_frames,
+        has_time_array: !!data.time_array,
+        time_steps: data.time_steps
+    });
+
+    // 只有在数据明确标记启用了4D动画时才显示4D动画界面
+    if (data.enable_4d_animation === true) {
+        if (currentModelType === 'dill' && !dill4DAnimationData) {
+            console.log('用户启用了DILL模型4D动画，设置4D动画界面');
+            
+            dill4DAnimationData = data;
+            
+            // 设置总帧数
+            if (data.exposure_dose_frames) {
+                dill4DAnimationState.totalFrames = data.exposure_dose_frames.length;
+            } else if (data.time_steps) {
+                dill4DAnimationState.totalFrames = data.time_steps;
+            } else {
+                dill4DAnimationState.totalFrames = 20; // 默认帧数
+            }
+            
+            console.log('设置DILL 4D动画总帧数:', dill4DAnimationState.totalFrames);
+            
+            // 设置4D动画界面
+            setupDill4DAnimationUI();
+            
+            // 显示4D动画区域
+            const dill4DAnimationSection = document.getElementById('dill-4d-animation-section');
+            if (dill4DAnimationSection) {
+                dill4DAnimationSection.style.display = 'block';
+                console.log('DILL 4D动画区域已显示');
+            }
+            
+            // 初始化显示第一帧
+            setTimeout(() => {
+                updateDill4DAnimationFrame(0);
+            }, 100);
+        }
+
+        // Enhanced Dill模型的4D动画检测
+        if (currentModelType === 'enhanced_dill' && !enhancedDill4DAnimationData) {
+            console.log('用户启用了Enhanced DILL模型4D动画，设置4D动画界面');
+            
+            enhancedDill4DAnimationData = data;
+            
+            // 设置总帧数
+            if (data.exposure_dose_frames) {
+                enhancedDill4DAnimationState.totalFrames = data.exposure_dose_frames.length;
+            } else if (data.time_steps) {
+                enhancedDill4DAnimationState.totalFrames = data.time_steps;
+            } else {
+                enhancedDill4DAnimationState.totalFrames = 20; // 默认帧数
+            }
+            
+            console.log('设置Enhanced DILL 4D动画总帧数:', enhancedDill4DAnimationState.totalFrames);
+            
+            // 设置4D动画界面
+            setupEnhancedDill4DAnimationUI();
+            
+            // 显示4D动画区域
+            const enhancedDill4DAnimationSection = document.getElementById('enhanced-dill-4d-animation-section');
+            if (enhancedDill4DAnimationSection) {
+                enhancedDill4DAnimationSection.style.display = 'block';
+                console.log('Enhanced DILL 4D动画区域已显示');
+            }
+            
+            // 初始化显示第一帧
+            setTimeout(() => {
+                updateEnhancedDill4DAnimationFrame(0);
+            }, 100);
+        }
+    } else {
+        // 用户没有启用4D动画，确保4D动画区域被隐藏
+        console.log('用户未启用4D动画，隐藏所有4D动画界面');
+        
+        const dill4DAnimationSection = document.getElementById('dill-4d-animation-section');
+        const enhancedDill4DAnimationSection = document.getElementById('enhanced-dill-4d-animation-section');
+        
+        if (dill4DAnimationSection) {
+            dill4DAnimationSection.style.display = 'none';
+        }
+        if (enhancedDill4DAnimationSection) {
+            enhancedDill4DAnimationSection.style.display = 'none';
+        }
+        
+        // 停止任何正在播放的动画
+        if (dill4DAnimationState.intervalId) {
+            clearInterval(dill4DAnimationState.intervalId);
+            dill4DAnimationState.intervalId = null;
+            dill4DAnimationState.isPlaying = false;
+        }
+        if (enhancedDill4DAnimationState.intervalId) {
+            clearInterval(enhancedDill4DAnimationState.intervalId);
+            enhancedDill4DAnimationState.intervalId = null;
+            enhancedDill4DAnimationState.isPlaying = false;
+        }
     }
 
     animateResults();
@@ -1144,15 +1698,30 @@ function createExposure3DPlot(container, data) {
     if (currentModelType === 'car') {
         // CAR模型优先使用acid_concentration_3d字段
         zData = data.acid_concentration_3d || data.z_exposure_dose || data.exposure_dose || data.intensity_3d || data.I;
+    } else if (currentModelType === 'enhanced_dill') {
+        // 增强Dill模型优先使用exposure_dose字段（支持3D动画数据格式）
+        zData = data.exposure_dose || data.z_exposure_dose || data.intensity_3d || data.I;
     } else {
         // 其他模型使用标准字段
         zData = data.z_exposure_dose || data.exposure_dose || data.intensity_3d || data.I;
     }
 
-    // 更健壮的数据检查
+    // 更健壮的数据检查 - 添加对3D模式的特殊支持
+    console.log('DEBUG - 数据存在检查:', {
+        xCoords_exists: !!xCoords,
+        yCoords_exists: !!yCoords,
+        zData_exists: !!zData,
+        xCoords_length: xCoords ? xCoords.length : 0,
+        yCoords_length: yCoords ? yCoords.length : 0,
+        zData_length: zData ? zData.length : 0,
+        is_3d: data.is_3d,
+        sine_type: data.sine_type
+    });
+
     if (!xCoords || !yCoords || !zData ||
         !Array.isArray(xCoords) || !Array.isArray(yCoords) || !Array.isArray(zData) ||
         xCoords.length === 0 || yCoords.length === 0 || zData.length === 0) {
+        console.warn('3D曝光数据不完整或缺失');
         container.innerHTML = `<div style="color:red;padding:20px;">${LANGS[currentLang].error_no_exposure_data || '无有效3D曝光剂量数据，无法绘图。'}</div>`;
         return;
     }
@@ -1167,11 +1736,46 @@ function createExposure3DPlot(container, data) {
         length: plotDataZ.length,
         first_item_type: plotDataZ.length > 0 ? typeof plotDataZ[0] : 'unknown', 
         first_item_isArray: plotDataZ.length > 0 ? Array.isArray(plotDataZ[0]) : false,
-        first_item_length: plotDataZ.length > 0 && Array.isArray(plotDataZ[0]) ? plotDataZ[0].length : 0
+        first_item_length: plotDataZ.length > 0 && Array.isArray(plotDataZ[0]) ? plotDataZ[0].length : 0,
+        intensity_shape: data.intensity_shape // 从后端获取的形状信息
     });
 
     // 改进的数据格式检测和转换逻辑
-    if (!Array.isArray(plotDataZ[0])) {
+    // 首先检查是否是3D数组结构 [x][y][z] 
+    const is3DArray = Array.isArray(plotDataZ) && 
+                      Array.isArray(plotDataZ[0]) && 
+                      Array.isArray(plotDataZ[0][0]);
+    
+    if (is3DArray) {
+        console.log('检测到3D数组结构，需要转换为Plotly surface格式');
+        console.log('3D数组维度:', `[Z=${plotDataZ.length}][Y=${plotDataZ[0].length}][X=${plotDataZ[0][0].length}]`);
+        
+        // 对于Enhanced Dill模型的3D数据格式[z][y][x]，Plotly surface需要的是二维数组z[y][x]
+        // 我们需要从3D数组中提取一个Z切片作为表面显示
+        try {
+            // 取z方向的中间切片作为表面显示
+            const midZIndex = Math.floor(plotDataZ.length / 2);
+            console.log(`从${plotDataZ.length}个Z层中选择第${midZIndex}层作为表面显示`);
+            
+            // plotDataZ[midZIndex] 是一个 [y][x] 的二维数组，正好是Plotly需要的格式
+            plotDataZ = plotDataZ[midZIndex];
+            console.log('成功提取Z中间切片，新维度:', `[Y=${plotDataZ.length}][X=${plotDataZ[0].length}]`);
+            
+            // 验证提取的数据
+            console.log('切片数据样本:', {
+                corner_values: {
+                    top_left: plotDataZ[0][0],
+                    top_right: plotDataZ[0][plotDataZ[0].length-1],
+                    bottom_left: plotDataZ[plotDataZ.length-1][0],
+                    bottom_right: plotDataZ[plotDataZ.length-1][plotDataZ[0].length-1]
+                }
+            });
+        } catch (error) {
+            console.error('3D数据切片提取失败:', error);
+            container.innerHTML = `<div style="color:red;padding:20px;">3D数据格式处理失败: ${error.message}</div>`;
+            return;
+        }
+    } else if (!Array.isArray(plotDataZ[0])) {
         console.log('Z数据是扁平数组，需要重塑成二维数组');
         
         // 首先检查是否可以正确重塑
@@ -1380,15 +1984,30 @@ function createThickness3DPlot(container, data) {
     if (currentModelType === 'car') {
         // CAR模型优先使用deprotection_3d字段
         zData = data.deprotection_3d || data.z_thickness || data.thickness || data.thickness_3d || data.M;
+    } else if (currentModelType === 'enhanced_dill') {
+        // 增强Dill模型优先使用thickness字段（支持3D动画数据格式）
+        zData = data.thickness || data.z_thickness || data.thickness_3d || data.M;
     } else {
         // 其他模型使用标准字段
         zData = data.z_thickness || data.thickness || data.thickness_3d || data.M;
     }
 
-    // 更健壮的数据检查
+    // 更健壮的数据检查 - 添加对3D模式的特殊支持
+    console.log('DEBUG - 厚度数据存在检查:', {
+        xCoords_exists: !!xCoords,
+        yCoords_exists: !!yCoords,
+        zData_exists: !!zData,
+        xCoords_length: xCoords ? xCoords.length : 0,
+        yCoords_length: yCoords ? yCoords.length : 0,
+        zData_length: zData ? zData.length : 0,
+        is_3d: data.is_3d,
+        sine_type: data.sine_type
+    });
+
     if (!xCoords || !yCoords || !zData ||
         !Array.isArray(xCoords) || !Array.isArray(yCoords) || !Array.isArray(zData) ||
         xCoords.length === 0 || yCoords.length === 0 || zData.length === 0) {
+        console.warn('3D厚度数据不完整或缺失');
         container.innerHTML = `<div style="color:red;padding:20px;">${LANGS[currentLang].error_no_thickness_data || '无有效3D厚度数据，无法绘图。'}</div>`;
         return;
     }
@@ -1403,11 +2022,46 @@ function createThickness3DPlot(container, data) {
         length: plotDataZ.length,
         first_item_type: plotDataZ.length > 0 ? typeof plotDataZ[0] : 'unknown',
         first_item_isArray: plotDataZ.length > 0 ? Array.isArray(plotDataZ[0]) : false,
-        first_item_length: plotDataZ.length > 0 && Array.isArray(plotDataZ[0]) ? plotDataZ[0].length : 0
+        first_item_length: plotDataZ.length > 0 && Array.isArray(plotDataZ[0]) ? plotDataZ[0].length : 0,
+        intensity_shape: data.intensity_shape // 从后端获取的形状信息
     });
 
     // 改进的数据格式检测和转换逻辑
-    if (!Array.isArray(plotDataZ[0])) {
+    // 首先检查是否是3D数组结构 [x][y][z] 
+    const is3DArray = Array.isArray(plotDataZ) && 
+                      Array.isArray(plotDataZ[0]) && 
+                      Array.isArray(plotDataZ[0][0]);
+    
+    if (is3DArray) {
+        console.log('检测到3D厚度数组结构，需要转换为Plotly surface格式');
+        console.log('3D厚度数组维度:', `[Z=${plotDataZ.length}][Y=${plotDataZ[0].length}][X=${plotDataZ[0][0].length}]`);
+        
+        // 对于Enhanced Dill模型的3D数据格式[z][y][x]，Plotly surface需要的是二维数组z[y][x]
+        // 我们需要从3D数组中提取一个Z切片作为表面显示
+        try {
+            // 取z方向的中间切片作为表面显示
+            const midZIndex = Math.floor(plotDataZ.length / 2);
+            console.log(`从${plotDataZ.length}个Z层中选择第${midZIndex}层作为厚度表面显示`);
+            
+            // plotDataZ[midZIndex] 是一个 [y][x] 的二维数组，正好是Plotly需要的格式
+            plotDataZ = plotDataZ[midZIndex];
+            console.log('成功提取厚度Z中间切片，新维度:', `[Y=${plotDataZ.length}][X=${plotDataZ[0].length}]`);
+            
+            // 验证提取的厚度数据
+            console.log('厚度切片数据样本:', {
+                corner_values: {
+                    top_left: plotDataZ[0][0],
+                    top_right: plotDataZ[0][plotDataZ[0].length-1],
+                    bottom_left: plotDataZ[plotDataZ.length-1][0],
+                    bottom_right: plotDataZ[plotDataZ.length-1][plotDataZ[0].length-1]
+                }
+            });
+        } catch (error) {
+            console.error('3D厚度数据切片提取失败:', error);
+            container.innerHTML = `<div style="color:red;padding:20px;">3D厚度数据格式处理失败: ${error.message}</div>`;
+            return;
+        }
+    } else if (!Array.isArray(plotDataZ[0])) {
         console.log('Z数据是扁平数组，需要重塑成二维数组');
         
         // 首先检查是否可以正确重塑
@@ -1490,81 +2144,6 @@ function createThickness3DPlot(container, data) {
     }
 }
 
-// ... (createExposurePlot and createThicknessPlot remain for 1D)
-// START - Add 1D plot functions back
-function createExposurePlot(container, data) {
-    if (!data || !data.x || !data.exposure_dose || 
-        !Array.isArray(data.x) || !Array.isArray(data.exposure_dose) ||
-        data.x.length === 0 || data.exposure_dose.length === 0 ||
-        data.x.length !== data.exposure_dose.length) {
-        container.innerHTML = `<div style=\"color:red;padding:20px;\">${LANGS[currentLang].error_no_exposure_data || '无有效曝光剂量数据，无法绘图。'}</div>`;
-        return;
-    }
-
-    const trace = {
-        x: data.x,
-        y: data.exposure_dose,
-        mode: 'lines',
-        type: 'scatter',
-        name: LANGS[currentLang].exposure_dose_trace_name || '曝光剂量'
-    };
-
-    const layout = {
-        title: '曝光计量分布 (1D)',
-        xaxis: { title: LANGS[currentLang].x_position },
-        yaxis: { title: LANGS[currentLang].exposure_dose_unit || '曝光剂量 (mJ/cm²)' },
-        margin: { l: 60, r: 20, t: 60, b: 60 },
-        shapes: [],
-        annotations: []
-    };
-    Plotly.newPlot(container, [trace], layout, {responsive: true});
-    container.on('plotly_click', function(eventData) {
-        if(eventData.points.length > 0) {
-            const point = eventData.points[0];
-            const params = getParameterValues(); // 获取当前参数
-            showSinglePointDetailsPopup({ x: point.x, y: point.y }, 'exposure', container, eventData);
-        }
-    });
-    window.lastPlotData = data; // Store for export
-}
-
-function createThicknessPlot(container, data) {
-    if (!data || !data.x || !data.thickness || 
-        !Array.isArray(data.x) || !Array.isArray(data.thickness) ||
-        data.x.length === 0 || data.thickness.length === 0 ||
-        data.x.length !== data.thickness.length) {
-        container.innerHTML = `<div style=\"color:red;padding:20px;\">${LANGS[currentLang].error_no_thickness_data || '无有效厚度数据，无法绘图。'}</div>`;
-        return;
-    }
-
-    const trace = {
-        x: data.x,
-        y: data.thickness,
-        mode: 'lines',
-        type: 'scatter',
-        name: LANGS[currentLang].thickness_trace_name || '相对厚度'
-    };
-
-    const layout = {
-        title: '光刻胶厚度分布 (1D)',
-        xaxis: { title: LANGS[currentLang].x_position },
-        yaxis: { title: LANGS[currentLang].relative_thickness_unit || '相对厚度 (归一化)' },
-        margin: { l: 60, r: 20, t: 60, b: 60 },
-        shapes: [],
-        annotations: []
-    };
-    Plotly.newPlot(container, [trace], layout, {responsive: true});
-    container.on('plotly_click', function(eventData) {
-        if(eventData.points.length > 0) {
-            const point = eventData.points[0];
-            const params = getParameterValues(); // 获取当前参数
-            showSinglePointDetailsPopup({ x: point.x, y: point.y }, 'thickness', container, eventData);
-        }
-    });
-    window.lastPlotData = data; // Store for export - might overwrite exposure plot data if called sequentially
-}
-// END - Add 1D plot functions back
-
 /**
  * 标准化热图数据格式，确保数据为二维数组形式
  * @param {Array} data - 原始数据，可能是一维或二维数组
@@ -1592,6 +2171,128 @@ function standardizeHeatmapData(data, xCoords, yCoords) {
     console.error('数据维度不匹配: 无法重塑数组');
     console.error(`数据长度=${data ? data.length : 'undefined'}, X长度=${xCoords.length}, Y长度=${yCoords.length}`);
     return data; // 返回原始数据，让调用函数决定如何处理
+}
+
+/**
+ * 创建1D曝光剂量分布线图
+ * 
+ * @param {HTMLElement} container - 容器元素
+ * @param {Object} data - 数据对象
+ */
+function createExposurePlot(container, data) {
+    // 获取当前语言设置
+    const currentLang = window.currentLang || localStorage.getItem('lang') || 'zh-CN';
+    
+    // 统一字段名处理，增加更多兼容性
+    let xCoords = data.x || data.positions || data.x_coords;
+    let yData = data.exposure_dose || data.intensity || data.I;
+
+    // 更健壮的数据检查
+    if (!xCoords || !yData || 
+        !Array.isArray(xCoords) || !Array.isArray(yData) ||
+        xCoords.length === 0 || yData.length === 0 ||
+        xCoords.length !== yData.length) {
+        container.innerHTML = `<div style="color:red;padding:20px;">${(window.LANGS && window.LANGS[currentLang] && window.LANGS[currentLang].error_no_exposure_data) || '无有效1D曝光剂量数据，无法绘图。'}</div>`;
+        return;
+    }
+
+    try {
+        const trace = {
+            x: xCoords,
+            y: yData,
+            type: 'scatter',
+            mode: 'lines+markers',
+            line: { color: '#1f77b4', width: 2 },
+            marker: { size: 4, color: '#1f77b4' },
+            name: (window.LANGS && window.LANGS[currentLang] && window.LANGS[currentLang].exposure_dose_trace_name) || '曝光剂量',
+            hovertemplate: `位置: %{x}<br>${(window.LANGS && window.LANGS[currentLang] && window.LANGS[currentLang].hover_exposure_value) || '曝光剂量值'}: %{y}<extra></extra>`
+        };
+
+        const layout = {
+            title: '曝光计量分布 (1D)',
+            xaxis: { title: (window.LANGS && window.LANGS[currentLang] && window.LANGS[currentLang].x_position) || 'X 位置 (μm)' },
+            yaxis: { title: (window.LANGS && window.LANGS[currentLang] && window.LANGS[currentLang].exposure_dose_trace_name) || '曝光剂量 (mJ/cm²)' },
+            margin: { l: 60, r: 20, t: 60, b: 60 },
+            showlegend: false
+        };
+        
+        Plotly.newPlot(container, [trace], layout, {responsive: true});
+        
+        // 添加点击事件处理
+        container.on('plotly_click', function(eventData) {
+            if(eventData.points.length > 0) {
+                const point = eventData.points[0];
+                showSinglePointDetailsPopup({ 
+                    x: point.x, 
+                    y: point.y
+                }, 'exposure', container, eventData);
+            }
+        });
+    } catch (error) {
+        console.error('Error creating 1D Exposure plot:', error);
+        container.innerHTML = `<div style="color:red;padding:20px;">创建1D线图失败: ${error.message}</div>`;
+    }
+}
+
+/**
+ * 创建1D光刻胶厚度分布线图
+ * 
+ * @param {HTMLElement} container - 容器元素
+ * @param {Object} data - 数据对象
+ */
+function createThicknessPlot(container, data) {
+    // 获取当前语言设置
+    const currentLang = window.currentLang || localStorage.getItem('lang') || 'zh-CN';
+    
+    // 统一字段名处理，增加更多兼容性
+    let xCoords = data.x || data.positions || data.x_coords;
+    let yData = data.thickness || data.M;
+
+    // 更健壮的数据检查
+    if (!xCoords || !yData || 
+        !Array.isArray(xCoords) || !Array.isArray(yData) ||
+        xCoords.length === 0 || yData.length === 0 ||
+        xCoords.length !== yData.length) {
+        container.innerHTML = `<div style="color:red;padding:20px;">${(window.LANGS && window.LANGS[currentLang] && window.LANGS[currentLang].error_no_thickness_data) || '无有效1D厚度数据，无法绘图。'}</div>`;
+        return;
+    }
+
+    try {
+        const trace = {
+            x: xCoords,
+            y: yData,
+            type: 'scatter',
+            mode: 'lines+markers',
+            line: { color: '#ff7f0e', width: 2 },
+            marker: { size: 4, color: '#ff7f0e' },
+            name: (window.LANGS && window.LANGS[currentLang] && window.LANGS[currentLang].thickness_trace_name) || '相对厚度',
+            hovertemplate: `位置: %{x}<br>${(window.LANGS && window.LANGS[currentLang] && window.LANGS[currentLang].hover_thickness_value) || '相对厚度值'}: %{y}<extra></extra>`
+        };
+
+        const layout = {
+            title: '光刻胶厚度分布 (1D)',
+            xaxis: { title: (window.LANGS && window.LANGS[currentLang] && window.LANGS[currentLang].x_position) || 'X 位置 (μm)' },
+            yaxis: { title: (window.LANGS && window.LANGS[currentLang] && window.LANGS[currentLang].thickness_trace_name) || '相对厚度' },
+            margin: { l: 60, r: 20, t: 60, b: 60 },
+            showlegend: false
+        };
+        
+        Plotly.newPlot(container, [trace], layout, {responsive: true});
+        
+        // 添加点击事件处理
+        container.on('plotly_click', function(eventData) {
+            if(eventData.points.length > 0) {
+                const point = eventData.points[0];
+                showSinglePointDetailsPopup({ 
+                    x: point.x, 
+                    y: point.y
+                }, 'thickness', container, eventData);
+            }
+        });
+    } catch (error) {
+        console.error('Error creating 1D Thickness plot:', error);
+        container.innerHTML = `<div style="color:red;padding:20px;">创建1D线图失败: ${error.message}</div>`;
+    }
 }
 
 function createExposureHeatmap(container, data) {
@@ -1853,6 +2554,154 @@ function createThicknessXYHeatmap(container, data) {
     } catch (error) {
         console.error('创建(X, Y)平面厚度热图失败:', error);
         container.innerHTML = `<div style="color:red;padding:20px;">创建(X, Y)平面厚度热图失败: ${error.message}</div>`;
+    }
+}
+
+/**
+ * Enhanced Dill模型专用：创建XY平面曝光剂量热图
+ */
+function createEnhancedDillXYExposureHeatmap(container, data) {
+    // Enhanced Dill模型XY平面数据处理
+    let xCoords = data.x_coords || data.x;
+    let yCoords = data.xy_y_coords || data.y_coords || data.y;
+    let zData = data.xy_exposure;
+    
+    console.log('Enhanced Dill XY平面曝光剂量热图数据检查:', {
+        x_coords_length: xCoords ? xCoords.length : 0,
+        y_coords_length: yCoords ? yCoords.length : 0,
+        z_data_type: typeof zData,
+        z_data_shape: Array.isArray(zData) ? `${zData.length}x${zData[0] ? zData[0].length : 0}` : 'not array',
+        data_keys: Object.keys(data)
+    });
+    
+    // 检查数据
+    if (!xCoords || !yCoords || !zData || 
+        !Array.isArray(xCoords) || !Array.isArray(yCoords) || !Array.isArray(zData) ||
+        xCoords.length === 0 || yCoords.length === 0 || zData.length === 0) {
+        console.error('Enhanced Dill XY平面曝光剂量数据不完整');
+        container.innerHTML = '<div style="color:red;padding:20px;">无有效XY平面曝光剂量数据，无法绘图</div>';
+        return;
+    }
+    
+    // 处理数据格式，使用标准化函数
+    try {
+        let heatmapZ = standardizeHeatmapData(zData, xCoords, yCoords);
+        
+        console.log('Enhanced Dill XY平面曝光剂量热图数据处理完成:', {
+            x_range: [Math.min(...xCoords), Math.max(...xCoords)],
+            y_range: [Math.min(...yCoords), Math.max(...yCoords)],
+            z_range: [Math.min(...heatmapZ.flat()), Math.max(...heatmapZ.flat())]
+        });
+        
+        const trace = {
+            x: xCoords,
+            y: yCoords,
+            z: heatmapZ,
+            type: 'heatmap',
+            colorscale: 'Viridis',
+            colorbar: { title: '曝光剂量 (mJ/cm²)' },
+            hovertemplate: 'X: %{x}<br>Y: %{y}<br>曝光剂量: %{z}<extra></extra>'
+        };
+        
+        const layout = {
+            title: 'XY平面曝光剂量分布 (表面)',
+            xaxis: { title: 'X 位置 (μm)' },
+            yaxis: { title: 'Y 位置 (μm)' },
+            margin: { l: 60, r: 20, t: 60, b: 60 }
+        };
+        
+        Plotly.newPlot(container, [trace], layout, {responsive: true});
+        
+        // 添加点击事件处理
+        container.on('plotly_click', function(eventData) {
+            if(eventData.points.length > 0) {
+                const point = eventData.points[0];
+                showSinglePointDetailsPopup({ 
+                    x: point.x, 
+                    y: point.y, 
+                    z: point.z 
+                }, 'exposure', container, eventData);
+            }
+        });
+        
+        console.log('Enhanced Dill XY平面曝光剂量热图渲染完成');
+    } catch (error) {
+        console.error('创建Enhanced Dill XY平面曝光热图失败:', error);
+        container.innerHTML = `<div style="color:red;padding:20px;">创建XY平面曝光热图失败: ${error.message}</div>`;
+    }
+}
+
+/**
+ * Enhanced Dill模型专用：创建XY平面厚度热图
+ */
+function createEnhancedDillXYThicknessHeatmap(container, data) {
+    // Enhanced Dill模型XY平面数据处理
+    let xCoords = data.x_coords || data.x;
+    let yCoords = data.xy_y_coords || data.y_coords || data.y;
+    let zData = data.xy_thickness;
+    
+    console.log('Enhanced Dill XY平面厚度热图数据检查:', {
+        x_coords_length: xCoords ? xCoords.length : 0,
+        y_coords_length: yCoords ? yCoords.length : 0,
+        z_data_type: typeof zData,
+        z_data_shape: Array.isArray(zData) ? `${zData.length}x${zData[0] ? zData[0].length : 0}` : 'not array',
+        data_keys: Object.keys(data)
+    });
+    
+    // 检查数据
+    if (!xCoords || !yCoords || !zData || 
+        !Array.isArray(xCoords) || !Array.isArray(yCoords) || !Array.isArray(zData) ||
+        xCoords.length === 0 || yCoords.length === 0 || zData.length === 0) {
+        console.error('Enhanced Dill XY平面厚度数据不完整');
+        container.innerHTML = '<div style="color:red;padding:20px;">无有效XY平面厚度数据，无法绘图</div>';
+        return;
+    }
+    
+    // 处理数据格式，使用标准化函数
+    try {
+        let heatmapZ = standardizeHeatmapData(zData, xCoords, yCoords);
+        
+        console.log('Enhanced Dill XY平面厚度热图数据处理完成:', {
+            x_range: [Math.min(...xCoords), Math.max(...xCoords)],
+            y_range: [Math.min(...yCoords), Math.max(...yCoords)],
+            z_range: [Math.min(...heatmapZ.flat()), Math.max(...heatmapZ.flat())]
+        });
+        
+        const trace = {
+            x: xCoords,
+            y: yCoords,
+            z: heatmapZ,
+            type: 'heatmap',
+            colorscale: 'Plasma',
+            colorbar: { title: '相对厚度' },
+            hovertemplate: 'X: %{x}<br>Y: %{y}<br>相对厚度: %{z}<extra></extra>'
+        };
+        
+        const layout = {
+            title: 'XY平面厚度分布 (表面)',
+            xaxis: { title: 'X 位置 (μm)' },
+            yaxis: { title: 'Y 位置 (μm)' },
+            margin: { l: 60, r: 20, t: 60, b: 60 }
+        };
+        
+        Plotly.newPlot(container, [trace], layout, {responsive: true});
+        
+        // 添加点击事件处理
+        container.on('plotly_click', function(eventData) {
+            if(eventData.points.length > 0) {
+                const point = eventData.points[0];
+                showSinglePointDetailsPopup({ 
+                    x: point.x, 
+                    y: point.y, 
+                    z: point.z 
+                }, 'thickness', container, eventData);
+            }
+        });
+        
+        console.log('Enhanced Dill XY平面厚度热图渲染完成');
+    } catch (error) {
+        console.error('创建Enhanced Dill XY平面厚度热图失败:', error);
+        container.innerHTML = `<div style="color:red;padding:20px;">创建XY平面厚度热图失败: ${error.message}</div>`;
     }
 }
 
@@ -2825,7 +3674,7 @@ function getEnhancedDillPopupHtmlContent(x, y, setName, params, plotType) {
             <div>• Ky: Y方向空间频率 (${params.Ky} rad/μm)</div>
             <div>• Kz: Z方向空间频率 (${params.Kz} rad/μm)</div>
             <div>• φ(t): 相位表达式 (${params.phi_expr || '0'})</div>
-            <div>• A(z_h,T,t_B): 光敏剂吸收率</div>
+            <div>• A(z_h,T,t_B): 光敏吸收率</div>
             <div>• B(z_h,T,t_B): 基底吸收率</div>
             <div>• C(z_h,T,t_B): 光敏速率常数</div>
         `;
@@ -3414,6 +4263,8 @@ function initSineWaveTypeSelectors() {
     const dillSineType = document.getElementById('dill-sine-type');
     const dillMultiSineParams = document.getElementById('dill-multisine-params');
     const dill3dSineParams = document.getElementById('dill-3dsine-params');
+    // 添加4D动画参数容器的引用
+    const dill4DAnimationGroup = document.querySelector('[data-title="4D动画参数"]');
     
     if (dillSineType && dillMultiSineParams && dill3dSineParams) {
         dillSineType.addEventListener('change', function() {
@@ -3426,6 +4277,44 @@ function initSineWaveTypeSelectors() {
                 dillMultiSineParams.style.display = 'block';
             } else if (this.value === '3d') {
                 dill3dSineParams.style.display = 'block';
+            }
+            
+            // 新增：控制4D动画参数的显示/隐藏
+            if (dill4DAnimationGroup) {
+                const dillParamsContainer = document.getElementById('dill-params');
+                if (this.value === '3d') {
+                    dill4DAnimationGroup.style.display = 'block';
+                    // 添加show-4d类名以显示4D动画参数
+                    if (dillParamsContainer) {
+                        dillParamsContainer.classList.add('show-4d');
+                    }
+                } else {
+                    dill4DAnimationGroup.style.display = 'none';
+                    // 移除show-4d类名以隐藏4D动画参数
+                    if (dillParamsContainer) {
+                        dillParamsContainer.classList.remove('show-4d');
+                    }
+                    // 如果切换到非3D模式，取消勾选4D动画并隐藏动画区域
+                    const enable4dCheckbox = document.getElementById('enable_4d_animation_dill');
+                    if (enable4dCheckbox) {
+                        enable4dCheckbox.checked = false;
+                        const dill4dParams = document.getElementById('dill_4d_time_params');
+                        if (dill4dParams) dill4dParams.style.display = 'none';
+                        
+                        // 隐藏4D动画区域
+                        const animationSection = document.getElementById('dill-4d-animation-section');
+                        if (animationSection) {
+                            animationSection.style.display = 'none';
+                        }
+                        
+                        // 停止当前播放的动画
+                        if (typeof dill4DAnimationState !== 'undefined' && dill4DAnimationState.intervalId) {
+                            clearInterval(dill4DAnimationState.intervalId);
+                            dill4DAnimationState.intervalId = null;
+                            dill4DAnimationState.isPlaying = false;
+                        }
+                    }
+                }
             }
         });
     }
@@ -3446,6 +4335,49 @@ function initSineWaveTypeSelectors() {
                 enhancedDillMultiSineParams.style.display = 'block';
             } else if (this.value === '3d') {
                 enhancedDill3dSineParams.style.display = 'block';
+            }
+            
+            // 新增：控制Enhanced Dill 4D动画参数的显示/隐藏
+            const enhancedDill4DAnimationGroup = document.querySelector('#enhanced-dill-params [data-title="4D动画参数"]');
+            if (enhancedDill4DAnimationGroup) {
+                const enhancedDillParamsContainer = document.getElementById('enhanced-dill-params');
+                if (this.value === '3d') {
+                    enhancedDill4DAnimationGroup.style.display = 'block';
+                    // 添加show-4d类名以显示4D动画参数
+                    if (enhancedDillParamsContainer) {
+                        enhancedDillParamsContainer.classList.add('show-4d');
+                    }
+                    console.log('✅ Enhanced Dill 3D模式：4D动画参数组已显示');
+                } else {
+                    enhancedDill4DAnimationGroup.style.display = 'none';
+                    // 移除show-4d类名以隐藏4D动画参数
+                    if (enhancedDillParamsContainer) {
+                        enhancedDillParamsContainer.classList.remove('show-4d');
+                    }
+                    // 如果切换到非3D模式，取消勾选4D动画并隐藏动画区域
+                    const enable4dCheckbox = document.getElementById('enable_4d_animation_enhanced_dill');
+                    if (enable4dCheckbox) {
+                        enable4dCheckbox.checked = false;
+                        const enhancedDill4dParams = document.getElementById('enhanced_dill_4d_time_params');
+                        if (enhancedDill4dParams) enhancedDill4dParams.style.display = 'none';
+                        
+                        // 隐藏4D动画区域
+                        const animationSection = document.getElementById('enhanced-dill-4d-animation-section');
+                        if (animationSection) {
+                            animationSection.style.display = 'none';
+                        }
+                        
+                        // 停止当前播放的动画
+                        if (typeof enhancedDill4DAnimationState !== 'undefined' && enhancedDill4DAnimationState.intervalId) {
+                            clearInterval(enhancedDill4DAnimationState.intervalId);
+                            enhancedDill4DAnimationState.intervalId = null;
+                            enhancedDill4DAnimationState.isPlaying = false;
+                        }
+                    }
+                    console.log('Enhanced Dill 非3D模式：4D动画参数组已隐藏');
+                }
+            } else {
+                console.error('❌ 找不到Enhanced Dill 4D动画参数组元素');
             }
         });
     }
@@ -3470,9 +4402,23 @@ function initSineWaveTypeSelectors() {
         });
     }
     
-    // 初始化各模型波形类型
-    if (dillSineType) dillSineType.dispatchEvent(new Event('change'));
-    if (enhancedDillSineType) enhancedDillSineType.dispatchEvent(new Event('change'));
+    // 初始化各模型波形类型（触发change事件以设置初始状态）
+    if (dillSineType) {
+        // 先检查初始值，如果是3D则添加show-4d类名
+        const dillParamsContainer = document.getElementById('dill-params');
+        if (dillSineType.value === '3d' && dillParamsContainer) {
+            dillParamsContainer.classList.add('show-4d');
+        }
+        dillSineType.dispatchEvent(new Event('change'));
+    }
+    if (enhancedDillSineType) {
+        // 先检查初始值，如果是3D则添加show-4d类名
+        const enhancedDillParamsContainer = document.getElementById('enhanced-dill-params');
+        if (enhancedDillSineType.value === '3d' && enhancedDillParamsContainer) {
+            enhancedDillParamsContainer.classList.add('show-4d');
+        }
+        enhancedDillSineType.dispatchEvent(new Event('change'));
+    }
     if (carSineType) carSineType.dispatchEvent(new Event('change'));
 }
 
@@ -3960,6 +4906,19 @@ function resetModelSpecificComponents() {
             container.style.display = 'none';
         }
     });
+
+    // 取消勾选所有模型的4D动画复选框
+    const dill4DCheckbox = document.getElementById('enable_4d_animation_dill');
+    if (dill4DCheckbox && dill4DCheckbox.checked) {
+        dill4DCheckbox.checked = false;
+        dill4DCheckbox.dispatchEvent(new Event('change'));
+    }
+
+    const enhancedDill4DCheckbox = document.getElementById('enable_4d_animation_enhanced_dill');
+    if (enhancedDill4DCheckbox && enhancedDill4DCheckbox.checked) {
+        enhancedDill4DCheckbox.checked = false;
+        enhancedDill4DCheckbox.dispatchEvent(new Event('change'));
+    }
 }
 
 /**
@@ -4416,4 +5375,1340 @@ function scrollToBottomAndRefreshLogs() {
             loadLogs();
         }
     }, 500); // 等待滚动开始后再刷新日志
+}
+
+// DILL模型4D动画相关变量和函数
+let dill4DAnimationData = null;
+let dill4DAnimationState = {
+    isPlaying: false,
+    currentFrame: 0,
+    totalFrames: 0,
+    timeArray: [],
+    intervalId: null,
+    loopEnabled: false
+};
+
+let enhancedDill4DAnimationData = null;
+let enhancedDill4DAnimationState = {
+    isPlaying: false,
+    currentFrame: 0,
+    totalFrames: 0,
+    timeArray: [],
+    intervalId: null,
+    loopEnabled: false
+};
+
+// 4D动画开关互斥管理
+function handle4DAnimationExclusivity(enabledModel) {
+    console.log(`4D动画开关互斥: 启用${enabledModel}模型，禁用其他模型`);
+    
+    // 获取所有4D动画复选框
+    const dillCheckbox = document.getElementById('enable_4d_animation_dill');
+    const enhancedDillCheckbox = document.getElementById('enable_4d_animation_enhanced_dill');
+    const carCheckbox = document.getElementById('car_enable_4d_animation');
+    
+    // 获取所有4D参数面板
+    const dillParams = document.getElementById('dill_4d_time_params');
+    const enhancedDillParams = document.getElementById('enhanced_dill_4d_time_params');
+    const carParams = document.getElementById('car_4d_time_params');
+    
+    // 获取所有4D动画区域
+    const dillAnimationSection = document.getElementById('dill-4d-animation-section');
+    const enhancedDillAnimationSection = document.getElementById('enhanced-dill-4d-animation-section');
+    const carAnimationSection = document.getElementById('car-4d-animation-section');
+    
+    // 根据启用的模型，禁用其他模型
+    switch(enabledModel) {
+        case 'dill':
+            // 禁用其他模型
+            if (enhancedDillCheckbox) {
+                enhancedDillCheckbox.checked = false;
+                if (enhancedDillParams) enhancedDillParams.style.display = 'none';
+                if (enhancedDillAnimationSection) enhancedDillAnimationSection.style.display = 'none';
+            }
+            if (carCheckbox) {
+                carCheckbox.checked = false;
+                if (carParams) carParams.style.display = 'none';
+                if (carAnimationSection) carAnimationSection.style.display = 'none';
+            }
+            // 停止其他模型的动画
+            if (enhancedDill4DAnimationState.intervalId) {
+                clearInterval(enhancedDill4DAnimationState.intervalId);
+                enhancedDill4DAnimationState.intervalId = null;
+                enhancedDill4DAnimationState.isPlaying = false;
+            }
+            if (typeof car4DAnimationState !== 'undefined' && car4DAnimationState.intervalId) {
+                clearInterval(car4DAnimationState.intervalId);
+                car4DAnimationState.intervalId = null;
+                car4DAnimationState.isPlaying = false;
+            }
+            break;
+            
+        case 'enhanced_dill':
+            // 禁用其他模型
+            if (dillCheckbox) {
+                dillCheckbox.checked = false;
+                if (dillParams) dillParams.style.display = 'none';
+                if (dillAnimationSection) dillAnimationSection.style.display = 'none';
+            }
+            if (carCheckbox) {
+                carCheckbox.checked = false;
+                if (carParams) carParams.style.display = 'none';
+                if (carAnimationSection) carAnimationSection.style.display = 'none';
+            }
+            // 停止其他模型的动画
+            if (dill4DAnimationState.intervalId) {
+                clearInterval(dill4DAnimationState.intervalId);
+                dill4DAnimationState.intervalId = null;
+                dill4DAnimationState.isPlaying = false;
+            }
+            if (typeof car4DAnimationState !== 'undefined' && car4DAnimationState.intervalId) {
+                clearInterval(car4DAnimationState.intervalId);
+                car4DAnimationState.intervalId = null;
+                car4DAnimationState.isPlaying = false;
+            }
+            break;
+            
+        case 'car':
+            // 禁用其他模型
+            if (dillCheckbox) {
+                dillCheckbox.checked = false;
+                if (dillParams) dillParams.style.display = 'none';
+                if (dillAnimationSection) dillAnimationSection.style.display = 'none';
+            }
+            if (enhancedDillCheckbox) {
+                enhancedDillCheckbox.checked = false;
+                if (enhancedDillParams) enhancedDillParams.style.display = 'none';
+                if (enhancedDillAnimationSection) enhancedDillAnimationSection.style.display = 'none';
+            }
+            // 停止其他模型的动画
+            if (dill4DAnimationState.intervalId) {
+                clearInterval(dill4DAnimationState.intervalId);
+                dill4DAnimationState.intervalId = null;
+                dill4DAnimationState.isPlaying = false;
+            }
+            if (enhancedDill4DAnimationState.intervalId) {
+                clearInterval(enhancedDill4DAnimationState.intervalId);
+                enhancedDill4DAnimationState.intervalId = null;
+                enhancedDill4DAnimationState.isPlaying = false;
+            }
+            break;
+    }
+    
+    console.log(`4D动画开关互斥处理完成: ${enabledModel}模型已启用，其他模型已禁用`);
+}
+
+// DILL模型4D动画事件监听器
+document.addEventListener('DOMContentLoaded', function() {
+    // DILL模型4D动画复选框事件
+    const enable4DAnimationDill = document.getElementById('enable_4d_animation_dill');
+    const dill4DTimeParams = document.getElementById('dill_4d_time_params');
+    
+    if (enable4DAnimationDill && dill4DTimeParams) {
+        enable4DAnimationDill.addEventListener('change', function() {
+            if (this.checked) {
+                // 启用DILL 4D动画，禁用其他模型
+                handle4DAnimationExclusivity('dill');
+                dill4DTimeParams.style.display = 'flex';
+                console.log('DILL模型4D动画已启用，其他模型已禁用');
+            } else {
+                dill4DTimeParams.style.display = 'none';
+                // 隐藏4D动画区域
+                const animationSection = document.getElementById('dill-4d-animation-section');
+                if (animationSection) {
+                    animationSection.style.display = 'none';
+                }
+                // 停止当前播放的动画
+                if (dill4DAnimationState.intervalId) {
+                    clearInterval(dill4DAnimationState.intervalId);
+                    dill4DAnimationState.intervalId = null;
+                    dill4DAnimationState.isPlaying = false;
+                }
+                console.log('DILL模型4D动画已禁用');
+            }
+        });
+    }
+    
+    // 增强DILL模型4D动画复选框事件
+    const enable4DAnimationEnhancedDill = document.getElementById('enable_4d_animation_enhanced_dill');
+    const enhancedDill4DTimeParams = document.getElementById('enhanced_dill_4d_time_params');
+    
+    if (enable4DAnimationEnhancedDill && enhancedDill4DTimeParams) {
+        // 初始化时根据复选框状态设置参数面板
+        enhancedDill4DTimeParams.style.display = enable4DAnimationEnhancedDill.checked ? 'flex' : 'none';
+        
+        enable4DAnimationEnhancedDill.addEventListener('change', function() {
+            if (this.checked) {
+                // 启用Enhanced DILL 4D动画，禁用其他模型
+                handle4DAnimationExclusivity('enhanced_dill');
+                enhancedDill4DTimeParams.style.display = 'flex';
+                console.log('Enhanced DILL模型4D动画已启用，其他模型已禁用');
+            } else {
+                enhancedDill4DTimeParams.style.display = 'none';
+                // 隐藏4D动画区域
+                const animationSection = document.getElementById('enhanced-dill-4d-animation-section');
+                if (animationSection) {
+                    animationSection.style.display = 'none';
+                }
+                // 停止当前播放的动画
+                if (enhancedDill4DAnimationState.intervalId) {
+                    clearInterval(enhancedDill4DAnimationState.intervalId);
+                    enhancedDill4DAnimationState.intervalId = null;
+                    enhancedDill4DAnimationState.isPlaying = false;
+                }
+                console.log('Enhanced DILL模型4D动画已禁用');
+            }
+        });
+    }
+    
+    // CAR模型4D动画复选框事件 (如果存在)
+    const carEnable4DAnimation = document.getElementById('car_enable_4d_animation');
+    const car4DTimeParams = document.getElementById('car_4d_time_params');
+    
+    if (carEnable4DAnimation && car4DTimeParams) {
+        carEnable4DAnimation.addEventListener('change', function() {
+            if (this.checked) {
+                // 启用CAR 4D动画，禁用其他模型
+                handle4DAnimationExclusivity('car');
+                car4DTimeParams.style.display = 'flex';
+                console.log('CAR模型4D动画已启用，其他模型已禁用');
+            } else {
+                car4DTimeParams.style.display = 'none';
+                // 隐藏4D动画区域
+                const animationSection = document.getElementById('car-4d-animation-section');
+                if (animationSection) {
+                    animationSection.style.display = 'none';
+                }
+                // 停止当前播放的动画
+                if (typeof car4DAnimationState !== 'undefined' && car4DAnimationState.intervalId) {
+                    clearInterval(car4DAnimationState.intervalId);
+                    car4DAnimationState.intervalId = null;
+                    car4DAnimationState.isPlaying = false;
+                }
+                console.log('CAR模型4D动画已禁用');
+            }
+        });
+    }
+    
+    // DILL模型4D动画控制按钮事件
+    setupDill4DAnimationControls();
+    setupEnhancedDill4DAnimationControls();
+});
+
+// 设置DILL模型4D动画控制事件
+function setupDill4DAnimationControls() {
+    const enable4DAnimationDill = document.getElementById('enable_4d_animation_dill');
+    const dill4DTimeParams = document.getElementById('dill_4d_time_params');
+    
+    if (enable4DAnimationDill && dill4DTimeParams) {
+        // 初始状态：根据复选框状态显示/隐藏参数
+        dill4DTimeParams.style.display = enable4DAnimationDill.checked ? 'block' : 'none';
+        
+        enable4DAnimationDill.addEventListener('change', function() {
+            dill4DTimeParams.style.display = this.checked ? 'block' : 'none';
+            
+            // 如果取消勾选，立即隐藏4D动画区域
+            if (!this.checked) {
+                const animationSection = document.getElementById('dill-4d-animation-section');
+                if (animationSection) {
+                    animationSection.style.display = 'none';
+                    console.log('用户取消勾选DILL 4D动画，已隐藏动画区域');
+                }
+                // 停止当前播放的动画
+                if (typeof dill4DAnimationState !== 'undefined' && dill4DAnimationState.intervalId) {
+                    clearInterval(dill4DAnimationState.intervalId);
+                    dill4DAnimationState.intervalId = null;
+                    dill4DAnimationState.isPlaying = false;
+                }
+            }
+        });
+    }
+}
+
+function setupEnhancedDill4DAnimationControls() {
+    const enable4DAnimationEnhancedDill = document.getElementById('enable_4d_animation_enhanced_dill');
+    const enhancedDill4DTimeParams = document.getElementById('enhanced_dill_4d_time_params');
+    
+    if (enable4DAnimationEnhancedDill && enhancedDill4DTimeParams) {
+        // 初始状态：根据复选框状态显示/隐藏参数
+        enhancedDill4DTimeParams.style.display = enable4DAnimationEnhancedDill.checked ? 'block' : 'none';
+        
+        enable4DAnimationEnhancedDill.addEventListener('change', function() {
+            enhancedDill4DTimeParams.style.display = this.checked ? 'block' : 'none';
+            
+            // 如果取消勾选，立即隐藏4D动画区域
+            if (!this.checked) {
+                const animationSection = document.getElementById('enhanced-dill-4d-animation-section');
+                if (animationSection) {
+                    animationSection.style.display = 'none';
+                    console.log('用户取消勾选Enhanced DILL 4D动画，已隐藏动画区域');
+                }
+                // 停止当前播放的动画
+                if (typeof enhancedDill4DAnimationState !== 'undefined' && enhancedDill4DAnimationState.intervalId) {
+                    clearInterval(enhancedDill4DAnimationState.intervalId);
+                    enhancedDill4DAnimationState.intervalId = null;
+                    enhancedDill4DAnimationState.isPlaying = false;
+                }
+            }
+        });
+    }
+}
+
+// ... existing code ...
+
+function getDillModelParams() {
+    const sineType = document.getElementById('dill-sine-type').value;
+    const enable4DAnimation = document.getElementById('enable_4d_animation_dill')?.checked || false;
+    
+    const params = {
+        model_type: 'dill',
+        sine_type: sineType
+    };
+    
+    // 只有在3D模式且启用4D动画时才添加4D动画参数
+    if (enable4DAnimation && sineType === '3d') {
+        params.enable_4d_animation = true;
+        params.t_start = parseFloat(document.getElementById('t_start_dill')?.value) || 0;
+        params.t_end = parseFloat(document.getElementById('t_end_dill')?.value) || 5;
+        params.time_steps = parseInt(document.getElementById('time_steps_dill')?.value) || 20;
+        params.animation_speed = parseInt(document.getElementById('dill_animation_speed')?.value) || 500;
+    }
+    
+    return params;
+}
+
+function getEnhancedDillModelParams() {
+    const sineType = document.getElementById('enhanced-dill-sine-type').value;
+    const enable4DAnimation = document.getElementById('enable_4d_animation_enhanced_dill')?.checked || false;
+    
+    const params = {
+        model_type: 'enhanced_dill',
+        sine_type: sineType
+    };
+    
+    // 只有在3D模式且启用4D动画时才添加4D动画参数
+    if (enable4DAnimation && sineType === '3d') {
+        params.enable_4d_animation = true;
+        params.t_start = parseFloat(document.getElementById('t_start_enhanced_dill')?.value) || 0;
+        params.t_end = parseFloat(document.getElementById('t_end_enhanced_dill')?.value) || 5;
+        params.time_steps = parseInt(document.getElementById('time_steps_enhanced_dill')?.value) || 20;
+        params.animation_speed = parseInt(document.getElementById('enhanced_dill_animation_speed')?.value) || 500;
+    } else {
+        // 确保4D动画参数不会被传递
+        params.enable_4d_animation = false;
+        console.log('Enhanced DILL模型4D动画已禁用');
+    }
+    
+    return params;
+}
+
+// 添加缺失的DILL模型4D动画播放控制函数
+
+// DILL模型4D动画播放控制函数
+function playDill4DAnimation() {
+    if (dill4DAnimationState.isPlaying) return;
+    
+    // 如果动画已在结尾且未开启循环，则重置后再播放
+    if (!dill4DAnimationState.loopEnabled && dill4DAnimationState.currentFrame >= dill4DAnimationState.totalFrames - 1) {
+        resetDill4DAnimation();
+    }
+    
+    dill4DAnimationState.isPlaying = true;
+    updateDill4DAnimationStatus('动画播放中...');
+    
+    const playBtn = document.getElementById('dill-4d-play-btn');
+    const pauseBtn = document.getElementById('dill-4d-pause-btn');
+    
+    if (playBtn) playBtn.style.display = 'none';
+    if (pauseBtn) pauseBtn.style.display = 'inline-flex';
+    
+    dill4DAnimationState.intervalId = setInterval(() => {
+        let nextFrame = dill4DAnimationState.currentFrame + 1;
+        
+        if (nextFrame >= dill4DAnimationState.totalFrames) {
+            if (dill4DAnimationState.loopEnabled) {
+                nextFrame = 0; // 循环播放
+            } else {
+                pauseDill4DAnimation(); // 播放到结尾则暂停
+                dill4DAnimationState.currentFrame = dill4DAnimationState.totalFrames - 1; // 确保停在最后一帧
+                updateDill4DAnimationFrame(dill4DAnimationState.currentFrame);
+                return;
+            }
+        }
+        
+        dill4DAnimationState.currentFrame = nextFrame;
+        updateDill4DAnimationFrame(dill4DAnimationState.currentFrame);
+    }, 200);
+}
+
+function pauseDill4DAnimation() {
+    if (!dill4DAnimationState.isPlaying) return;
+    dill4DAnimationState.isPlaying = false;
+    clearInterval(dill4DAnimationState.intervalId);
+    dill4DAnimationState.intervalId = null;
+    updateDill4DAnimationStatus('动画已暂停');
+    
+    const playBtn = document.getElementById('dill-4d-play-btn');
+    const pauseBtn = document.getElementById('dill-4d-pause-btn');
+    if (playBtn && pauseBtn) {
+        playBtn.style.display = 'flex';
+        pauseBtn.style.display = 'none';
+    }
+}
+
+function resetDill4DAnimation() {
+    pauseDill4DAnimation(); // 先暂停
+    dill4DAnimationState.currentFrame = 0;
+    updateDill4DAnimationFrame(0);
+    updateDill4DAnimationStatus('动画已重置');
+}
+
+function toggleDill4DLoop() {
+    dill4DAnimationState.loopEnabled = !dill4DAnimationState.loopEnabled;
+    const loopBtn = document.getElementById('dill-4d-loop-btn');
+    if (loopBtn) {
+        const textSpan = loopBtn.querySelector('span');
+        if (dill4DAnimationState.loopEnabled) {
+            if (textSpan) textSpan.textContent = '关闭循环';
+            loopBtn.classList.remove('loop-off');
+            loopBtn.setAttribute('title', '关闭循环播放');
+        } else {
+            if (textSpan) textSpan.textContent = '开启循环';
+            loopBtn.classList.add('loop-off');
+            loopBtn.setAttribute('title', '开启循环播放');
+        }
+    }
+}
+
+// 增强DILL模型4D动画播放控制函数（类似实现）
+function playEnhancedDill4DAnimation() {
+    if (enhancedDill4DAnimationState.isPlaying) return;
+    
+    // 如果动画已在结尾且未开启循环，则重置后再播放
+    if (!enhancedDill4DAnimationState.loopEnabled && enhancedDill4DAnimationState.currentFrame >= enhancedDill4DAnimationState.totalFrames - 1) {
+        resetEnhancedDill4DAnimation();
+    }
+    
+    enhancedDill4DAnimationState.isPlaying = true;
+    updateEnhancedDill4DAnimationStatus('动画播放中...');
+    
+    const playBtn = document.getElementById('enhanced-dill-4d-play-btn');
+    const pauseBtn = document.getElementById('enhanced-dill-4d-pause-btn');
+    
+    if (playBtn) playBtn.style.display = 'none';
+    if (pauseBtn) pauseBtn.style.display = 'inline-flex';
+    
+    enhancedDill4DAnimationState.intervalId = setInterval(() => {
+        let nextFrame = enhancedDill4DAnimationState.currentFrame + 1;
+        
+        if (nextFrame >= enhancedDill4DAnimationState.totalFrames) {
+            if (enhancedDill4DAnimationState.loopEnabled) {
+                nextFrame = 0; // 循环播放
+            } else {
+                pauseEnhancedDill4DAnimation(); // 播放到结尾则暂停
+                enhancedDill4DAnimationState.currentFrame = enhancedDill4DAnimationState.totalFrames - 1; // 确保停在最后一帧
+                updateEnhancedDill4DAnimationFrame(enhancedDill4DAnimationState.currentFrame);
+                return;
+            }
+        }
+        
+        enhancedDill4DAnimationState.currentFrame = nextFrame;
+        updateEnhancedDill4DAnimationFrame(enhancedDill4DAnimationState.currentFrame);
+    }, 200);
+}
+
+function pauseEnhancedDill4DAnimation() {
+    if (!enhancedDill4DAnimationState.isPlaying) return;
+    enhancedDill4DAnimationState.isPlaying = false;
+    clearInterval(enhancedDill4DAnimationState.intervalId);
+    enhancedDill4DAnimationState.intervalId = null;
+    updateEnhancedDill4DAnimationStatus('动画已暂停');
+    
+    const playBtn = document.getElementById('enhanced-dill-4d-play-btn');
+    const pauseBtn = document.getElementById('enhanced-dill-4d-pause-btn');
+    if (playBtn && pauseBtn) {
+        playBtn.style.display = 'flex';
+        pauseBtn.style.display = 'none';
+    }
+}
+
+function resetEnhancedDill4DAnimation() {
+    pauseEnhancedDill4DAnimation(); // 先暂停
+    enhancedDill4DAnimationState.currentFrame = 0;
+    updateEnhancedDill4DAnimationFrame(0);
+    updateEnhancedDill4DAnimationStatus('动画已重置');
+}
+
+function toggleEnhancedDill4DLoop() {
+    enhancedDill4DAnimationState.loopEnabled = !enhancedDill4DAnimationState.loopEnabled;
+    const loopBtn = document.getElementById('enhanced-dill-4d-loop-btn');
+    if (loopBtn) {
+        const textSpan = loopBtn.querySelector('span');
+        if (enhancedDill4DAnimationState.loopEnabled) {
+            if (textSpan) textSpan.textContent = '关闭循环';
+            loopBtn.classList.remove('loop-off');
+            loopBtn.setAttribute('title', '关闭循环播放');
+        } else {
+            if (textSpan) textSpan.textContent = '开启循环';
+            loopBtn.classList.add('loop-off');
+            loopBtn.setAttribute('title', '开启循环播放');
+        }
+    }
+}
+
+// 状态更新函数
+function updateDill4DAnimationStatus(status) {
+    const statusElement = document.querySelector('#dill-4d-animation-section .animation-status span');
+    if (statusElement) {
+        statusElement.textContent = status;
+    }
+}
+
+function updateEnhancedDill4DAnimationStatus(status) {
+    const statusElement = document.querySelector('#enhanced-dill-4d-animation-section .animation-status span');
+    if (statusElement) {
+        statusElement.textContent = status;
+    }
+}
+
+/**
+ * 设置DILL模型4D动画界面
+ */
+function setupDill4DAnimationUI() {
+    const plotContainer = document.getElementById('dill-4d-animation-container');
+    if (!plotContainer) {
+        console.error('DILL模型：未找到4D动画容器');
+        return;
+    }
+    
+    // 清空容器，生成正确的图表ID
+    plotContainer.innerHTML = `
+        <div class="car-4d-plot-container">
+            <h3>光强度分布 (3D+时间)</h3>
+            <div id="dill-4d-exposure" class="car-4d-plot"></div>
+        </div>
+        <div class="car-4d-plot-container">
+            <h3>光刻胶厚度分布 (3D+时间)</h3>
+            <div id="dill-4d-thickness" class="car-4d-plot"></div>
+        </div>
+    `;
+    
+    // 重新绑定控制按钮事件
+    setupDill4DAnimationEventListeners();
+}
+
+/**
+ * 设置Enhanced DILL模型4D动画界面
+ */
+function setupEnhancedDill4DAnimationUI() {
+    console.log('设置Enhanced DILL模型4D动画界面');
+    
+    const plotContainer = document.getElementById('enhanced-dill-4d-animation-container');
+    if (!plotContainer) {
+        console.error('Enhanced DILL模型：未找到4D动画容器 #enhanced-dill-4d-animation-container');
+        return;
+    }
+    
+    console.log('找到Enhanced DILL 4D动画容器，开始设置UI');
+    
+    // 清空容器，生成正确的图表ID
+    plotContainer.innerHTML = `
+        <div class="car-4d-plot-container">
+            <h3>光强度分布 (3D+时间)</h3>
+            <div id="enhanced-dill-4d-exposure" class="car-4d-plot"></div>
+        </div>
+        <div class="car-4d-plot-container">
+            <h3>光刻胶厚度分布 (3D+时间)</h3>
+            <div id="enhanced-dill-4d-thickness" class="car-4d-plot"></div>
+        </div>
+    `;
+    
+    console.log('Enhanced DILL 4D动画UI内容已设置');
+    
+    // 重新绑定控制按钮事件
+    setupEnhancedDill4DAnimationEventListeners();
+    
+    console.log('Enhanced DILL 4D动画UI设置完成');
+}
+
+// 添加动画帧更新函数
+function updateDill4DAnimationFrame(frameIndex) {
+    if (!dill4DAnimationData) {
+        console.error('DILL模型：无4D动画数据');
+        return;
+    }
+    
+    console.log('🎬 DILL 4D动画帧更新开始:', {
+        'frameIndex': frameIndex,
+        'sine_type': dill4DAnimationData.sine_type,
+        'is_3d': dill4DAnimationData.is_3d,
+        'is_2d': dill4DAnimationData.is_2d,
+        'is_1d': dill4DAnimationData.is_1d,
+        'available_keys': Object.keys(dill4DAnimationData),
+        'x_coords_length': dill4DAnimationData.x_coords?.length,
+        'y_coords_length': dill4DAnimationData.y_coords?.length,
+        'z_coords_length': dill4DAnimationData.z_coords?.length,
+        'exposure_frames_length': dill4DAnimationData.exposure_dose_frames?.length,
+        'thickness_frames_length': dill4DAnimationData.thickness_frames?.length,
+        'time_array_length': dill4DAnimationData.time_array?.length
+    });
+    
+    const exposureFrames = dill4DAnimationData.exposure_dose_frames || dill4DAnimationData.exposure_frames;
+    const thicknessFrames = dill4DAnimationData.thickness_frames;
+    const timeArray = dill4DAnimationData.time_array;
+    
+    if (!exposureFrames || frameIndex >= exposureFrames.length) {
+        console.error(`DILL模型：无效的帧索引(${frameIndex})，总帧数: ${exposureFrames ? exposureFrames.length : 0}`);
+        return;
+    }
+    
+    // 获取当前帧的时间值
+    const timeValue = timeArray ? timeArray[frameIndex] : frameIndex;
+    
+    // 配置Plotly选项
+    const plotlyConfig = {
+        responsive: true,
+        toImageButtonOptions: {
+            format: 'png',
+            filename: `dill_4d_frame_${frameIndex}`,
+            scale: 1,
+            width: 800,
+            height: 600
+        }
+    };
+    
+    console.log(`📊 开始更新第${frameIndex}帧 (t=${timeValue.toFixed(2)}s)`);
+    
+    // 根据不同的数据维度类型处理
+    const sineType = dill4DAnimationData.sine_type;
+    
+    try {
+        if (sineType === '3d' && dill4DAnimationData.is_3d) {
+            // 3D模式 - 需要处理3D数组数据
+            console.log('🔮 处理3D模式数据');
+            update3DDillAnimationFrame(frameIndex, exposureFrames, thicknessFrames, timeValue, plotlyConfig);
+        } else if (sineType === 'multi' && dill4DAnimationData.is_2d) {
+            // 2D模式 - 处理2D数组数据
+            console.log('🌐 处理2D模式数据');
+            update2DDillAnimationFrame(frameIndex, exposureFrames, thicknessFrames, timeValue, plotlyConfig);
+        } else if (sineType === '1d' && dill4DAnimationData.is_1d) {
+            // 1D模式 - 处理1D数组数据
+            console.log('📈 处理1D模式数据');
+            update1DDillAnimationFrame(frameIndex, exposureFrames, thicknessFrames, timeValue, plotlyConfig);
+        } else {
+            console.warn('⚠️ 未知的数据类型，尝试通用处理');
+            // 通用处理逻辑
+            updateGenericDillAnimationFrame(frameIndex, exposureFrames, thicknessFrames, timeValue, plotlyConfig);
+        }
+        
+        // 更新时间轴进度条（如果存在）
+        updateDill4DTimeSlider(frameIndex);
+        
+        console.log(`✅ 第${frameIndex}帧更新完成`);
+        
+    } catch (error) {
+        console.error(`❌ 更新第${frameIndex}帧时出错:`, error);
+        console.error('错误堆栈:', error.stack);
+        
+        // 尝试降级处理
+        try {
+            console.log('🔄 尝试降级处理...');
+            updateGenericDillAnimationFrame(frameIndex, exposureFrames, thicknessFrames, timeValue, plotlyConfig);
+        } catch (fallbackError) {
+            console.error('❌ 降级处理也失败:', fallbackError);
+        }
+    }
+}
+
+// 3D数据处理函数
+function update3DDillAnimationFrame(frameIndex, exposureFrames, thicknessFrames, timeValue, plotlyConfig) {
+    console.log('🔮 3D数据处理开始');
+    
+    // 公共3D布局设置
+    const common3DLayout = {
+        scene: {
+            camera: {
+                eye: { x: 1.5, y: 1.5, z: 1.5 }
+            },
+            aspectmode: 'cube'
+        },
+        autosize: true,
+        margin: { l: 0, r: 0, b: 0, t: 40 }
+    };
+    
+    // 处理曝光剂量数据
+    if (exposureFrames && dill4DAnimationData.x_coords && dill4DAnimationData.y_coords) {
+        let surfaceZ = exposureFrames[frameIndex];
+        
+        console.log('🔍 曝光数据结构分析:', {
+            'surfaceZ类型': typeof surfaceZ,
+            'surfaceZ长度': Array.isArray(surfaceZ) ? surfaceZ.length : 'N/A',
+            '第一级维度': Array.isArray(surfaceZ) && surfaceZ[0] ? (Array.isArray(surfaceZ[0]) ? surfaceZ[0].length : typeof surfaceZ[0]) : 'N/A',
+            '第二级维度': Array.isArray(surfaceZ) && surfaceZ[0] && Array.isArray(surfaceZ[0]) && surfaceZ[0][0] ? (Array.isArray(surfaceZ[0][0]) ? surfaceZ[0][0].length : typeof surfaceZ[0][0]) : 'N/A'
+        });
+        
+        // 处理3D数组数据，转换为surface格式
+        if (Array.isArray(surfaceZ) && Array.isArray(surfaceZ[0]) && Array.isArray(surfaceZ[0][0])) {
+            console.log('🔄 转换3D数组为surface格式');
+            const midZ = Math.floor(surfaceZ[0][0].length / 2);
+            const surface2D = [];
+            
+            // 转换为适合plotly surface的格式
+            for (let y = 0; y < surfaceZ[0].length; y++) {
+                const row = [];
+                for (let x = 0; x < surfaceZ.length; x++) {
+                    row.push(surfaceZ[x][y][midZ]);
+                }
+                surface2D.push(row);
+            }
+            surfaceZ = surface2D;
+            console.log(`✅ 3D数据转换完成，取Z切片[${midZ}]，结果维度: ${surface2D.length}x${surface2D[0]?.length}`);
+        }
+        
+        const exposureData = [{
+            type: 'surface',
+            x: dill4DAnimationData.x_coords,
+            y: dill4DAnimationData.y_coords,
+            z: surfaceZ,
+            colorscale: 'Viridis',
+            contours: {
+                z: {
+                    show: true,
+                    usecolormap: true,
+                    highlightcolor: "#42f462",
+                    project: { z: true }
+                }
+            },
+            hovertemplate: 'X: %{x}<br>Y: %{y}<br>光强度: %{z}<extra></extra>'
+        }];
+        
+        const exposureLayout = {
+            ...common3DLayout,
+            title: `光强度分布 (t=${timeValue.toFixed(2)}s)`,
+            scene: {
+                ...common3DLayout.scene,
+                xaxis: { title: 'X (μm)' },
+                yaxis: { title: 'Y (μm)' },
+                zaxis: { title: '光强度' }
+            }
+        };
+        
+        Plotly.newPlot('dill-4d-exposure', exposureData, exposureLayout, plotlyConfig);
+        console.log('✅ 3D曝光图表更新完成');
+    }
+    
+    // 处理厚度数据
+    if (thicknessFrames && dill4DAnimationData.x_coords && dill4DAnimationData.y_coords) {
+        let thicknessSurfaceZ = thicknessFrames[frameIndex];
+        
+        // 处理3D数组数据
+        if (Array.isArray(thicknessSurfaceZ) && Array.isArray(thicknessSurfaceZ[0]) && Array.isArray(thicknessSurfaceZ[0][0])) {
+            console.log('🔄 转换3D厚度数组为surface格式');
+            const midZ = Math.floor(thicknessSurfaceZ[0][0].length / 2);
+            const surface2D = [];
+            
+            for (let y = 0; y < thicknessSurfaceZ[0].length; y++) {
+                const row = [];
+                for (let x = 0; x < thicknessSurfaceZ.length; x++) {
+                    row.push(thicknessSurfaceZ[x][y][midZ]);
+                }
+                surface2D.push(row);
+            }
+            thicknessSurfaceZ = surface2D;
+            console.log('✅ 3D厚度数据转换完成');
+        }
+        
+        const thicknessData = [{
+            type: 'surface',
+            x: dill4DAnimationData.x_coords,
+            y: dill4DAnimationData.y_coords,
+            z: thicknessSurfaceZ,
+            colorscale: 'RdYlBu',
+            contours: {
+                z: {
+                    show: true,
+                    usecolormap: true,
+                    highlightcolor: "#42f462",
+                    project: { z: true }
+                }
+            },
+            hovertemplate: 'X: %{x}<br>Y: %{y}<br>厚度: %{z}<extra></extra>'
+        }];
+        
+        const thicknessLayout = {
+            ...common3DLayout,
+            title: `光刻胶厚度分布 (t=${timeValue.toFixed(2)}s)`,
+            scene: {
+                ...common3DLayout.scene,
+                xaxis: { title: 'X (μm)' },
+                yaxis: { title: 'Y (μm)' },
+                zaxis: { title: '厚度 (μm)' }
+            }
+        };
+        
+        Plotly.newPlot('dill-4d-thickness', thicknessData, thicknessLayout, plotlyConfig);
+        console.log('✅ 3D厚度图表更新完成');
+    }
+}
+
+// 2D数据处理函数
+function update2DDillAnimationFrame(frameIndex, exposureFrames, thicknessFrames, timeValue, plotlyConfig) {
+    console.log('🌐 2D数据处理开始');
+    
+    // 处理曝光剂量数据 - 2D热图
+    if (exposureFrames && dill4DAnimationData.x_coords && dill4DAnimationData.y_coords) {
+        const exposureData = [{
+            type: 'heatmap',
+            x: dill4DAnimationData.x_coords,
+            y: dill4DAnimationData.y_coords,
+            z: exposureFrames[frameIndex],
+            colorscale: 'Viridis',
+            hoverongaps: false,
+            hovertemplate: 'X: %{x}<br>Y: %{y}<br>光强度: %{z}<extra></extra>'
+        }];
+        
+        const exposureLayout = {
+            title: `光强度分布 (t=${timeValue.toFixed(2)}s)`,
+            xaxis: { title: 'X (μm)' },
+            yaxis: { title: 'Y (μm)' },
+            autosize: true,
+            margin: { l: 50, r: 50, b: 50, t: 50 }
+        };
+        
+        Plotly.newPlot('dill-4d-exposure', exposureData, exposureLayout, plotlyConfig);
+        console.log('✅ 2D曝光热图更新完成');
+    }
+    
+    // 处理厚度数据 - 2D热图
+    if (thicknessFrames && dill4DAnimationData.x_coords && dill4DAnimationData.y_coords) {
+        const thicknessData = [{
+            type: 'heatmap',
+            x: dill4DAnimationData.x_coords,
+            y: dill4DAnimationData.y_coords,
+            z: thicknessFrames[frameIndex],
+            colorscale: 'RdYlBu',
+            hoverongaps: false,
+            hovertemplate: 'X: %{x}<br>Y: %{y}<br>厚度: %{z}<extra></extra>'
+        }];
+        
+        const thicknessLayout = {
+            title: `光刻胶厚度分布 (t=${timeValue.toFixed(2)}s)`,
+            xaxis: { title: 'X (μm)' },
+            yaxis: { title: 'Y (μm)' },
+            autosize: true,
+            margin: { l: 50, r: 50, b: 50, t: 50 }
+        };
+        
+        Plotly.newPlot('dill-4d-thickness', thicknessData, thicknessLayout, plotlyConfig);
+        console.log('✅ 2D厚度热图更新完成');
+    }
+}
+
+// 1D数据处理函数
+function update1DDillAnimationFrame(frameIndex, exposureFrames, thicknessFrames, timeValue, plotlyConfig) {
+    console.log('📈 1D数据处理开始');
+    
+    // 处理曝光剂量数据 - 1D线图
+    if (exposureFrames && dill4DAnimationData.x_coords) {
+        const exposureData = [{
+            type: 'scatter',
+            mode: 'lines+markers',
+            x: dill4DAnimationData.x_coords,
+            y: exposureFrames[frameIndex],
+            line: { color: '#3498db', width: 3 },
+            marker: { size: 5 },
+            name: '光强度',
+            hovertemplate: 'X: %{x}<br>光强度: %{y}<extra></extra>'
+        }];
+        
+        const exposureLayout = {
+            title: `光强度分布 (t=${timeValue.toFixed(2)}s)`,
+            xaxis: { title: 'X (μm)' },
+            yaxis: { title: '光强度' },
+            autosize: true,
+            margin: { l: 50, r: 50, b: 50, t: 50 }
+        };
+        
+        Plotly.newPlot('dill-4d-exposure', exposureData, exposureLayout, plotlyConfig);
+        console.log('✅ 1D曝光线图更新完成');
+    }
+    
+    // 处理厚度数据 - 1D线图
+    if (thicknessFrames && dill4DAnimationData.x_coords) {
+        const thicknessData = [{
+            type: 'scatter',
+            mode: 'lines+markers',
+            x: dill4DAnimationData.x_coords,
+            y: thicknessFrames[frameIndex],
+            line: { color: '#e74c3c', width: 3 },
+            marker: { size: 5 },
+            name: '厚度',
+            hovertemplate: 'X: %{x}<br>厚度: %{y}<extra></extra>'
+        }];
+        
+        const thicknessLayout = {
+            title: `光刻胶厚度分布 (t=${timeValue.toFixed(2)}s)`,
+            xaxis: { title: 'X (μm)' },
+            yaxis: { title: '厚度 (μm)' },
+            autosize: true,
+            margin: { l: 50, r: 50, b: 50, t: 50 }
+        };
+        
+        Plotly.newPlot('dill-4d-thickness', thicknessData, thicknessLayout, plotlyConfig);
+        console.log('✅ 1D厚度线图更新完成');
+    }
+}
+
+// 通用数据处理函数（降级处理）
+function updateGenericDillAnimationFrame(frameIndex, exposureFrames, thicknessFrames, timeValue, plotlyConfig) {
+    console.log('🔧 通用数据处理开始（降级模式）');
+    
+    // 尝试自动检测数据格式
+    const exposureFrame = exposureFrames[frameIndex];
+    const thicknessFrame = thicknessFrames?.[frameIndex];
+    
+    console.log('🔍 自动检测数据格式:', {
+        'exposureFrame类型': typeof exposureFrame,
+        'exposureFrame长度': Array.isArray(exposureFrame) ? exposureFrame.length : 'N/A',
+        'is嵌套数组': Array.isArray(exposureFrame) && Array.isArray(exposureFrame[0])
+    });
+    
+    // 判断是1D、2D还是3D数据
+    if (Array.isArray(exposureFrame)) {
+        if (Array.isArray(exposureFrame[0])) {
+            if (Array.isArray(exposureFrame[0][0])) {
+                // 3D数据
+                console.log('🔮 检测为3D数据，使用3D处理方式');
+                update3DDillAnimationFrame(frameIndex, exposureFrames, thicknessFrames, timeValue, plotlyConfig);
+            } else {
+                // 2D数据
+                console.log('🌐 检测为2D数据，使用2D处理方式');
+                update2DDillAnimationFrame(frameIndex, exposureFrames, thicknessFrames, timeValue, plotlyConfig);
+            }
+        } else {
+            // 1D数据
+            console.log('📈 检测为1D数据，使用1D处理方式');
+            update1DDillAnimationFrame(frameIndex, exposureFrames, thicknessFrames, timeValue, plotlyConfig);
+        }
+    } else {
+        console.error('❌ 无法识别的数据格式');
+    }
+}
+
+// 时间轴滑块更新函数
+function updateDill4DTimeSlider(frameIndex) {
+    const slider = document.getElementById('dill-4d-time-slider');
+    if (slider) {
+        slider.value = frameIndex;
+        
+        // 更新滑块显示
+        const sliderDisplay = document.getElementById('dill-4d-time-display');
+        if (sliderDisplay && dill4DAnimationData.time_array) {
+            const timeValue = dill4DAnimationData.time_array[frameIndex];
+            sliderDisplay.textContent = `t = ${timeValue.toFixed(2)}s`;
+        }
+    }
+}
+
+function updateEnhancedDill4DAnimationFrame(frameIndex) {
+    console.log(`更新Enhanced DILL 4D动画帧: ${frameIndex}`);
+    
+    if (!enhancedDill4DAnimationData) {
+        console.error('Enhanced DILL模型：无4D动画数据');
+        return;
+    }
+    
+    console.log('Enhanced DILL 4D动画数据调试:', {
+        'enhancedDill4DAnimationData keys': Object.keys(enhancedDill4DAnimationData),
+        'x_coords': enhancedDill4DAnimationData.x_coords ? `length=${enhancedDill4DAnimationData.x_coords.length}` : 'undefined',
+        'y_coords': enhancedDill4DAnimationData.y_coords ? `length=${enhancedDill4DAnimationData.y_coords.length}` : 'undefined',
+        'z_coords': enhancedDill4DAnimationData.z_coords ? `length=${enhancedDill4DAnimationData.z_coords.length}` : 'undefined',
+        'exposure_dose_frames': enhancedDill4DAnimationData.exposure_dose_frames ? `length=${enhancedDill4DAnimationData.exposure_dose_frames.length}` : 'undefined',
+        'thickness_frames': enhancedDill4DAnimationData.thickness_frames ? `length=${enhancedDill4DAnimationData.thickness_frames.length}` : 'undefined',
+        'frameIndex': frameIndex,
+        'sine_type': enhancedDill4DAnimationData.sine_type,
+        'is_3d': enhancedDill4DAnimationData.is_3d
+    });
+    
+    const exposureFrames = enhancedDill4DAnimationData.exposure_dose_frames;
+    const thicknessFrames = enhancedDill4DAnimationData.thickness_frames;
+    const timeArray = enhancedDill4DAnimationData.time_array;
+    
+    if (!exposureFrames || frameIndex >= exposureFrames.length) {
+        console.warn(`Enhanced DILL模型：帧索引超出范围(${frameIndex})，总帧数: ${exposureFrames ? exposureFrames.length : 0}`);
+        return;
+    }
+    
+    // 获取当前帧的时间值
+    const timeValue = timeArray ? timeArray[frameIndex] : frameIndex * 0.25;
+    
+    // 配置Plotly选项
+    const plotlyConfig = {
+        responsive: true,
+        toImageButtonOptions: {
+            format: 'png',
+            filename: `enhanced_dill_4d_frame_${frameIndex}`,
+            scale: 1,
+            width: 800,
+            height: 600
+        }
+    };
+    
+    // 公共3D布局设置
+    const common3DLayout = {
+        scene: {
+            camera: {
+                eye: { x: 1.5, y: 1.5, z: 1.5 }
+            },
+            aspectmode: 'cube'
+        },
+        autosize: true,
+        margin: { l: 0, r: 0, b: 0, t: 40 }
+    };
+    
+    // 获取当前帧的完整3D数据
+    const currentExposureFrame = exposureFrames[frameIndex];
+    const currentThicknessFrame = thicknessFrames[frameIndex];
+    
+    // 1. 更新曝光剂量3D分布图
+    if (currentExposureFrame && enhancedDill4DAnimationData.x_coords && enhancedDill4DAnimationData.y_coords && enhancedDill4DAnimationData.z_coords) {
+        const exposureContainer = document.getElementById('enhanced-dill-4d-exposure');
+        if (exposureContainer) {
+            try {
+                // 处理3D数据：创建多个Z层的surface
+                const exposureTraces = [];
+                const zCoords = enhancedDill4DAnimationData.z_coords;
+                const xCoords = enhancedDill4DAnimationData.x_coords;
+                const yCoords = enhancedDill4DAnimationData.y_coords;
+                
+                // 显示多个Z层（表面、中间、底部）
+                // 可配置选项：用户可以选择显示模式
+                const layerDisplayMode = window.enhancedDillLayerMode || 'multi'; // 'single', 'multi', 'all'
+                
+                let zIndices, layerNames, opacities;
+                
+                if (layerDisplayMode === 'single') {
+                    // 仅显示表面层
+                    zIndices = [0];
+                    layerNames = ['表面'];
+                    opacities = [0.9];
+                } else if (layerDisplayMode === 'all') {
+                    // 显示所有层（密集显示）
+                    zIndices = Array.from({length: Math.min(zCoords.length, 5)}, (_, i) => 
+                        Math.floor(i * (zCoords.length - 1) / 4));
+                    layerNames = zIndices.map((idx, i) => `层${i+1} (z=${zCoords[idx].toFixed(2)}μm)`);
+                    opacities = zIndices.map((_, i) => 0.9 - i * 0.15);
+                } else {
+                    // 默认多层显示（表面、中间、底部）
+                    zIndices = [0, Math.floor(zCoords.length / 2), zCoords.length - 1];
+                    layerNames = ['表面', '中间', '底部'];
+                    opacities = [0.9, 0.6, 0.3];
+                }
+                
+                for (let layerIdx = 0; layerIdx < zIndices.length; layerIdx++) {
+                    const zIdx = zIndices[layerIdx];
+                    const layerData = currentExposureFrame[zIdx];
+                    
+                    if (layerData && layerData.length > 0) {
+                        // 确保数据正确转置（数据格式为[z][y][x]）
+                        const surfaceZ = [];
+                        for (let yIdx = 0; yIdx < yCoords.length; yIdx++) {
+                            const row = [];
+                            for (let xIdx = 0; xIdx < xCoords.length; xIdx++) {
+                                if (layerData[yIdx] && layerData[yIdx][xIdx] !== undefined) {
+                                    row.push(layerData[yIdx][xIdx]);
+                                } else {
+                                    row.push(0);
+                                }
+                            }
+                            surfaceZ.push(row);
+                        }
+                        
+                        exposureTraces.push({
+                            type: 'surface',
+                            x: xCoords,
+                            y: yCoords,
+                            z: surfaceZ,
+                            colorscale: layerIdx === 0 ? 'Viridis' : 'Hot',
+                            opacity: opacities[layerIdx],
+                            name: `${layerNames[layerIdx]} (z=${zCoords[zIdx].toFixed(2)}μm)`,
+                            showscale: layerIdx === 0,
+                            contours: {
+                                z: {
+                                    show: true,
+                                    usecolormap: true,
+                                    highlightcolor: "#42f462",
+                                    project: { z: false }
+                                }
+                            },
+                            hovertemplate: `X: %{x}<br>Y: %{y}<br>曝光剂量: %{z}<br>深度: ${zCoords[zIdx].toFixed(2)}μm<extra>${layerNames[layerIdx]}</extra>`
+                        });
+                    }
+                }
+                
+                const exposureLayout = {
+                    ...common3DLayout,
+                    title: `曝光剂量分布 (t=${timeValue.toFixed(2)}s) - 多层显示`,
+                    scene: {
+                        ...common3DLayout.scene,
+                        xaxis: { title: 'X (μm)' },
+                        yaxis: { title: 'Y (μm)' },
+                        zaxis: { title: '曝光剂量 (mJ/cm²)' }
+                    }
+                };
+                
+                Plotly.newPlot('enhanced-dill-4d-exposure', exposureTraces, exposureLayout, plotlyConfig);
+                console.log(`Enhanced DILL 4D动画：曝光剂量3D分布图更新成功 (帧${frameIndex})`);
+            } catch (error) {
+                console.error('Enhanced DILL 4D动画：曝光剂量分布图更新失败:', error);
+                
+                // 回退到表面显示
+                try {
+                    const surfaceData = currentExposureFrame[0]; // 表面数据
+                    if (surfaceData) {
+                        const surfaceZ = [];
+                        for (let yIdx = 0; yIdx < enhancedDill4DAnimationData.y_coords.length; yIdx++) {
+                            const row = [];
+                            for (let xIdx = 0; xIdx < enhancedDill4DAnimationData.x_coords.length; xIdx++) {
+                                row.push(surfaceData[yIdx] ? surfaceData[yIdx][xIdx] || 0 : 0);
+                            }
+                            surfaceZ.push(row);
+                        }
+                        
+                        const fallbackTrace = [{
+                            type: 'surface',
+                            x: enhancedDill4DAnimationData.x_coords,
+                            y: enhancedDill4DAnimationData.y_coords,
+                            z: surfaceZ,
+                            colorscale: 'Viridis',
+                            hovertemplate: 'X: %{x}<br>Y: %{y}<br>曝光剂量: %{z}<extra>表面</extra>'
+                        }];
+                        
+                        const fallbackLayout = {
+                            ...common3DLayout,
+                            title: `曝光剂量分布 (t=${timeValue.toFixed(2)}s) - 表面`,
+                            scene: {
+                                ...common3DLayout.scene,
+                                xaxis: { title: 'X (μm)' },
+                                yaxis: { title: 'Y (μm)' },
+                                zaxis: { title: '曝光剂量 (mJ/cm²)' }
+                            }
+                        };
+                        
+                        Plotly.newPlot('enhanced-dill-4d-exposure', fallbackTrace, fallbackLayout, plotlyConfig);
+                        console.log(`Enhanced DILL 4D动画：使用表面数据回退显示成功`);
+                    }
+                } catch (fallbackError) {
+                    console.error('Enhanced DILL 4D动画：表面数据回退也失败:', fallbackError);
+                }
+            }
+        }
+    }
+    
+    // 2. 更新厚度3D分布图
+    if (currentThicknessFrame && enhancedDill4DAnimationData.x_coords && enhancedDill4DAnimationData.y_coords && enhancedDill4DAnimationData.z_coords) {
+        const thicknessContainer = document.getElementById('enhanced-dill-4d-thickness');
+        if (thicknessContainer) {
+            try {
+                // 处理3D厚度数据：创建多个Z层的surface
+                const thicknessTraces = [];
+                const zCoords = enhancedDill4DAnimationData.z_coords;
+                const xCoords = enhancedDill4DAnimationData.x_coords;
+                const yCoords = enhancedDill4DAnimationData.y_coords;
+                
+                // 显示多个Z层（表面、中间、底部）
+                // 使用与曝光剂量相同的配置选项
+                const layerDisplayMode = window.enhancedDillLayerMode || 'multi'; // 'single', 'multi', 'all'
+                
+                let zIndices, layerNames, opacities, colorscales;
+                
+                if (layerDisplayMode === 'single') {
+                    // 仅显示表面层
+                    zIndices = [0];
+                    layerNames = ['表面'];
+                    opacities = [0.9];
+                    colorscales = ['Plasma'];
+                } else if (layerDisplayMode === 'all') {
+                    // 显示所有层（密集显示）
+                    zIndices = Array.from({length: Math.min(zCoords.length, 5)}, (_, i) => 
+                        Math.floor(i * (zCoords.length - 1) / 4));
+                    layerNames = zIndices.map((idx, i) => `层${i+1} (z=${zCoords[idx].toFixed(2)}μm)`);
+                    opacities = zIndices.map((_, i) => 0.9 - i * 0.15);
+                    colorscales = ['Plasma', 'Cividis', 'Rainbow', 'Viridis', 'Hot'];
+                } else {
+                    // 默认多层显示（表面、中间、底部）
+                    zIndices = [0, Math.floor(zCoords.length / 2), zCoords.length - 1];
+                    layerNames = ['表面', '中间', '底部'];
+                    opacities = [0.9, 0.6, 0.3];
+                    colorscales = ['Plasma', 'Cividis', 'Rainbow'];
+                }
+                
+                for (let layerIdx = 0; layerIdx < zIndices.length; layerIdx++) {
+                    const zIdx = zIndices[layerIdx];
+                    const layerData = currentThicknessFrame[zIdx];
+                    
+                    if (layerData && layerData.length > 0) {
+                        // 确保数据正确转置（数据格式为[z][y][x]）
+                        const surfaceZ = [];
+                        for (let yIdx = 0; yIdx < yCoords.length; yIdx++) {
+                            const row = [];
+                            for (let xIdx = 0; xIdx < xCoords.length; xIdx++) {
+                                if (layerData[yIdx] && layerData[yIdx][xIdx] !== undefined) {
+                                    row.push(layerData[yIdx][xIdx]);
+                                } else {
+                                    row.push(0);
+                                }
+                            }
+                            surfaceZ.push(row);
+                        }
+                        
+                        thicknessTraces.push({
+                            type: 'surface',
+                            x: xCoords,
+                            y: yCoords,
+                            z: surfaceZ,
+                            colorscale: colorscales[layerIdx],
+                            opacity: opacities[layerIdx],
+                            name: `${layerNames[layerIdx]} (z=${zCoords[zIdx].toFixed(2)}μm)`,
+                            showscale: layerIdx === 0,
+                            contours: {
+                                z: {
+                                    show: true,
+                                    usecolormap: true,
+                                    highlightcolor: "#ff6b6b",
+                                    project: { z: false }
+                                }
+                            },
+                            hovertemplate: `X: %{x}<br>Y: %{y}<br>厚度: %{z}<br>深度: ${zCoords[zIdx].toFixed(2)}μm<extra>${layerNames[layerIdx]}</extra>`
+                        });
+                    }
+                }
+                
+                const thicknessLayout = {
+                    ...common3DLayout,
+                    title: `厚度分布 (t=${timeValue.toFixed(2)}s) - 多层显示`,
+                    scene: {
+                        ...common3DLayout.scene,
+                        xaxis: { title: 'X (μm)' },
+                        yaxis: { title: 'Y (μm)' },
+                        zaxis: { title: '相对厚度' }
+                    }
+                };
+                
+                Plotly.newPlot('enhanced-dill-4d-thickness', thicknessTraces, thicknessLayout, plotlyConfig);
+                console.log(`Enhanced DILL 4D动画：厚度3D分布图更新成功 (帧${frameIndex})`);
+            } catch (error) {
+                console.error('Enhanced DILL 4D动画：厚度分布图更新失败:', error);
+            }
+        }
+    }
+    
+    // 3. 更新时间显示和进度条
+    const timeDisplay = document.getElementById('enhanced-dill-4d-time-display');
+    if (timeDisplay) {
+        timeDisplay.textContent = `时间: ${timeValue.toFixed(2)}s`;
+    }
+    
+    const progressSlider = document.getElementById('enhanced-dill-4d-time-slider');
+    if (progressSlider) {
+        progressSlider.value = frameIndex;
+        progressSlider.max = enhancedDill4DAnimationData.time_steps - 1;
+    }
+    
+    const frameInfo = document.getElementById('enhanced-dill-4d-frame-info');
+    if (frameInfo) {
+        frameInfo.textContent = `帧 ${frameIndex + 1}/${enhancedDill4DAnimationData.time_steps}`;
+    }
+    
+    console.log(`Enhanced DILL 4D动画：帧${frameIndex}更新完成，时间=${timeValue.toFixed(2)}s`)
+}
+
+// 重新绑定DILL模型4D动画控制事件
+function setupDill4DAnimationEventListeners() {
+    const playBtn = document.getElementById('dill-4d-play-btn');
+    const pauseBtn = document.getElementById('dill-4d-pause-btn');
+    const resetBtn = document.getElementById('dill-4d-reset-btn');
+    const loopBtn = document.getElementById('dill-4d-loop-btn');
+    
+    if (playBtn) {
+        playBtn.addEventListener('click', function() {
+            if (dill4DAnimationData) {
+                playDill4DAnimation();
+            } else {
+                alert('请先计算DILL模型数据以启用4D动画');
+            }
+        });
+    }
+    
+    if (pauseBtn) {
+        pauseBtn.addEventListener('click', pauseDill4DAnimation);
+    }
+    
+    if (resetBtn) {
+        resetBtn.addEventListener('click', resetDill4DAnimation);
+    }
+    
+    if (loopBtn) {
+        loopBtn.addEventListener('click', toggleDill4DLoop);
+    }
+}
+
+// 重新绑定Enhanced DILL模型4D动画控制事件
+function setupEnhancedDill4DAnimationEventListeners() {
+    console.log('设置Enhanced DILL 4D动画事件监听器');
+    
+    const playBtn = document.getElementById('enhanced-dill-4d-play-btn');
+    const pauseBtn = document.getElementById('enhanced-dill-4d-pause-btn');
+    const resetBtn = document.getElementById('enhanced-dill-4d-reset-btn');
+    const loopBtn = document.getElementById('enhanced-dill-4d-loop-btn');
+    
+    console.log('Enhanced DILL 4D动画按钮状态:', {
+        playBtn: !!playBtn,
+        pauseBtn: !!pauseBtn,
+        resetBtn: !!resetBtn,
+        loopBtn: !!loopBtn
+    });
+    
+    if (playBtn) {
+        // 移除旧的事件监听器
+        playBtn.removeEventListener('click', playEnhancedDill4DAnimation);
+        playBtn.addEventListener('click', function() {
+            console.log('Enhanced DILL 4D动画播放按钮被点击');
+            if (enhancedDill4DAnimationData) {
+                playEnhancedDill4DAnimation();
+            } else {
+                console.warn('Enhanced DILL 4D动画数据不存在');
+                alert('请先计算增强DILL模型数据以启用4D动画');
+            }
+        });
+        console.log('Enhanced DILL 4D动画播放按钮事件已绑定');
+    } else {
+        console.error('Enhanced DILL 4D动画播放按钮未找到');
+    }
+    
+    if (pauseBtn) {
+        pauseBtn.removeEventListener('click', pauseEnhancedDill4DAnimation);
+        pauseBtn.addEventListener('click', pauseEnhancedDill4DAnimation);
+        console.log('Enhanced DILL 4D动画暂停按钮事件已绑定');
+    } else {
+        console.error('Enhanced DILL 4D动画暂停按钮未找到');
+    }
+    
+    if (resetBtn) {
+        resetBtn.removeEventListener('click', resetEnhancedDill4DAnimation);
+        resetBtn.addEventListener('click', resetEnhancedDill4DAnimation);
+        console.log('Enhanced DILL 4D动画重置按钮事件已绑定');
+    } else {
+        console.error('Enhanced DILL 4D动画重置按钮未找到');
+    }
+    
+    if (loopBtn) {
+        loopBtn.removeEventListener('click', toggleEnhancedDill4DLoop);
+        loopBtn.addEventListener('click', toggleEnhancedDill4DLoop);
+        console.log('Enhanced DILL 4D动画循环按钮事件已绑定');
+    } else {
+        console.error('Enhanced DILL 4D动画循环按钮未找到');
+    }
+    
+    console.log('Enhanced DILL 4D动画事件监听器设置完成');
 }
