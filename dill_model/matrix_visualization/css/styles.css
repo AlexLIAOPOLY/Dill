@@ -92,6 +92,7 @@ body {
     justify-content: center;
     gap: 15px;
     margin-top: 15px;
+    flex-wrap: wrap;
 }
 
 .header-controls button {
@@ -107,6 +108,8 @@ body {
     gap: 8px;
     font-size: 0.9rem;
     box-shadow: 0 2px 4px var(--shadow-color);
+    white-space: nowrap;
+    min-width: fit-content;
 }
 
 .header-controls button:hover {

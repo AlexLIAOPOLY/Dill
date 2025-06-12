@@ -5358,11 +5358,22 @@ window.testNewLogSystem = testNewLogSystem;
  * 滑动到页面最底部并刷新日志系统
  */
 function scrollToBottomAndRefreshLogs() {
-    // 滑动到页面最底部
-    window.scrollTo({
-        top: document.body.scrollHeight,
-        behavior: 'smooth'
-    });
+    // 查找日志容器并滚动到其底部
+    const logsContainer = document.getElementById('logs-container');
+    if (logsContainer) {
+        // 先滚动到日志区域
+        logsContainer.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        // 然后滚动日志容器内部到底部
+        setTimeout(() => {
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        }, 300);
+    } else {
+        // 如果没有找到日志容器，滚动到页面底部作为后备方案
+        window.scrollTo({
+            top: document.body.scrollHeight,
+            behavior: 'smooth'
+        });
+    }
     
     // 延迟一点时间后自动刷新日志
     setTimeout(() => {

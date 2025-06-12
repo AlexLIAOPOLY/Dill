@@ -2,12 +2,16 @@
 const LANGS = {
     'zh-CN': {
         title: '多模型光刻胶计算工具',
+        logo_title: '多模型光刻胶计算平台',
+        logo_subtitle: 'Multi-Model Photoresist Simulation Platform',
         nav_guide: '使用指南',
         nav_single: '单一计算',
         nav_compare: '参数比较',
         nav_batch: '批量计算',
         nav_matrix: '模型矩阵可视化',
         lang_btn: 'English/中文',
+        company_name: '香港大学 · 机械工程学院',
+        support_text: '技术支持',
         select_model: '选择计算模型:',
         dill_model: 'Dill模型（薄胶）',
         enhanced_dill_model: '增强Dill模型（厚胶）',
@@ -165,6 +169,45 @@ const LANGS = {
         'phi_expr_complex2': '衰减正弦: exp(-0.1*t)*sin(t)',
         'phi_expr_pi4': '固定相位: PI/4',
         'phi_expr_help': '支持数学函数: sin, cos, tan, exp, abs, sqrt, PI, E',
+        
+        // 页脚翻译
+        footer_brand: '光刻胶建模平台',
+        footer_desc: '基于先进的数学模型和计算方法，为半导体制造业提供专业的光刻胶建模与仿真解决方案。',
+        footer_platform: '平台功能',
+        footer_single: '单一模型计算',
+        footer_compare: '参数对比分析',
+        footer_matrix: '矩阵可视化',
+        footer_documentation: '使用文档',
+        footer_models: '支持模型',
+        footer_dill: '薄胶模型',
+        footer_enhanced: '厚胶模型',
+        footer_car: '化学放大模型',
+        footer_custom: '自定义模型',
+        footer_contact: '联系我们',
+        footer_university: '香港大学',
+        footer_version: '版本 v2.1.0',
+        footer_copyright_org: '香港大学机械工程学院',
+        footer_rights: '保留所有权利',
+
+        footer_privacy: '隐私政策',
+        footer_terms: '安全政策',
+        footer_support: '技术支持',
+        badge_research: '科研级',
+        badge_professional: '专业版',
+        badge_verified: '已验证',
+        
+        // 日志相关
+        view_logs: '查看日志',
+        view_logs_title: '查看详细计算日志',
+        loading_logs: '计算日志',
+        loading_logs_title: '查看计算进度',
+        loading_logs_title_text: '实时计算日志',
+        loading_logs_placeholder: '计算开始后将显示详细日志...',
+        loading_stat_progress: '进度:',
+        loading_stat_time: '用时:',
+        
+        // 4D动画参数
+        '4d_animation_params': '4D动画参数',
     },
     // 添加zh映射到zh-CN解决语言匹配问题
     'zh': {
@@ -172,12 +215,16 @@ const LANGS = {
     },
     en: {
         title: 'Multi-Model Photoresist Calculator',
+        logo_title: 'Multi-Model Photoresist Simulation Platform',
+        logo_subtitle: 'Multi-Model Photoresist Simulation Platform',
         nav_guide: 'User Guide',
         nav_single: 'Single Calculation',
         nav_compare: 'Parameter Comparison',
         nav_batch: 'Batch Calculation',
         nav_matrix: 'Model Matrix Visualization',
         lang_btn: 'English/中文',
+        company_name: 'The University of Hong Kong · Department of Mechanical Engineering',
+        support_text: 'Technical Support',
         select_model: 'Select Calculation Model:',
         dill_model: 'Dill Model (Thin Resist)',
         enhanced_dill_model: 'Enhanced Dill Model (Thick Resist)',
@@ -335,6 +382,45 @@ const LANGS = {
         'phi_expr_complex2': 'Damped Sine: exp(-0.1*t)*sin(t)',
         'phi_expr_pi4': 'Fixed Phase: PI/4',
         'phi_expr_help': 'Supported functions: sin, cos, tan, exp, abs, sqrt, PI, E',
+        
+        // Footer translations
+        footer_brand: 'Photoresist Modeling Platform',
+        footer_desc: 'Based on advanced mathematical models and computational methods, providing professional photoresist modeling and simulation solutions for the semiconductor manufacturing industry.',
+        footer_platform: 'Platform Features',
+        footer_single: 'Single Model Calculation',
+        footer_compare: 'Parameter Comparison Analysis',
+        footer_matrix: 'Matrix Visualization',
+        footer_documentation: 'Documentation',
+        footer_models: 'Supported Models',
+        footer_dill: 'Thin Resist Model',
+        footer_enhanced: 'Thick Resist Model',
+        footer_car: 'Chemically Amplified Model',
+        footer_custom: 'Custom Model',
+        footer_contact: 'Contact Us',
+        footer_university: 'The University of Hong Kong',
+        footer_version: 'Version v2.1.0',
+        footer_copyright_org: 'Department of Mechanical Engineering, Faculty of Engineering, The University of Hong Kong',
+        footer_rights: 'All rights reserved',
+
+        footer_privacy: 'Privacy Policy',
+        footer_terms: 'Safety Policy',
+        footer_support: 'Technical Support',
+        badge_research: 'Research-grade',
+        badge_professional: 'Professional',
+        badge_verified: 'Verified',
+        
+        // Log related
+        view_logs: 'View Logs',
+        view_logs_title: 'View detailed calculation logs',
+        loading_logs: 'Calculation Logs',
+        loading_logs_title: 'View calculation progress',
+        loading_logs_title_text: 'Real-time Calculation Logs',
+        loading_logs_placeholder: 'Detailed logs will be displayed after calculation starts...',
+        loading_stat_progress: 'Progress:',
+        loading_stat_time: 'Time elapsed:',
+        
+        // 4D animation parameters
+        '4d_animation_params': '4D Animation Parameters',
     }
 };
 
@@ -358,19 +444,25 @@ let currentLang = getInitialLang();
  * @returns {string} 初始语言代码
  */
 function getInitialLang() {
-    let lang = localStorage.getItem('preferredLang');
-    if (lang && LANGS[lang]) {
-        console.log(`从localStorage加载语言: ${lang}`);
-        return lang;
-    }
     try {
+        // 优先从preferredLang获取
+        let lang = localStorage.getItem('preferredLang');
+        if (lang && LANGS[lang]) {
+            console.log(`从preferredLang加载语言: ${lang}`);
+            return lang;
+        }
+        
+        // 其次从userLanguage获取
         const persistedLang = localStorage.getItem('userLanguage');
         if (persistedLang && (persistedLang === 'zh' || persistedLang === 'en')) {
+            console.log(`从userLanguage加载语言: ${persistedLang}`);
             return persistedLang;
         }
     } catch (e) {
         console.error('Error reading language from localStorage:', e);
     }
+    
+    console.log('使用默认语言: zh');
     return 'zh'; // Default language
 }
 
@@ -400,6 +492,9 @@ function applyLang() {
         console.error('Language not found in LANGS:', currentLang);
         return;
     }
+
+    // 设置body的data-lang属性，用于CSS样式选择器
+    document.body.setAttribute('data-lang', currentLang);
 
     document.querySelectorAll('[data-i18n]').forEach(elem => {
         const key = elem.getAttribute('data-i18n');
@@ -490,6 +585,24 @@ function applyLang() {
 document.addEventListener('DOMContentLoaded', function() {
     applyLang(); // Apply the initial language (from localStorage or default)
 
+    // 绑定新的语言选择下拉框事件
+    const langSelect = document.getElementById('lang-select');
+    if (langSelect) {
+        // 设置当前语言值
+        langSelect.value = currentLang === 'zh' ? 'zh-CN' : 'en';
+        langSelect.addEventListener('change', function() {
+            const selectedLang = this.value;
+            // 将下拉框的值转换为内部语言代码
+            currentLang = selectedLang === 'zh-CN' ? 'zh' : 'en';
+            localStorage.setItem('userLanguage', currentLang);
+            localStorage.setItem('preferredLang', currentLang);
+            applyLang();
+            console.log('[lang] Language switched to:', currentLang);
+        });
+        console.log('[lang] Language select dropdown bound');
+    }
+
+    // 向后兼容：保留原有按钮事件绑定（如果存在）
     const langBtn = document.getElementById('lang-toggle-btn');
     if (langBtn) {
         langBtn.addEventListener('click', function() {
@@ -497,7 +610,7 @@ document.addEventListener('DOMContentLoaded', function() {
             switchLang(); // switchLang now saves to localStorage and calls applyLang
         });
     } else {
-        console.log('[lang] lang-toggle-btn not found');
+        console.log('[lang] lang-toggle-btn not found, using new dropdown instead');
     }
 });
 
