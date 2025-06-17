@@ -101,7 +101,6 @@ function initApp() {
     initSineWaveTypeSelectors();
     initPhaseExpressionDropdowns();  // 确保初始化相位表达式下拉框
     bindSliderEvents();
-    bindParamTooltips();
     bindPhiExprUI();
     
     // 初始化4D动画控制
@@ -407,105 +406,182 @@ function initApp() {
         if(modelSelectionSection) modelSelectionSection.classList.add('loaded');
     }, 100); // 延迟一点点确保页面元素已就绪
 
-    // 参数说明tooltip逻辑
-    bindParamTooltips();
+    // 导出图片和数据功能 - 添加安全检查
+    const exportExposureImg = document.getElementById('export-exposure-img');
+    if (exportExposureImg) {
+        exportExposureImg.onclick = function() {
+            Plotly.downloadImage(document.getElementById('exposure-plot-container'), {format: 'png', filename: 'exposure_plot'});
+        };
+    }
+    
+    const exportThicknessImg = document.getElementById('export-thickness-img');
+    if (exportThicknessImg) {
+        exportThicknessImg.onclick = function() {
+            Plotly.downloadImage(document.getElementById('thickness-plot-container'), {format: 'png', filename: 'thickness_plot'});
+        };
+    }
+    
+    const exportExposureData = document.getElementById('export-exposure-data');
+    if (exportExposureData) {
+        exportExposureData.onclick = function() {
+            exportPlotData('exposure');
+        };
+    }
+    
+    const exportThicknessData = document.getElementById('export-thickness-data');
+    if (exportThicknessData) {
+        exportThicknessData.onclick = function() {
+            exportPlotData('thickness');
+        };
+    }
+    
+    // 增强DILL模型专用的X平面导出功能 - 添加安全检查
+    const exportEnhancedDillXPlaneExposureImg = document.getElementById('export-enhanced-dill-x-plane-exposure-img');
+    if (exportEnhancedDillXPlaneExposureImg) {
+        exportEnhancedDillXPlaneExposureImg.onclick = function() {
+            Plotly.downloadImage(document.getElementById('enhanced-dill-x-plane-exposure-container'), {format: 'png', filename: 'enhanced_dill_x_plane_exposure'});
+        };
+    }
+    
+    const exportEnhancedDillXPlaneThicknessImg = document.getElementById('export-enhanced-dill-x-plane-thickness-img');
+    if (exportEnhancedDillXPlaneThicknessImg) {
+        exportEnhancedDillXPlaneThicknessImg.onclick = function() {
+            Plotly.downloadImage(document.getElementById('enhanced-dill-x-plane-thickness-container'), {format: 'png', filename: 'enhanced_dill_x_plane_thickness'});
+        };
+    }
+    
+    const exportEnhancedDillXPlaneExposureData = document.getElementById('export-enhanced-dill-x-plane-exposure-data');
+    if (exportEnhancedDillXPlaneExposureData) {
+        exportEnhancedDillXPlaneExposureData.onclick = function() {
+            exportPlotData('enhanced_dill_x_plane_exposure');
+        };
+    }
+    
+    const exportEnhancedDillXPlaneThicknessData = document.getElementById('export-enhanced-dill-x-plane-thickness-data');
+    if (exportEnhancedDillXPlaneThicknessData) {
+        exportEnhancedDillXPlaneThicknessData.onclick = function() {
+            exportPlotData('enhanced_dill_x_plane_thickness');
+        };
+    }
+    
+    // 增强DILL模型专用的Y平面导出功能 - 添加安全检查
+    const exportEnhancedDillYPlaneExposureImg = document.getElementById('export-enhanced-dill-y-plane-exposure-img');
+    if (exportEnhancedDillYPlaneExposureImg) {
+        exportEnhancedDillYPlaneExposureImg.onclick = function() {
+            Plotly.downloadImage(document.getElementById('enhanced-dill-y-plane-exposure-container'), {format: 'png', filename: 'enhanced_dill_y_plane_exposure'});
+        };
+    }
+    
+    const exportEnhancedDillYPlaneThicknessImg = document.getElementById('export-enhanced-dill-y-plane-thickness-img');
+    if (exportEnhancedDillYPlaneThicknessImg) {
+        exportEnhancedDillYPlaneThicknessImg.onclick = function() {
+            Plotly.downloadImage(document.getElementById('enhanced-dill-y-plane-thickness-container'), {format: 'png', filename: 'enhanced_dill_y_plane_thickness'});
+        };
+    }
+    
+    const exportEnhancedDillYPlaneExposureData = document.getElementById('export-enhanced-dill-y-plane-exposure-data');
+    if (exportEnhancedDillYPlaneExposureData) {
+        exportEnhancedDillYPlaneExposureData.onclick = function() {
+            exportPlotData('enhanced_dill_y_plane_exposure');
+        };
+    }
+    
+    const exportEnhancedDillYPlaneThicknessData = document.getElementById('export-enhanced-dill-y-plane-thickness-data');
+    if (exportEnhancedDillYPlaneThicknessData) {
+        exportEnhancedDillYPlaneThicknessData.onclick = function() {
+            exportPlotData('enhanced_dill_y_plane_thickness');
+        };
+    }
 
-    // 导出图片和数据功能
-    document.getElementById('export-exposure-img').onclick = function() {
-        Plotly.downloadImage(document.getElementById('exposure-plot-container'), {format: 'png', filename: 'exposure_plot'});
-    };
-    document.getElementById('export-thickness-img').onclick = function() {
-        Plotly.downloadImage(document.getElementById('thickness-plot-container'), {format: 'png', filename: 'thickness_plot'});
-    };
-    document.getElementById('export-exposure-data').onclick = function() {
-        exportPlotData('exposure');
-    };
-    document.getElementById('export-thickness-data').onclick = function() {
-        exportPlotData('thickness');
-    };
-
-    // 正弦波类型切换逻辑（Dill）
+    // 正弦波类型切换逻辑（Dill） - 添加安全检查
     const dillSineType = document.getElementById('dill-sine-type');
     const dillMultisineParams = document.getElementById('dill-multisine-params');
     const dill3DSineParams = document.getElementById('dill-3dsine-params');
     const dillK = document.getElementById('K') ? document.getElementById('K').closest('.parameter-item') : null;
     
-    // 改用正确的参数项选择器
-    const dillYRange = dillMultisineParams.querySelector('.parameter-item:last-child');
+    // 改用正确的参数项选择器 - 添加安全检查
+    const dillYRange = dillMultisineParams ? dillMultisineParams.querySelector('.parameter-item:last-child') : null;
     
     function updateDillYRangeDisplay() {
-        if (dillSineType.value === 'multi') {
+        if (dillSineType && dillSineType.value === 'multi') {
             if(dillYRange) dillYRange.style.display = '';
         } else {
             if(dillYRange) dillYRange.style.display = 'none';
         }
     }
-    dillSineType.addEventListener('change', function() {
-        console.log('正弦波类型切换:', this.value);
-        if (this.value === 'multi') {
-            dillMultisineParams.style.display = 'block';
-            dill3DSineParams.style.display = 'none';
-            if (dillK) dillK.style.display = 'none';
-        } else if (this.value === '3d') {
-            dillMultisineParams.style.display = 'none';
-            dill3DSineParams.style.display = 'block';
-            if (dillK) dillK.style.display = 'none';
-        } else {
-            dillMultisineParams.style.display = 'none';
-            dill3DSineParams.style.display = 'none';
-            if (dillK) dillK.style.display = '';
-        }
-        updateDillYRangeDisplay();
-    });
-    // 新增：页面加载时主动触发一次change，确保初始状态正确
-    dillSineType.dispatchEvent(new Event('change'));
-    updateDillYRangeDisplay();
     
-    // 正弦波类型切换逻辑（增强Dill）
+    if (dillSineType) {
+        dillSineType.addEventListener('change', function() {
+            console.log('正弦波类型切换:', this.value);
+            if (this.value === 'multi') {
+                if (dillMultisineParams) dillMultisineParams.style.display = 'block';
+                if (dill3DSineParams) dill3DSineParams.style.display = 'none';
+                if (dillK) dillK.style.display = 'none';
+            } else if (this.value === '3d') {
+                if (dillMultisineParams) dillMultisineParams.style.display = 'none';
+                if (dill3DSineParams) dill3DSineParams.style.display = 'block';
+                if (dillK) dillK.style.display = 'none';
+            } else {
+                if (dillMultisineParams) dillMultisineParams.style.display = 'none';
+                if (dill3DSineParams) dill3DSineParams.style.display = 'none';
+                if (dillK) dillK.style.display = '';
+            }
+            updateDillYRangeDisplay();
+        });
+        // 新增：页面加载时主动触发一次change，确保初始状态正确
+        dillSineType.dispatchEvent(new Event('change'));
+        updateDillYRangeDisplay();
+    }
+    
+    // 正弦波类型切换逻辑（增强Dill） - 添加安全检查
     const enhancedDillSineType = document.getElementById('enhanced-dill-sine-type');
     const enhancedDillMultisineParams = document.getElementById('enhanced-dill-multisine-params');
     const enhancedDill3DSineParams = document.getElementById('enhanced-dill-3dsine-params');
     const enhancedK = document.getElementById('enhanced_K');
     const enhancedKItem = document.getElementById('enhanced-dill-params')?.querySelector('#K')?.closest('.parameter-item');
-    enhancedDillSineType.addEventListener('change', function() {
-        if (this.value === 'multi') {
-            enhancedDillMultisineParams.style.display = 'block';
-            enhancedDill3DSineParams.style.display = 'none';
-            if (enhancedKItem) enhancedKItem.style.display = 'none';
-        } else if (this.value === '3d') {
-            enhancedDillMultisineParams.style.display = 'none';
-            enhancedDill3DSineParams.style.display = 'block';
-            if (enhancedKItem) enhancedKItem.style.display = 'none';
-        } else {
-            enhancedDillMultisineParams.style.display = 'none';
-            enhancedDill3DSineParams.style.display = 'none';
-            if (enhancedKItem) enhancedKItem.style.display = '';
-        }
-    });
     
-    // 正弦波类型切换逻辑（CAR）
+    if (enhancedDillSineType) {
+        enhancedDillSineType.addEventListener('change', function() {
+            if (this.value === 'multi') {
+                if (enhancedDillMultisineParams) enhancedDillMultisineParams.style.display = 'block';
+                if (enhancedDill3DSineParams) enhancedDill3DSineParams.style.display = 'none';
+                if (enhancedKItem) enhancedKItem.style.display = 'none';
+            } else if (this.value === '3d') {
+                if (enhancedDillMultisineParams) enhancedDillMultisineParams.style.display = 'none';
+                if (enhancedDill3DSineParams) enhancedDill3DSineParams.style.display = 'block';
+                if (enhancedKItem) enhancedKItem.style.display = 'none';
+            } else {
+                if (enhancedDillMultisineParams) enhancedDillMultisineParams.style.display = 'none';
+                if (enhancedDill3DSineParams) enhancedDill3DSineParams.style.display = 'none';
+                if (enhancedKItem) enhancedKItem.style.display = '';
+            }
+        });
+    }
+    
+    // 正弦波类型切换逻辑（CAR） - 添加安全检查
     const carSineType = document.getElementById('car-sine-type');
     const carMultisineParams = document.getElementById('car-multisine-params');
     const car3DSineParams = document.getElementById('car-3dsine-params');
-    const carK = document.getElementById('car_K').closest('.parameter-item');
-    carSineType.addEventListener('change', function() {
-        if (this.value === 'multi') {
-            carMultisineParams.style.display = 'block';
-            car3DSineParams.style.display = 'none';
-            if (carK) carK.style.display = 'none';
-        } else if (this.value === '3d') {
-            carMultisineParams.style.display = 'none';
-            car3DSineParams.style.display = 'block';
-            if (carK) carK.style.display = 'none';
-        } else {
-            carMultisineParams.style.display = 'none';
-            car3DSineParams.style.display = 'none';
-            if (carK) carK.style.display = '';
-        }
-    });
-
-    // 添加phi_expr输入框下方表达式示例和格式提示
-    addPhiExprHint();
+    const carKElement = document.getElementById('car_K');
+    const carK = carKElement ? carKElement.closest('.parameter-item') : null;
+    
+    if (carSineType) {
+        carSineType.addEventListener('change', function() {
+            if (this.value === 'multi') {
+                if (carMultisineParams) carMultisineParams.style.display = 'block';
+                if (car3DSineParams) car3DSineParams.style.display = 'none';
+                if (carK) carK.style.display = 'none';
+            } else if (this.value === '3d') {
+                if (carMultisineParams) carMultisineParams.style.display = 'none';
+                if (car3DSineParams) car3DSineParams.style.display = 'block';
+                if (carK) carK.style.display = 'none';
+            } else {
+                if (carMultisineParams) carMultisineParams.style.display = 'none';
+                if (car3DSineParams) car3DSineParams.style.display = 'none';
+                if (carK) carK.style.display = '';
+            }
+        });
+    }
 
     // 添加Enhanced DILL层显示模式控制功能
     function addEnhancedDillLayerModeControl() {
@@ -1330,119 +1406,60 @@ function displayInteractiveResults(data) {
             createExposure3DPlot(exposurePlotContainer, data);
             createThickness3DPlot(thicknessPlotContainer, data);
         } else if (has2DData) {
-            // Enhanced Dill模型2D数据的特殊处理 - 显示4张图表
-            if (currentModelType === 'enhanced_dill' && data.has_yz_data && data.has_xy_data) {
-                console.log('显示Enhanced Dill模型4图热图分布');
+            // Enhanced Dill模型2D数据的特殊处理 - 显示多张图表
+            if (currentModelType === 'enhanced_dill') {
+                console.log('显示Enhanced Dill模型多图热图分布');
                 console.log('Enhanced Dill 2D数据检查:', {
                     has_z_exposure_dose: !!data.z_exposure_dose,
                     has_z_thickness: !!data.z_thickness,
-                    has_yz_data: !!data.has_yz_data,
-                    has_xy_data: !!data.has_xy_data,
+                    has_x_plane_exposure: !!data.x_plane_exposure,
+                    has_x_plane_thickness: !!data.x_plane_thickness,
+                    has_y_plane_exposure: !!data.y_plane_exposure,
+                    has_y_plane_thickness: !!data.y_plane_thickness,
                     y_coords_length: data.y_coords ? data.y_coords.length : 0,
                     z_coords_length: data.z_coords ? data.z_coords.length : 0,
                     x_coords_length: data.x_coords ? data.x_coords.length : 0
                 });
                 
-                // 创建4图布局容器
-                const resultsContainer = document.querySelector('.results-container');
-                if (resultsContainer) {
-                    // 清空容器
-                    resultsContainer.innerHTML = '';
+                // 显示原有的YZ平面图表（主要图表）
+                createExposureHeatmap(exposurePlotContainer, data);
+                createThicknessHeatmap(thicknessPlotContainer, data);
+                
+                // 显示X平面图表（如果有数据）
+                if (data.x_plane_exposure && data.x_plane_thickness) {
+                    const xPlaneExposureItem = document.getElementById('enhanced-dill-x-plane-exposure-item');
+                    const xPlaneThicknessItem = document.getElementById('enhanced-dill-x-plane-thickness-item');
+                    const xPlaneExposureContainer = document.getElementById('enhanced-dill-x-plane-exposure-container');
+                    const xPlaneThicknessContainer = document.getElementById('enhanced-dill-x-plane-thickness-container');
                     
-                    // 创建4图布局
-                    const fourPlotContainer = document.createElement('div');
-                    fourPlotContainer.className = 'enhanced-dill-four-plot-container';
-                    fourPlotContainer.innerHTML = `
-                        <div class="four-plot-grid">
-                            <div class="plot-item">
-                                <h3>YZ平面曝光剂量分布 (深度方向)</h3>
-                                <div id="yz-exposure-plot" class="plot-container"></div>
-                            </div>
-                            <div class="plot-item">
-                                <h3>YZ平面厚度分布 (深度方向)</h3>
-                                <div id="yz-thickness-plot" class="plot-container"></div>
-                            </div>
-                            <div class="plot-item">
-                                <h3>XY平面曝光剂量分布 (表面)</h3>
-                                <div id="xy-exposure-plot" class="plot-container"></div>
-                            </div>
-                            <div class="plot-item">
-                                <h3>XY平面厚度分布 (表面)</h3>
-                                <div id="xy-thickness-plot" class="plot-container"></div>
-                            </div>
-                        </div>
-                    `;
-                    
-                    // 添加CSS样式
-                    if (!document.getElementById('enhanced-dill-4plot-styles')) {
-                        const style = document.createElement('style');
-                        style.id = 'enhanced-dill-4plot-styles';
-                        style.textContent = `
-                            .enhanced-dill-four-plot-container {
-                                width: 100%;
-                                padding: 20px;
-                            }
-                            .four-plot-grid {
-                                display: grid;
-                                grid-template-columns: 1fr 1fr;
-                                gap: 20px;
-                                width: 100%;
-                            }
-                            .plot-item {
-                                background: white;
-                                border: 1px solid #ddd;
-                                border-radius: 8px;
-                                padding: 15px;
-                                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                            }
-                            .plot-item h3 {
-                                margin: 0 0 15px 0;
-                                text-align: center;
-                                color: #333;
-                                font-size: 14px;
-                                font-weight: 600;
-                            }
-                            .plot-container {
-                                width: 100%;
-                                height: 400px;
-                                min-height: 300px;
-                            }
-                        `;
-                        document.head.appendChild(style);
+                    if (xPlaneExposureItem && xPlaneThicknessItem && xPlaneExposureContainer && xPlaneThicknessContainer) {
+                        xPlaneExposureItem.style.display = 'block';
+                        xPlaneThicknessItem.style.display = 'block';
+                        
+                        console.log('渲染X平面图表...');
+                        createEnhancedDillXPlaneExposureHeatmap(xPlaneExposureContainer, data);
+                        createEnhancedDillXPlaneThicknessHeatmap(xPlaneThicknessContainer, data);
                     }
-                    
-                    resultsContainer.appendChild(fourPlotContainer);
-                    
-                    // 获取4个图表容器
-                    const yzExposureContainer = document.getElementById('yz-exposure-plot');
-                    const yzThicknessContainer = document.getElementById('yz-thickness-plot');
-                    const xyExposureContainer = document.getElementById('xy-exposure-plot');
-                    const xyThicknessContainer = document.getElementById('xy-thickness-plot');
-                    
-                    // 渲染YZ平面图表（使用兼容性数据）
-                    console.log('渲染YZ平面图表...');
-                    if (yzExposureContainer && data.z_exposure_dose) {
-                        createExposureHeatmap(yzExposureContainer, data);
-                    }
-                    if (yzThicknessContainer && data.z_thickness) {
-                        createThicknessHeatmap(yzThicknessContainer, data);
-                    }
-                    
-                    // 渲染XY平面图表（使用扩展数据）
-                    console.log('渲染XY平面图表...');
-                    if (xyExposureContainer && data.xy_exposure) {
-                        createEnhancedDillXYExposureHeatmap(xyExposureContainer, data);
-                    }
-                    if (xyThicknessContainer && data.xy_thickness) {
-                        createEnhancedDillXYThicknessHeatmap(xyThicknessContainer, data);
-                    }
-                    
-                    console.log('Enhanced Dill模型4图显示完成');
-                } else {
-                    console.error('未找到results-container，回退到双图显示');
-                    createExposureHeatmap(exposurePlotContainer, data);
-                    createThicknessHeatmap(thicknessPlotContainer, data);
                 }
+                
+                // 显示Y平面图表（如果有数据）
+                if (data.y_plane_exposure && data.y_plane_thickness) {
+                    const yPlaneExposureItem = document.getElementById('enhanced-dill-y-plane-exposure-item');
+                    const yPlaneThicknessItem = document.getElementById('enhanced-dill-y-plane-thickness-item');
+                    const yPlaneExposureContainer = document.getElementById('enhanced-dill-y-plane-exposure-container');
+                    const yPlaneThicknessContainer = document.getElementById('enhanced-dill-y-plane-thickness-container');
+                    
+                    if (yPlaneExposureItem && yPlaneThicknessItem && yPlaneExposureContainer && yPlaneThicknessContainer) {
+                        yPlaneExposureItem.style.display = 'block';
+                        yPlaneThicknessItem.style.display = 'block';
+                        
+                        console.log('渲染Y平面图表...');
+                        createEnhancedDillYPlaneExposureHeatmap(yPlaneExposureContainer, data);
+                        createEnhancedDillYPlaneThicknessHeatmap(yPlaneThicknessContainer, data);
+                    }
+                }
+                
+                console.log('Enhanced Dill模型多图显示完成');
             } else {
                 // 统一处理所有模型的二维数据 - 使用热图
                 console.log('Displaying 2D Heatmap for model:', currentModelType);
@@ -2183,6 +2200,10 @@ function createExposurePlot(container, data) {
     // 获取当前语言设置
     const currentLang = window.currentLang || localStorage.getItem('lang') || 'zh-CN';
     
+    // 获取当前选择的模型类型
+    const modelSelect = document.getElementById('model-select');
+    const currentModelType = modelSelect ? modelSelect.value : 'dill';
+    
     // 统一字段名处理，增加更多兼容性
     let xCoords = data.x || data.positions || data.x_coords;
     let yData = data.exposure_dose || data.intensity || data.I;
@@ -2208,9 +2229,17 @@ function createExposurePlot(container, data) {
             hovertemplate: `位置: %{x}<br>${(window.LANGS && window.LANGS[currentLang] && window.LANGS[currentLang].hover_exposure_value) || '曝光剂量值'}: %{y}<extra></extra>`
         };
 
+        // 根据模型类型设置不同的轴标签
+        let xAxisTitle;
+        if (currentModelType === 'enhanced_dill') {
+            xAxisTitle = 'Z 位置 (μm)'; // 增强DILL模型关注深度方向
+        } else {
+            xAxisTitle = (window.LANGS && window.LANGS[currentLang] && window.LANGS[currentLang].x_position) || 'X 位置 (μm)';
+        }
+
         const layout = {
             title: '曝光计量分布 (1D)',
-            xaxis: { title: (window.LANGS && window.LANGS[currentLang] && window.LANGS[currentLang].x_position) || 'X 位置 (μm)' },
+            xaxis: { title: xAxisTitle },
             yaxis: { title: (window.LANGS && window.LANGS[currentLang] && window.LANGS[currentLang].exposure_dose_trace_name) || '曝光剂量 (mJ/cm²)' },
             margin: { l: 60, r: 20, t: 60, b: 60 },
             showlegend: false
@@ -2244,6 +2273,10 @@ function createThicknessPlot(container, data) {
     // 获取当前语言设置
     const currentLang = window.currentLang || localStorage.getItem('lang') || 'zh-CN';
     
+    // 获取当前选择的模型类型
+    const modelSelect = document.getElementById('model-select');
+    const currentModelType = modelSelect ? modelSelect.value : 'dill';
+    
     // 统一字段名处理，增加更多兼容性
     let xCoords = data.x || data.positions || data.x_coords;
     let yData = data.thickness || data.M;
@@ -2269,9 +2302,17 @@ function createThicknessPlot(container, data) {
             hovertemplate: `位置: %{x}<br>${(window.LANGS && window.LANGS[currentLang] && window.LANGS[currentLang].hover_thickness_value) || '相对厚度值'}: %{y}<extra></extra>`
         };
 
+        // 根据模型类型设置不同的轴标签
+        let xAxisTitle;
+        if (currentModelType === 'enhanced_dill') {
+            xAxisTitle = 'Z 位置 (μm)'; // 增强DILL模型关注深度方向
+        } else {
+            xAxisTitle = (window.LANGS && window.LANGS[currentLang] && window.LANGS[currentLang].x_position) || 'X 位置 (μm)';
+        }
+
         const layout = {
             title: '光刻胶厚度分布 (1D)',
-            xaxis: { title: (window.LANGS && window.LANGS[currentLang] && window.LANGS[currentLang].x_position) || 'X 位置 (μm)' },
+            xaxis: { title: xAxisTitle },
             yaxis: { title: (window.LANGS && window.LANGS[currentLang] && window.LANGS[currentLang].thickness_trace_name) || '相对厚度' },
             margin: { l: 60, r: 20, t: 60, b: 60 },
             showlegend: false
@@ -2323,16 +2364,26 @@ function createExposureHeatmap(container, data) {
             hovertemplate: `X: %{x}<br>Y: %{y}<br>${LANGS[currentLang].hover_exposure_value || '曝光剂量值'}: %{z}<extra></extra>`
         };
 
-        // 根据模型类型设置不同的标题
+        // 根据模型类型设置不同的标题和轴标签
         const modelSelect = document.getElementById('model-select');
         const currentModelType = modelSelect ? modelSelect.value : 'dill';
         
+        let title, xAxisTitle, yAxisTitle;
+        
+        if (currentModelType === 'enhanced_dill') {
+            title = '曝光计量分布 (2D) (Y, Z平面)';
+            xAxisTitle = 'Z 位置 (μm)';  // 对于增强DILL模型，横轴是深度方向
+            yAxisTitle = 'Y 位置 (μm)';
+        } else {
+            title = '曝光计量分布 (2D)';
+            xAxisTitle = LANGS[currentLang].x_position || 'X 位置 (μm)';
+            yAxisTitle = LANGS[currentLang].y_position || 'Y 位置 (μm)';
+        }
+        
         const layout = {
-            title: (currentModelType === 'dill' || currentModelType === 'car') ? 
-                  '曝光计量分布 (2D)' : 
-                  '曝光计量分布 (2D) (Y, Z平面)',
-            xaxis: { title: LANGS[currentLang].z_position },
-            yaxis: { title: LANGS[currentLang].y_position },
+            title: title,
+            xaxis: { title: xAxisTitle },
+            yaxis: { title: yAxisTitle },
             margin: { l: 60, r: 20, t: 60, b: 60 }
         };
         
@@ -2384,16 +2435,26 @@ function createThicknessHeatmap(container, data) {
             hovertemplate: `X: %{x}<br>Y: %{y}<br>${LANGS[currentLang].hover_thickness_value || '相对厚度值'}: %{z}<extra></extra>`
         };
 
-        // 根据模型类型设置不同的标题
+        // 根据模型类型设置不同的标题和轴标签
         const modelSelect = document.getElementById('model-select');
         const currentModelType = modelSelect ? modelSelect.value : 'dill';
         
+        let title, xAxisTitle, yAxisTitle;
+        
+        if (currentModelType === 'enhanced_dill') {
+            title = '光刻胶厚度分布 (2D) (Y, Z平面)';
+            xAxisTitle = 'Z 位置 (μm)';  // 对于增强DILL模型，横轴是深度方向
+            yAxisTitle = 'Y 位置 (μm)';
+        } else {
+            title = '光刻胶厚度分布 (2D)';
+            xAxisTitle = LANGS[currentLang].x_position || 'X 位置 (μm)';
+            yAxisTitle = LANGS[currentLang].y_position || 'Y 位置 (μm)';
+        }
+        
         const layout = {
-            title: (currentModelType === 'dill' || currentModelType === 'car') ? 
-                  '光刻胶厚度分布 (2D)' : 
-                  '光刻胶厚度分布 (2D) (Y, Z平面)',
-            xaxis: { title: LANGS[currentLang].z_position },
-            yaxis: { title: LANGS[currentLang].y_position },
+            title: title,
+            xaxis: { title: xAxisTitle },
+            yaxis: { title: yAxisTitle },
             margin: { l: 60, r: 20, t: 60, b: 60 }
         };
         
@@ -2473,14 +2534,20 @@ function createExposureXYHeatmap(container, data) {
             }
         });
         
-        // 添加导出功能
-        document.getElementById('export-exposure-xy-img').onclick = function() {
-            Plotly.downloadImage(container, {format: 'png', filename: 'exposure_xy_distribution'});
-        };
+        // 添加导出功能 - 添加安全检查
+        const exportExposureXYImg = document.getElementById('export-exposure-xy-img');
+        if (exportExposureXYImg) {
+            exportExposureXYImg.onclick = function() {
+                Plotly.downloadImage(container, {format: 'png', filename: 'exposure_xy_distribution'});
+            };
+        }
         
-        document.getElementById('export-exposure-xy-data').onclick = function() {
-            exportPlotData('exposure_xy');
-        };
+        const exportExposureXYData = document.getElementById('export-exposure-xy-data');
+        if (exportExposureXYData) {
+            exportExposureXYData.onclick = function() {
+                exportPlotData('exposure_xy');
+            };
+        }
     } catch (error) {
         console.error('创建(X, Y)平面曝光热图失败:', error);
         container.innerHTML = `<div style="color:red;padding:20px;">创建(X, Y)平面曝光热图失败: ${error.message}</div>`;
@@ -2543,14 +2610,20 @@ function createThicknessXYHeatmap(container, data) {
             }
         });
         
-        // 添加导出功能
-        document.getElementById('export-thickness-xy-img').onclick = function() {
-            Plotly.downloadImage(container, {format: 'png', filename: 'thickness_xy_distribution'});
-        };
+        // 添加导出功能 - 添加安全检查
+        const exportThicknessXYImg = document.getElementById('export-thickness-xy-img');
+        if (exportThicknessXYImg) {
+            exportThicknessXYImg.onclick = function() {
+                Plotly.downloadImage(container, {format: 'png', filename: 'thickness_xy_distribution'});
+            };
+        }
         
-        document.getElementById('export-thickness-xy-data').onclick = function() {
-            exportPlotData('thickness_xy');
-        };
+        const exportThicknessXYData = document.getElementById('export-thickness-xy-data');
+        if (exportThicknessXYData) {
+            exportThicknessXYData.onclick = function() {
+                exportPlotData('thickness_xy');
+            };
+        }
     } catch (error) {
         console.error('创建(X, Y)平面厚度热图失败:', error);
         container.innerHTML = `<div style="color:red;padding:20px;">创建(X, Y)平面厚度热图失败: ${error.message}</div>`;
@@ -2705,6 +2778,302 @@ function createEnhancedDillXYThicknessHeatmap(container, data) {
     }
 }
 
+/**
+ * Enhanced Dill模型专用：创建X平面曝光剂量热图
+ */
+function createEnhancedDillXPlaneExposureHeatmap(container, data) {
+    // X平面数据处理 - 使用Y和Z坐标
+    let yCoords = data.y_coords || data.y;
+    let zCoords = data.z_coords || data.z;
+    let zData = data.x_plane_exposure;
+    
+    console.log('Enhanced Dill X平面曝光剂量热图数据检查:', {
+        y_coords_length: yCoords ? yCoords.length : 0,
+        z_coords_length: zCoords ? zCoords.length : 0,
+        z_data_type: typeof zData,
+        z_data_shape: Array.isArray(zData) ? `${zData.length}x${zData[0] ? zData[0].length : 0}` : 'not array',
+        data_keys: Object.keys(data)
+    });
+    
+    // 检查数据
+    if (!yCoords || !zCoords || !zData || 
+        !Array.isArray(yCoords) || !Array.isArray(zCoords) || !Array.isArray(zData) ||
+        yCoords.length === 0 || zCoords.length === 0 || zData.length === 0) {
+        console.error('Enhanced Dill X平面曝光剂量数据不完整');
+        container.innerHTML = '<div style="color:red;padding:20px;">无有效X平面曝光剂量数据，无法绘图</div>';
+        return;
+    }
+    
+    // 处理数据格式，使用标准化函数
+    try {
+        let heatmapZ = standardizeHeatmapData(zData, yCoords, zCoords);
+        
+        console.log('Enhanced Dill X平面曝光剂量热图数据处理完成:', {
+            y_range: [Math.min(...yCoords), Math.max(...yCoords)],
+            z_range: [Math.min(...zCoords), Math.max(...zCoords)],
+            value_range: [Math.min(...heatmapZ.flat()), Math.max(...heatmapZ.flat())]
+        });
+        
+        const trace = {
+            x: yCoords,
+            y: zCoords,
+            z: heatmapZ,
+            type: 'heatmap',
+            colorscale: 'Viridis',
+            colorbar: { title: '曝光剂量 (mJ/cm²)' },
+            hovertemplate: 'Y: %{x}<br>Z: %{y}<br>曝光剂量: %{z}<extra></extra>'
+        };
+        
+        const layout = {
+            title: 'X平面曝光剂量分布 (Y-Z截面)',
+            xaxis: { title: 'Y 位置 (μm)' },
+            yaxis: { title: 'Z 位置 (μm)' },
+            margin: { l: 60, r: 20, t: 60, b: 60 }
+        };
+        
+        Plotly.newPlot(container, [trace], layout, {responsive: true});
+        
+        // 添加点击事件处理
+        container.on('plotly_click', function(eventData) {
+            if(eventData.points.length > 0) {
+                const point = eventData.points[0];
+                showSinglePointDetailsPopup({ 
+                    x: point.x, 
+                    y: point.y, 
+                    z: point.z 
+                }, 'exposure', container, eventData);
+            }
+        });
+        
+        console.log('Enhanced Dill X平面曝光剂量热图渲染完成');
+    } catch (error) {
+        console.error('创建Enhanced Dill X平面曝光热图失败:', error);
+        container.innerHTML = `<div style="color:red;padding:20px;">创建X平面曝光热图失败: ${error.message}</div>`;
+    }
+}
+
+/**
+ * Enhanced Dill模型专用：创建X平面厚度热图
+ */
+function createEnhancedDillXPlaneThicknessHeatmap(container, data) {
+    // X平面数据处理 - 使用Y和Z坐标
+    let yCoords = data.y_coords || data.y;
+    let zCoords = data.z_coords || data.z;
+    let zData = data.x_plane_thickness;
+    
+    console.log('Enhanced Dill X平面厚度热图数据检查:', {
+        y_coords_length: yCoords ? yCoords.length : 0,
+        z_coords_length: zCoords ? zCoords.length : 0,
+        z_data_type: typeof zData,
+        z_data_shape: Array.isArray(zData) ? `${zData.length}x${zData[0] ? zData[0].length : 0}` : 'not array',
+        data_keys: Object.keys(data)
+    });
+    
+    // 检查数据
+    if (!yCoords || !zCoords || !zData || 
+        !Array.isArray(yCoords) || !Array.isArray(zCoords) || !Array.isArray(zData) ||
+        yCoords.length === 0 || zCoords.length === 0 || zData.length === 0) {
+        console.error('Enhanced Dill X平面厚度数据不完整');
+        container.innerHTML = '<div style="color:red;padding:20px;">无有效X平面厚度数据，无法绘图</div>';
+        return;
+    }
+    
+    // 处理数据格式，使用标准化函数
+    try {
+        let heatmapZ = standardizeHeatmapData(zData, yCoords, zCoords);
+        
+        console.log('Enhanced Dill X平面厚度热图数据处理完成:', {
+            y_range: [Math.min(...yCoords), Math.max(...yCoords)],
+            z_range: [Math.min(...zCoords), Math.max(...zCoords)],
+            value_range: [Math.min(...heatmapZ.flat()), Math.max(...heatmapZ.flat())]
+        });
+        
+        const trace = {
+            x: yCoords,
+            y: zCoords,
+            z: heatmapZ,
+            type: 'heatmap',
+            colorscale: 'Plasma',
+            colorbar: { title: '相对厚度' },
+            hovertemplate: 'Y: %{x}<br>Z: %{y}<br>相对厚度: %{z}<extra></extra>'
+        };
+        
+        const layout = {
+            title: 'X平面厚度分布 (Y-Z截面)',
+            xaxis: { title: 'Y 位置 (μm)' },
+            yaxis: { title: 'Z 位置 (μm)' },
+            margin: { l: 60, r: 20, t: 60, b: 60 }
+        };
+        
+        Plotly.newPlot(container, [trace], layout, {responsive: true});
+        
+        // 添加点击事件处理
+        container.on('plotly_click', function(eventData) {
+            if(eventData.points.length > 0) {
+                const point = eventData.points[0];
+                showSinglePointDetailsPopup({ 
+                    x: point.x, 
+                    y: point.y, 
+                    z: point.z 
+                }, 'thickness', container, eventData);
+            }
+        });
+        
+        console.log('Enhanced Dill X平面厚度热图渲染完成');
+    } catch (error) {
+        console.error('创建Enhanced Dill X平面厚度热图失败:', error);
+        container.innerHTML = `<div style="color:red;padding:20px;">创建X平面厚度热图失败: ${error.message}</div>`;
+    }
+}
+
+/**
+ * Enhanced Dill模型专用：创建Y平面曝光剂量热图
+ */
+function createEnhancedDillYPlaneExposureHeatmap(container, data) {
+    // Y平面数据处理 - 使用X和Z坐标
+    let xCoords = data.x_coords || data.x;
+    let zCoords = data.z_coords || data.z;
+    let zData = data.y_plane_exposure;
+    
+    console.log('Enhanced Dill Y平面曝光剂量热图数据检查:', {
+        x_coords_length: xCoords ? xCoords.length : 0,
+        z_coords_length: zCoords ? zCoords.length : 0,
+        z_data_type: typeof zData,
+        z_data_shape: Array.isArray(zData) ? `${zData.length}x${zData[0] ? zData[0].length : 0}` : 'not array',
+        data_keys: Object.keys(data)
+    });
+    
+    // 检查数据
+    if (!xCoords || !zCoords || !zData || 
+        !Array.isArray(xCoords) || !Array.isArray(zCoords) || !Array.isArray(zData) ||
+        xCoords.length === 0 || zCoords.length === 0 || zData.length === 0) {
+        console.error('Enhanced Dill Y平面曝光剂量数据不完整');
+        container.innerHTML = '<div style="color:red;padding:20px;">无有效Y平面曝光剂量数据，无法绘图</div>';
+        return;
+    }
+    
+    // 处理数据格式，使用标准化函数
+    try {
+        let heatmapZ = standardizeHeatmapData(zData, xCoords, zCoords);
+        
+        console.log('Enhanced Dill Y平面曝光剂量热图数据处理完成:', {
+            x_range: [Math.min(...xCoords), Math.max(...xCoords)],
+            z_range: [Math.min(...zCoords), Math.max(...zCoords)],
+            value_range: [Math.min(...heatmapZ.flat()), Math.max(...heatmapZ.flat())]
+        });
+        
+        const trace = {
+            x: xCoords,
+            y: zCoords,
+            z: heatmapZ,
+            type: 'heatmap',
+            colorscale: 'Viridis',
+            colorbar: { title: '曝光剂量 (mJ/cm²)' },
+            hovertemplate: 'X: %{x}<br>Z: %{y}<br>曝光剂量: %{z}<extra></extra>'
+        };
+        
+        const layout = {
+            title: 'Y平面曝光剂量分布 (X-Z截面)',
+            xaxis: { title: 'X 位置 (μm)' },
+            yaxis: { title: 'Z 位置 (μm)' },
+            margin: { l: 60, r: 20, t: 60, b: 60 }
+        };
+        
+        Plotly.newPlot(container, [trace], layout, {responsive: true});
+        
+        // 添加点击事件处理
+        container.on('plotly_click', function(eventData) {
+            if(eventData.points.length > 0) {
+                const point = eventData.points[0];
+                showSinglePointDetailsPopup({ 
+                    x: point.x, 
+                    y: point.y, 
+                    z: point.z 
+                }, 'exposure', container, eventData);
+            }
+        });
+        
+        console.log('Enhanced Dill Y平面曝光剂量热图渲染完成');
+    } catch (error) {
+        console.error('创建Enhanced Dill Y平面曝光热图失败:', error);
+        container.innerHTML = `<div style="color:red;padding:20px;">创建Y平面曝光热图失败: ${error.message}</div>`;
+    }
+}
+
+/**
+ * Enhanced Dill模型专用：创建Y平面厚度热图
+ */
+function createEnhancedDillYPlaneThicknessHeatmap(container, data) {
+    // Y平面数据处理 - 使用X和Z坐标
+    let xCoords = data.x_coords || data.x;
+    let zCoords = data.z_coords || data.z;
+    let zData = data.y_plane_thickness;
+    
+    console.log('Enhanced Dill Y平面厚度热图数据检查:', {
+        x_coords_length: xCoords ? xCoords.length : 0,
+        z_coords_length: zCoords ? zCoords.length : 0,
+        z_data_type: typeof zData,
+        z_data_shape: Array.isArray(zData) ? `${zData.length}x${zData[0] ? zData[0].length : 0}` : 'not array',
+        data_keys: Object.keys(data)
+    });
+    
+    // 检查数据
+    if (!xCoords || !zCoords || !zData || 
+        !Array.isArray(xCoords) || !Array.isArray(zCoords) || !Array.isArray(zData) ||
+        xCoords.length === 0 || zCoords.length === 0 || zData.length === 0) {
+        console.error('Enhanced Dill Y平面厚度数据不完整');
+        container.innerHTML = '<div style="color:red;padding:20px;">无有效Y平面厚度数据，无法绘图</div>';
+        return;
+    }
+    
+    // 处理数据格式，使用标准化函数
+    try {
+        let heatmapZ = standardizeHeatmapData(zData, xCoords, zCoords);
+        
+        console.log('Enhanced Dill Y平面厚度热图数据处理完成:', {
+            x_range: [Math.min(...xCoords), Math.max(...xCoords)],
+            z_range: [Math.min(...zCoords), Math.max(...zCoords)],
+            value_range: [Math.min(...heatmapZ.flat()), Math.max(...heatmapZ.flat())]
+        });
+        
+        const trace = {
+            x: xCoords,
+            y: zCoords,
+            z: heatmapZ,
+            type: 'heatmap',
+            colorscale: 'Plasma',
+            colorbar: { title: '相对厚度' },
+            hovertemplate: 'X: %{x}<br>Z: %{y}<br>相对厚度: %{z}<extra></extra>'
+        };
+        
+        const layout = {
+            title: 'Y平面厚度分布 (X-Z截面)',
+            xaxis: { title: 'X 位置 (μm)' },
+            yaxis: { title: 'Z 位置 (μm)' },
+            margin: { l: 60, r: 20, t: 60, b: 60 }
+        };
+        
+        Plotly.newPlot(container, [trace], layout, {responsive: true});
+        
+        // 添加点击事件处理
+        container.on('plotly_click', function(eventData) {
+            if(eventData.points.length > 0) {
+                const point = eventData.points[0];
+                showSinglePointDetailsPopup({ 
+                    x: point.x, 
+                    y: point.y, 
+                    z: point.z 
+                }, 'thickness', container, eventData);
+            }
+        });
+        
+        console.log('Enhanced Dill Y平面厚度热图渲染完成');
+    } catch (error) {
+        console.error('创建Enhanced Dill Y平面厚度热图失败:', error);
+        container.innerHTML = `<div style="color:red;padding:20px;">创建Y平面厚度热图失败: ${error.message}</div>`;
+    }
+}
+
 // Make sure LANGS[currentLang].y_position exists or add it
 // Example: LANGS.zh.y_position = 'Y 位置 (μm)'; LANGS.en.y_position = 'Y Position (μm)';
 
@@ -2852,6 +3221,21 @@ function clearAllCharts() {
     if (exposureXyPlotItem) exposureXyPlotItem.style.display = 'none';
     if (thicknessXyPlotItem) thicknessXyPlotItem.style.display = 'none';
     
+    // 隐藏增强DILL模型的额外X和Y平面图表
+    const enhancedDillExtraPlots = [
+        'enhanced-dill-x-plane-exposure-item',
+        'enhanced-dill-x-plane-thickness-item',
+        'enhanced-dill-y-plane-exposure-item',
+        'enhanced-dill-y-plane-thickness-item'
+    ];
+    
+    enhancedDillExtraPlots.forEach(itemId => {
+        const item = document.getElementById(itemId);
+        if (item) {
+            item.style.display = 'none';
+        }
+    });
+    
     // 清空XY平面热力图内容
     const exposureXyContainer = document.getElementById('exposure-xy-plot-container');
     const thicknessXyContainer = document.getElementById('thickness-xy-plot-container');
@@ -2875,6 +3259,28 @@ function clearAllCharts() {
         }
         thicknessXyContainer.innerHTML = '';
     }
+    
+    // 清空增强DILL模型的额外X和Y平面图表容器
+    const enhancedDillExtraContainers = [
+        'enhanced-dill-x-plane-exposure-container',
+        'enhanced-dill-x-plane-thickness-container',
+        'enhanced-dill-y-plane-exposure-container',
+        'enhanced-dill-y-plane-thickness-container'
+    ];
+    
+    enhancedDillExtraContainers.forEach(containerId => {
+        const container = document.getElementById(containerId);
+        if (container) {
+            if (typeof Plotly !== 'undefined' && Plotly.purge && container._fullLayout) {
+                try {
+                    Plotly.purge(container);
+                } catch (e) {
+                    console.warn(`清除${containerId}图表失败:`, e);
+                }
+            }
+            container.innerHTML = '';
+        }
+    });
     
     console.log('图表已清空，等待用户重新生成');
 }
@@ -2979,282 +3385,8 @@ function removeSinglePointDetailsPopup() {
 window.clearAllCharts = clearAllCharts;
 window.removeSinglePointDetailsPopup = removeSinglePointDetailsPopup;
 
-// 参数说明tooltip逻辑
-function bindParamTooltips() {
-    // 已无问号，不再需要tooltip逻辑，直接return
-    return;
-
-    document.querySelectorAll('.param-tooltip').forEach(function(tip) {
-        tip.addEventListener('mouseenter', function() {
-            let key = tip.getAttribute('data-tooltip-key');
-            let lang = window.currentLang || 'zh';
-            let text = (window.LANGS && window.LANGS[lang] && window.LANGS[lang][key]) ? window.LANGS[lang][key] : '';
-            let tooltip = document.createElement('div');
-            tooltip.className = 'param-tooltip-popup';
-            tooltip.textContent = text;
-            document.body.appendChild(tooltip);
-            let rect = tip.getBoundingClientRect();
-            tooltip.style.left = (rect.left + window.scrollX + 20) + 'px';
-            tooltip.style.top = (rect.top + window.scrollY - 10) + 'px';
-            tip._tooltip = tooltip;
-        });
-        tip.addEventListener('mouseleave', function() {
-            if (tip._tooltip) {
-                tip._tooltip.remove();
-                tip._tooltip = null;
-            }
-        });
-    });
-}
-
-// applyLang时也刷新tooltip
-const oldApplyLang = window.applyLang;
-window.applyLang = function() {
-    if (oldApplyLang) oldApplyLang();
-    // bindParamTooltips(); // 已无问号，无需再绑定
-};
-
-function exportPlotData(type) {
-    let data, x, y, z, filename, is2D = false;
-    data = window.lastPlotData;
-    
-    if (type === 'exposure') {
-        x = data.x;
-        y = data.exposure_dose;
-        filename = 'exposure_data.csv';
-    } else if (type === 'thickness') {
-        x = data.x;
-        y = data.thickness;
-        filename = 'thickness_data.csv';
-    } else if (type === 'exposure_xy') {
-        // 导出XY平面曝光热力图数据
-        x = data.x_coords || data.x;
-        y = data.y_coords || data.y;
-        z = data.xy_exposure || data.exposure_xy; // 优先使用真正的XY平面数据
-        filename = 'exposure_xy_data.csv';
-        is2D = true;
-    } else if (type === 'thickness_xy') {
-        // 导出XY平面厚度热力图数据
-        x = data.x_coords || data.x;
-        y = data.y_coords || data.y;
-        z = data.xy_thickness || data.thickness_xy; // 优先使用真正的XY平面数据
-        filename = 'thickness_xy_data.csv';
-        is2D = true;
-    } else {
-        console.error('未知的数据导出类型:', type);
-        return;
-    }
-    
-    let csv;
-    
-    if (is2D && x && y && z) {
-        // 2D热力图数据导出 - 处理二维数据
-        let heatmapZ = z;
-        if (!Array.isArray(heatmapZ[0]) && x.length * y.length === heatmapZ.length) {
-            try {
-                // 尝试检测数据排列顺序并重塑数组
-                const isRowMajor = detectDataOrder(heatmapZ, x, y);
-                heatmapZ = reshapeArray(heatmapZ, x.length, y.length, isRowMajor);
-            } catch (error) {
-                console.error('导出数据格式转换失败:', error);
-                alert('无法转换数据格式，导出取消');
-                return;
-            }
-        }
-        
-        // 创建CSV标头 - X坐标作为列标题
-        csv = 'y/x,' + x.join(',') + '\n';
-        
-        // 为每行添加Y坐标和Z值
-        for (let j = 0; j < y.length; j++) {
-            let row = y[j].toString();
-            for (let i = 0; i < x.length; i++) {
-                row += ',' + (heatmapZ[j][i] || 0).toString();
-            }
-            csv += row + '\n';
-        }
-    } else if (x && y) {
-        // 1D数据导出
-        csv = 'x,y\n';
-        for (let i = 0; i < x.length; i++) {
-            csv += `${x[i]},${y[i]}\n`;
-        }
-    } else {
-        console.error('无法导出数据，缺少必要的坐标信息');
-        return;
-    }
-    
-    let blob = new Blob([csv], {type: 'text/csv'});
-    let link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
-
-// 添加phi_expr输入框下方表达式示例和格式提示
-function addPhiExprHint() {
-    const phiInputs = [
-        document.getElementById('phi_expr'),
-        document.getElementById('enhanced_phi_expr'),
-        document.getElementById('car_phi_expr')
-    ];
-    phiInputs.forEach(input => {
-        if (input && !input.nextElementSibling?.classList?.contains('phi-hint')) {
-            const hint = document.createElement('div');
-            hint.className = 'phi-hint';
-            hint.style.color = '#888';
-            hint.style.fontSize = '0.95em';
-            hint.innerHTML = '示例：0, pi/2, sin(2*t)，支持sin/cos/pi/t等';
-            input.parentNode.appendChild(hint);
-        }
-    });
-}
-document.addEventListener('DOMContentLoaded', addPhiExprHint);
-
-// 工具函数：校验phi_expr表达式是否合法
-function validatePhiExpr(expr) {
-    if (!expr || typeof expr !== 'string') return false;
-    try {
-        // 只允许sin/cos/pi/t/数字/加减乘除括号
-        if (!/^[-+*/(). 0-9tcosinpi]*$/.test(expr.replace(/\s+/g, ''))) return false;
-        // eslint-disable-next-line no-new-func
-        new Function('t', 'return ' + expr.replace(/\b(sin|cos|pi)\b/g, 'Math.$1'))(0);
-        return true;
-    } catch {
-        return false;
-    }
-}
-
-// 工具函数：生成二维正弦分布
-function generate2DSine(Kx, Ky, V, phi_expr, xRange, yRange) {
-    const xPoints = 100, yPoints = 100;
-    const x = Array.from({length: xPoints}, (_, i) => xRange[0] + (xRange[1]-xRange[0])*i/(xPoints-1));
-    const y = Array.from({length: yPoints}, (_, i) => yRange[0] + (yRange[1]-yRange[0])*i/(yPoints-1));
-    const phiFunc = (t) => {
-        try {
-            // eslint-disable-next-line no-new-func
-            return new Function('t', 'return ' + phi_expr.replace(/\b(sin|cos|pi)\b/g, 'Math.$1'))(t);
-        } catch { return 0; }
-    };
-    const phi = phiFunc(0);
-    const z = [];
-    for (let j = 0; j < yPoints; j++) {
-        const row = [];
-        for (let i = 0; i < xPoints; i++) {
-            row.push(1 + V * Math.cos(Kx * x[i] + Ky * y[j] + phi));
-        }
-        z.push(row);
-    }
-    return {x, y, z};
-}
-
-// 工具函数：生成三维正弦分布
-function generate3DSine(Kx, Ky, Kz, V, phi_expr, xRange, yRange, zRange) {
-    // 为了可视化效果，使用较少的点数
-    const xPoints = 20, yPoints = 20, zPoints = 20;
-    const x = Array.from({length: xPoints}, (_, i) => xRange[0] + (xRange[1]-xRange[0])*i/(xPoints-1));
-    const y = Array.from({length: yPoints}, (_, i) => yRange[0] + (yRange[1]-yRange[0])*i/(yPoints-1));
-    const z = Array.from({length: zPoints}, (_, i) => zRange[0] + (zRange[1]-zRange[0])*i/(zPoints-1));
-    
-    const phiFunc = (t) => {
-        try {
-            // eslint-disable-next-line no-new-func
-            return new Function('t', 'return ' + phi_expr.replace(/\b(sin|cos|pi)\b/g, 'Math.$1'))(t);
-        } catch { return 0; }
-    };
-    const phi = phiFunc(0);
-    
-    // 为3D可视化准备数据
-    const values = new Array(xPoints * yPoints * zPoints);
-    let idx = 0;
-    const xGrid = [], yGrid = [], zGrid = [];
-    
-    // 生成三维网格点和值
-    for (let k = 0; k < zPoints; k++) {
-        for (let j = 0; j < yPoints; j++) {
-            for (let i = 0; i < xPoints; i++) {
-                xGrid.push(x[i]);
-                yGrid.push(y[j]);
-                zGrid.push(z[k]);
-                values[idx++] = 1 + V * Math.cos(Kx * x[i] + Ky * y[j] + Kz * z[k] + phi);
-            }
-        }
-    }
-    
-    return {
-        x: xGrid,
-        y: yGrid,
-        z: zGrid,
-        values: values,
-        xGrid: x,
-        yGrid: y,
-        zGrid: z
-    };
-}
-
-// Dill模型二维正弦分布预览绘图函数 (从bindPhiExprUI提取并重命名)
-function dillDrawPreviewPlot(scrollToPlot = false) {
-    const input = document.getElementById('phi_expr');
-    const kxInput = document.getElementById('Kx');
-    const kyInput = document.getElementById('Ky');
-    const vInput = document.getElementById('V'); // Assuming 'V' is the ID for Dill model's V
-    const plot = document.getElementById('phi-expr-preview-plot');
-    const errDiv = input?.closest('.parameter-item')?.querySelector('.phi-expr-error');
-
-    if (!input || !plot) return;
-
-    let Kx = 2, Ky = 0, V_val = 0.8; // Default V_val
-    if (kxInput) Kx = parseFloat(kxInput.value);
-    if (kyInput) Ky = parseFloat(kyInput.value);
-    if (vInput) V_val = parseFloat(vInput.value); // Use V_val to avoid conflict with V variable if any
-
-    // 获取Y范围参数
-    const yMinInput = document.getElementById('y_min');
-    const yMaxInput = document.getElementById('y_max');
-    
-    // 默认范围，或从输入框获取
-    let xRange = [0, 10];
-    let yRange = [0, 10];
-    
-    if (yMinInput && yMaxInput) {
-        yRange = [parseFloat(yMinInput.value) || 0, parseFloat(yMaxInput.value) || 10];
-    }
-
-    const expr = input.value;
-
-    if (!validatePhaseExpr(expr)) {
-        if (errDiv) { 
-            errDiv.textContent = LANGS[currentLang]?.phi_expr_invalid_preview || '表达式格式有误，无法预览。'; 
-            errDiv.style.display = 'block'; 
-        }
-        return;
-    }
-    if (errDiv) {
-        errDiv.textContent = ''; 
-        errDiv.style.display = 'none'; 
-    }
-
-    const plotData = generate2DSine(Kx, Ky, V_val, expr, xRange, yRange);
-    plot.style.display = 'block';
-    Plotly.newPlot(plot, [{
-        z: plotData.z, x: plotData.x, y: plotData.y, type: 'heatmap', colorscale: 'Viridis',
-        colorbar: {title: 'I(x,y)'}
-    }], {
-        title: LANGS[currentLang]?.preview_2d_title || '二维正弦分布预览', 
-        xaxis: {title: 'x'}, 
-        yaxis: {title: 'y'},
-        margin: {t:40, l:40, r:20, b:10}, height: 260
-    }, {displayModeBar: false});
-
-    if (scrollToPlot) {
-        setTimeout(()=>{plot.scrollIntoView({behavior:'smooth', block:'center'});}, 200);
-    }
-}
-
 // Dill模型三维正弦分布预览绘图函数 (从bindPhiExprUI提取并重命名)
-function dillDraw3DPreviewPlot(scrollToPlot = false) {
+function dillDraw3DPreviewPlot(scrollToPlot = false, t = 0) {
     const input = document.getElementById('phi_expr_3d');
     const kxInput = document.getElementById('Kx_3d');
     const kyInput = document.getElementById('Ky_3d');
@@ -3262,6 +3394,9 @@ function dillDraw3DPreviewPlot(scrollToPlot = false) {
     const vInput = document.getElementById('V'); // Assuming 'V' is the ID for Dill model's V
     const plot = document.getElementById('phi-expr-3d-preview-plot');
     const errDiv = input?.closest('.parameter-item')?.querySelector('.phi-expr-error');
+    const controlsElement = document.getElementById('phi-expr-3d-preview-controls');
+    const tSlider = document.getElementById('phi-expr-3d-t-slider');
+    const tValueDisplay = controlsElement?.querySelector('.t-value');
 
     const xMinInput = document.getElementById('x_min_3d');
     const xMaxInput = document.getElementById('x_max_3d');
@@ -3269,6 +3404,7 @@ function dillDraw3DPreviewPlot(scrollToPlot = false) {
     const yMaxInput = document.getElementById('y_max_3d');
     const zMinInput = document.getElementById('z_min_3d');
     const zMaxInput = document.getElementById('z_max_3d');
+    const yPointsInput = document.getElementById('y_points');
 
     if (!input || !plot || !xMinInput || !xMaxInput || !yMinInput || !yMaxInput || !zMinInput || !zMaxInput) return;
 
@@ -3281,6 +3417,7 @@ function dillDraw3DPreviewPlot(scrollToPlot = false) {
     const xRange = [parseFloat(xMinInput.value) || 0, parseFloat(xMaxInput.value) || 10];
     const yRange = [parseFloat(yMinInput.value) || 0, parseFloat(yMaxInput.value) || 10];
     const zRange = [parseFloat(zMinInput.value) || 0, parseFloat(zMaxInput.value) || 10];
+    const yPoints = yPointsInput ? parseInt(yPointsInput.value) || 20 : 20;
     const expr = input.value;
 
     if (!validatePhaseExpr(expr)) {
@@ -3295,8 +3432,17 @@ function dillDraw3DPreviewPlot(scrollToPlot = false) {
         errDiv.style.display = 'none'; 
     }
 
-    const plotData = generate3DSine(Kx, Ky, Kz, V_val, expr, xRange, yRange, zRange);
+    const plotData = generate3DSine(Kx, Ky, Kz, V_val, expr, xRange, yRange, zRange, yPoints, 20, t);
     plot.style.display = 'block';
+    
+    // 显示t值控制面板
+    if (controlsElement && plot.style.display !== 'none') {
+        controlsElement.style.display = 'block';
+        if (tSlider && tValueDisplay) {
+            tSlider.value = t;
+            tValueDisplay.textContent = t.toFixed(2);
+        }
+    }
     
     const data = [{
         type: 'isosurface',
@@ -3312,7 +3458,7 @@ function dillDraw3DPreviewPlot(scrollToPlot = false) {
     }];
     
     Plotly.newPlot(plot, data, {
-        title: LANGS[currentLang]?.preview_3d_title || '三维正弦分布预览',
+        title: `Dill 三维正弦分布预览 (t=${t.toFixed(2)})`,
         scene: {
             xaxis: {title: 'X'},
             yaxis: {title: 'Y'},
@@ -3332,30 +3478,118 @@ function bindPhiExprUI() {
     // 二维正弦波参数配置
     const configs = [
         // Dill模型二维配置 - 使用新的dillDrawPreviewPlot
-        {input: 'phi_expr', kx: 'Kx', ky: 'Ky', v: 'V', btn: 'phi-expr-preview-btn', plotElementId: 'phi-expr-preview-plot', drawFunc: dillDrawPreviewPlot},
+        {
+            input: 'phi_expr', 
+            kx: 'Kx', 
+            ky: 'Ky', 
+            v: 'V', 
+            btn: 'phi-expr-preview-btn', 
+            plotElementId: 'phi-expr-preview-plot', 
+            drawFunc: dillDrawPreviewPlot,
+            controlsId: 'phi-expr-preview-controls',
+            tSlider: 'phi-expr-t-slider',
+            playBtn: 'phi-expr-play-btn',
+            stopBtn: 'phi-expr-stop-btn'
+        },
         // Enhanced Dill模型二维配置 - 使用enhancedDrawPreviewPlot
-        {input: 'enhanced_phi_expr', kx: 'enhanced_Kx', ky: 'enhanced_Ky', v: 'I0', btn: 'enhanced-phi-expr-preview-btn', plotElementId: 'enhanced-phi-expr-preview-plot', drawFunc: enhancedDrawPreviewPlot}, // Assuming V corresponds to I0 for enhanced
+        {
+            input: 'enhanced_phi_expr', 
+            kx: 'enhanced_Kx', 
+            ky: 'enhanced_Ky', 
+            v: 'I0', 
+            btn: 'enhanced-phi-expr-preview-btn', 
+            plotElementId: 'enhanced-phi-expr-preview-plot', 
+            drawFunc: enhancedDrawPreviewPlot,
+            controlsId: 'enhanced-phi-expr-preview-controls',
+            tSlider: 'enhanced-phi-expr-t-slider',
+            playBtn: 'enhanced-phi-expr-play-btn',
+            stopBtn: 'enhanced-phi-expr-stop-btn'
+        }, 
         // CAR模型二维配置 - 使用carDrawPreviewPlot
-        {input: 'car_phi_expr', kx: 'car_Kx', ky: 'car_Ky', v: 'car_V', btn: 'car-phi-expr-preview-btn', plotElementId: 'car-phi-expr-preview-plot', drawFunc: carDrawPreviewPlot}
+        {
+            input: 'car_phi_expr', 
+            kx: 'car_Kx', 
+            ky: 'car_Ky', 
+            v: 'car_V', 
+            btn: 'car-phi-expr-preview-btn', 
+            plotElementId: 'car-phi-expr-preview-plot', 
+            drawFunc: carDrawPreviewPlot,
+            controlsId: 'car-phi-expr-preview-controls',
+            tSlider: 'car-phi-expr-t-slider',
+            playBtn: 'car-phi-expr-play-btn',
+            stopBtn: 'car-phi-expr-stop-btn'
+        }
     ];
     
     // 三维正弦波参数配置
     const configs3D = [
         // Dill模型三维配置 - 使用新的dillDraw3DPreviewPlot
-        {input: 'phi_expr_3d', kx: 'Kx_3d', ky: 'Ky_3d', kz: 'Kz_3d', v: 'V', 
-         btn: 'phi-expr-3d-preview-btn', plotElementId: 'phi-expr-3d-preview-plot', 
-         xmin: 'x_min_3d', xmax: 'x_max_3d', ymin: 'y_min_3d', ymax: 'y_max_3d', zmin: 'z_min_3d', zmax: 'z_max_3d', drawFunc: dillDraw3DPreviewPlot},
+        {
+            input: 'phi_expr_3d', 
+            kx: 'Kx_3d', 
+            ky: 'Ky_3d', 
+            kz: 'Kz_3d', 
+            v: 'V', 
+            btn: 'phi-expr-3d-preview-btn', 
+            plotElementId: 'phi-expr-3d-preview-plot', 
+            xmin: 'x_min_3d', 
+            xmax: 'x_max_3d', 
+            ymin: 'y_min_3d', 
+            ymax: 'y_max_3d', 
+            zmin: 'z_min_3d', 
+            zmax: 'z_max_3d', 
+            drawFunc: dillDraw3DPreviewPlot,
+            controlsId: 'phi-expr-3d-preview-controls',
+            tSlider: 'phi-expr-3d-t-slider',
+            playBtn: 'phi-expr-3d-play-btn',
+            stopBtn: 'phi-expr-3d-stop-btn'
+        },
         // Enhanced Dill模型三维配置 - 使用enhancedDraw3DPreviewPlot
-        {input: 'enhanced_phi_expr_3d', kx: 'enhanced_Kx_3d', ky: 'enhanced_Ky_3d', kz: 'enhanced_Kz_3d', v: 'I0', 
-         btn: 'enhanced-phi-expr-3d-preview-btn', plotElementId: 'enhanced-phi-expr-3d-preview-plot',
-         xmin: 'enhanced_x_min_3d', xmax: 'enhanced_x_max_3d', ymin: 'enhanced_y_min_3d', ymax: 'enhanced_y_max_3d', 
-         zmin: 'enhanced_z_min_3d', zmax: 'enhanced_z_max_3d', drawFunc: enhancedDraw3DPreviewPlot}, // Assuming V corresponds to I0 for enhanced
+        {
+            input: 'enhanced_phi_expr_3d', 
+            kx: 'enhanced_Kx_3d', 
+            ky: 'enhanced_Ky_3d', 
+            kz: 'enhanced_Kz_3d', 
+            v: 'I0', 
+            btn: 'enhanced-phi-expr-3d-preview-btn', 
+            plotElementId: 'enhanced-phi-expr-3d-preview-plot',
+            xmin: 'enhanced_x_min_3d', 
+            xmax: 'enhanced_x_max_3d', 
+            ymin: 'enhanced_y_min_3d', 
+            ymax: 'enhanced_y_max_3d', 
+            zmin: 'enhanced_z_min_3d', 
+            zmax: 'enhanced_z_max_3d', 
+            drawFunc: enhancedDraw3DPreviewPlot,
+            controlsId: 'enhanced-phi-expr-3d-preview-controls',
+            tSlider: 'enhanced-phi-expr-3d-t-slider',
+            playBtn: 'enhanced-phi-expr-3d-play-btn',
+            stopBtn: 'enhanced-phi-expr-3d-stop-btn'
+        }, 
         // CAR模型三维配置 - 使用carDraw3DPreviewPlot
-        {input: 'car_phi_expr_3d', kx: 'car_Kx_3d', ky: 'car_Ky_3d', kz: 'car_Kz_3d', v: 'car_V', 
-         btn: 'car-phi-expr-3d-preview-btn', plotElementId: 'car-phi-expr-3d-preview-plot',
-         xmin: 'car_x_min_3d', xmax: 'car_x_max_3d', ymin: 'car_y_min_3d', ymax: 'car_y_max_3d', 
-         zmin: 'car_z_min_3d', zmax: 'car_z_max_3d', drawFunc: carDraw3DPreviewPlot}
+        {
+            input: 'car_phi_expr_3d', 
+            kx: 'car_Kx_3d', 
+            ky: 'car_Ky_3d', 
+            kz: 'car_Kz_3d', 
+            v: 'car_V', 
+            btn: 'car-phi-expr-3d-preview-btn', 
+            plotElementId: 'car-phi-expr-3d-preview-plot',
+            xmin: 'car_x_min_3d', 
+            xmax: 'car_x_max_3d', 
+            ymin: 'car_y_min_3d', 
+            ymax: 'car_y_max_3d', 
+            zmin: 'car_z_min_3d', 
+            zmax: 'car_z_max_3d', 
+            drawFunc: carDraw3DPreviewPlot,
+            controlsId: 'car-phi-expr-3d-preview-controls',
+            tSlider: 'car-phi-expr-3d-t-slider',
+            playBtn: 'car-phi-expr-3d-play-btn',
+            stopBtn: 'car-phi-expr-3d-stop-btn'
+        }
     ];
+    
+    // 存储动画间隔ID
+    const animationIntervals = {};
     
     // 统一处理预览逻辑
     function setupPreview(config, is3D) {
@@ -3364,6 +3598,13 @@ function bindPhiExprUI() {
         const plotElement = document.getElementById(config.plotElementId); // 使用 plotElementId
         const errDiv = input?.closest('.parameter-item')?.querySelector('.phi-expr-error');
         const calcBtn = document.getElementById('calculate-btn');
+        
+        // 获取t值控制元素
+        const controlsElement = document.getElementById(config.controlsId);
+        const tSlider = document.getElementById(config.tSlider);
+        const tValueDisplay = controlsElement?.querySelector('.t-value');
+        const playBtn = document.getElementById(config.playBtn);
+        const stopBtn = document.getElementById(config.stopBtn);
 
         if (!input || !btn || !plotElement) return;
 
@@ -3403,14 +3644,36 @@ function bindPhiExprUI() {
         }
         updateBtnText(); // Initial button text
 
+        // 绘制图表的包装函数，接收t值参数
+        function drawPlotWithT(t, scrollToPlot = false) {
+            if (!validatePhaseExpr(input.value)) return;
+            
+            // 传递t参数给绘图函数
+            config.drawFunc(scrollToPlot, t);
+        }
+
+        // 点击预览按钮
         btn.addEventListener('click', function() {
             if (validatePhaseExpr(input.value)) { // Only proceed if expression is valid
                 isPreviewShown = !isPreviewShown;
                 if (isPreviewShown) {
-                    config.drawFunc(true); // Call the specific draw function, scroll to plot
+                    drawPlotWithT(0, true); // 初始t=0，滚动到图表位置
                 } else {
                     plotElement.style.display = 'none'; // Hide plot
+                    if (controlsElement) controlsElement.style.display = 'none'; // 隐藏控制面板
                     if (Plotly.purge) Plotly.purge(plotElement); // Clear plot to free resources
+                    
+                    // 停止动画
+                    if (animationIntervals[config.plotElementId]) {
+                        clearInterval(animationIntervals[config.plotElementId]);
+                        animationIntervals[config.plotElementId] = null;
+                        
+                        // 重置按钮状态
+                        if (playBtn && stopBtn) {
+                            playBtn.style.display = 'block';
+                            stopBtn.style.display = 'none';
+                        }
+                    }
                 }
                 updateBtnText();
             } else {
@@ -3420,6 +3683,56 @@ function bindPhiExprUI() {
                 }
             }
         });
+
+        // 如果有t值滑块，添加事件监听
+        if (tSlider && tValueDisplay) {
+            tSlider.addEventListener('input', function() {
+                const t = parseFloat(this.value);
+                tValueDisplay.textContent = t.toFixed(2);
+                if (isPreviewShown) {
+                    drawPlotWithT(t, false);
+                }
+            });
+        }
+        
+        // 播放/停止动画按钮
+        if (playBtn && stopBtn) {
+            // 播放动画
+            playBtn.addEventListener('click', function() {
+                if (animationIntervals[config.plotElementId]) {
+                    clearInterval(animationIntervals[config.plotElementId]);
+                }
+                
+                let t = parseFloat(tSlider.value);
+                const step = 0.05;
+                
+                // 根据是否是3D调整动画间隔
+                const animationInterval = is3D ? 150 : 50; // 3D动画间隔150ms，2D动画间隔50ms
+                
+                animationIntervals[config.plotElementId] = setInterval(() => {
+                    t += step;
+                    if (t > 6.28) t = 0;
+                    
+                    tSlider.value = t;
+                    tValueDisplay.textContent = t.toFixed(2);
+                    drawPlotWithT(t, false);
+                }, animationInterval);
+                
+                playBtn.style.display = 'none';
+                stopBtn.style.display = 'block';
+            });
+            
+            // 停止动画
+            stopBtn.addEventListener('click', function() {
+                if (animationIntervals[config.plotElementId]) {
+                    clearInterval(animationIntervals[config.plotElementId]);
+                    animationIntervals[config.plotElementId] = null;
+                }
+                
+                playBtn.style.display = 'block';
+                stopBtn.style.display = 'none';
+            });
+        }
 
         // Auto-refresh on parameter change if preview is shown
         const paramInputs = [input];
@@ -3437,7 +3750,12 @@ function bindPhiExprUI() {
             if (pInput) {
                 pInput.addEventListener('input', () => { // Use 'input' for immediate feedback
                     if (isPreviewShown && validatePhaseExpr(input.value)) {
-                        config.drawFunc(false); // No scroll on auto-refresh
+                        // 获取当前的t值（如果有滑块的话）
+                        let currentT = 0;
+                        if (tSlider) {
+                            currentT = parseFloat(tSlider.value) || 0;
+                        }
+                        config.drawFunc(false, currentT); // No scroll on auto-refresh, use current t value
                     }
                 });
             }
@@ -3446,61 +3764,6 @@ function bindPhiExprUI() {
 
     configs.forEach(cfg => setupPreview(cfg, false));
     configs3D.forEach(cfg => setupPreview(cfg, true));
-    
-    // 为2D模式下的Y范围参数添加监听器
-    // Dill模型
-    const dillYMin = document.getElementById('y_min');
-    const dillYMax = document.getElementById('y_max');
-    const dillYPoints = document.getElementById('y_points');
-    const dillPlot = document.getElementById('phi-expr-preview-plot');
-    
-    // Enhanced Dill模型
-    const enhancedYMin = document.getElementById('enhanced_y_min');
-    const enhancedYMax = document.getElementById('enhanced_y_max');
-    const enhancedYPoints = document.getElementById('enhanced_y_points');
-    const enhancedPlot = document.getElementById('enhanced-phi-expr-preview-plot');
-    
-    // CAR模型
-    const carYMin = document.getElementById('car_y_min');
-    const carYMax = document.getElementById('car_y_max');
-    const carYPoints = document.getElementById('car_y_points');
-    const carPlot = document.getElementById('car-phi-expr-preview-plot');
-    
-    // 为Dill模型的Y范围参数添加监听器
-    [dillYMin, dillYMax, dillYPoints].forEach(input => {
-        if (input) {
-            input.addEventListener('input', () => {
-                // 检查是否正在显示预览
-                if (dillPlot && dillPlot.style.display !== 'none') {
-                    dillDrawPreviewPlot(false); // 不滚动到图表位置
-                }
-            });
-        }
-    });
-    
-    // 为Enhanced Dill模型的Y范围参数添加监听器
-    [enhancedYMin, enhancedYMax, enhancedYPoints].forEach(input => {
-        if (input) {
-            input.addEventListener('input', () => {
-                // 检查是否正在显示预览
-                if (enhancedPlot && enhancedPlot.style.display !== 'none') {
-                    enhancedDrawPreviewPlot(false); // 不滚动到图表位置
-                }
-            });
-        }
-    });
-    
-    // 为CAR模型的Y范围参数添加监听器
-    [carYMin, carYMax, carYPoints].forEach(input => {
-        if (input) {
-            input.addEventListener('input', () => {
-                // 检查是否正在显示预览
-                if (carPlot && carPlot.style.display !== 'none') {
-                    carDrawPreviewPlot(false); // 不滚动到图表位置
-                }
-            });
-        }
-    });
 }
 
 function highlightErrorCard(msg) {
@@ -3551,24 +3814,52 @@ function getDillPopupHtmlContent(x, y, setName, params, plotType) {
         valueLabel = '曝光剂量:';
         valueUnit = 'mJ<span class="fraction"><span class="numerator">1</span><span class="denominator">cm²</span></span>';
         formulaTitle = 'Dill模型曝光剂量计算：';
-        formulaMath = 'D(x) = I<sub>avg</sub> × t<sub>exp</sub> × (1 + V × cos(K·x))';
-        formulaExplanation = `
-            <div>• I<sub>avg</sub>: 平均光强度 (${params.I_avg} mW<span class="fraction"><span class="numerator">1</span><span class="denominator">cm²</span></span>)</div>
-            <div>• t<sub>exp</sub>: 曝光时间 (${params.t_exp} s)</div>
-            <div>• V: 干涉条纹可见度 (${params.V})</div>
-            <div>• K: 空间频率 (${params.K} rad<span class="fraction"><span class="numerator">1</span><span class="denominator">μm</span></span>)</div>
-        `;
+        
+        // 根据不同的波形模式显示对应的公式
+        if (params.sine_type === 'multi') {
+            formulaMath = 'D(x,y) = I<sub>avg</sub> × t<sub>exp</sub> × (1 + V × cos(Kx·x + Ky·y + φ))';
+            formulaExplanation = `
+                <div>• I<sub>avg</sub>: 平均光强度 (${params.I_avg} mW<span class="fraction"><span class="numerator">1</span><span class="denominator">cm²</span></span>)</div>
+                <div>• t<sub>exp</sub>: 曝光时间 (${params.t_exp} s)</div>
+                <div>• V: 干涉条纹可见度 (${params.V})</div>
+                <div>• Kx: x方向空间频率 (${params.Kx} rad<span class="fraction"><span class="numerator">1</span><span class="denominator">μm</span></span>)</div>
+                <div>• Ky: y方向空间频率 (${params.Ky} rad<span class="fraction"><span class="numerator">1</span><span class="denominator">μm</span></span>)</div>
+                <div>• φ: 相位值 (${params.phi_expr})</div>
+            `;
+        } else if (params.sine_type === '3d') {
+            formulaMath = 'D(x,y,z) = I<sub>avg</sub> × t<sub>exp</sub> × (1 + V × cos(Kx·x + Ky·y + Kz·z + φ))';
+            formulaExplanation = `
+                <div>• I<sub>avg</sub>: 平均光强度 (${params.I_avg} mW<span class="fraction"><span class="numerator">1</span><span class="denominator">cm²</span></span>)</div>
+                <div>• t<sub>exp</sub>: 曝光时间 (${params.t_exp} s)</div>
+                <div>• V: 干涉条纹可见度 (${params.V})</div>
+                <div>• Kx: x方向空间频率 (${params.Kx} rad<span class="fraction"><span class="numerator">1</span><span class="denominator">μm</span></span>)</div>
+                <div>• Ky: y方向空间频率 (${params.Ky} rad<span class="fraction"><span class="numerator">1</span><span class="denominator">μm</span></span>)</div>
+                <div>• Kz: z方向空间频率 (${params.Kz} rad<span class="fraction"><span class="numerator">1</span><span class="denominator">μm</span></span>)</div>
+                <div>• φ: 相位值 (${params.phi_expr})</div>
+            `;
+        } else {
+            formulaMath = 'D(x) = I<sub>avg</sub> × t<sub>exp</sub> × (1 + V × cos(K·x))';
+            formulaExplanation = `
+                <div>• I<sub>avg</sub>: 平均光强度 (${params.I_avg} mW<span class="fraction"><span class="numerator">1</span><span class="denominator">cm²</span></span>)</div>
+                <div>• t<sub>exp</sub>: 曝光时间 (${params.t_exp} s)</div>
+                <div>• V: 干涉条纹可见度 (${params.V})</div>
+                <div>• K: 空间频率 (${params.K} rad<span class="fraction"><span class="numerator">1</span><span class="denominator">μm</span></span>)</div>
+            `;
+        }
     } else if (plotType === 'thickness') {
         valueLabel = '光刻胶厚度:';
         valueUnit = '(归一化)';
         formulaTitle = 'Dill模型光刻胶厚度计算：';
-        formulaMath = 'M(x) = e<sup>-C × D(x)</sup>';
         
         // 检查是否有多维数据，确定计算公式
         if (params.sine_type === 'multi') {
-            formulaMath += '<br>M(x,y) = e<sup>-C × D(x,y)</sup>';
+            formulaMath = 'M(x,y) = e<sup>-C × D(x,y)</sup>';
+            formulaMath += '<br>D(x,y) = I<sub>avg</sub> × t<sub>exp</sub> × (1 + V × cos(Kx·x + Ky·y + φ))';
         } else if (params.sine_type === '3d') {
-            formulaMath += '<br>M(x,y,z) = e<sup>-C × D(x,y,z)</sup>';
+            formulaMath = 'M(x,y,z) = e<sup>-C × D(x,y,z)</sup>';
+            formulaMath += '<br>D(x,y,z) = I<sub>avg</sub> × t<sub>exp</sub> × (1 + V × cos(Kx·x + Ky·y + Kz·z + φ))';
+        } else {
+            formulaMath = 'M(x) = e<sup>-C × D(x)</sup>';
         }
         
         formulaExplanation = `
@@ -3630,53 +3921,192 @@ function getEnhancedDillPopupHtmlContent(x, y, setName, params, plotType) {
     let formulaTitle = '';
     let formulaMath = '';
     let formulaExplanation = '';
+    let additionalInfo = '';
 
     if (plotType === 'exposure') {
         valueLabel = '曝光剂量:';
-        valueUnit = 'mJ/cm²';
-        formulaTitle = '增强Dill模型曝光剂量:';
-        formulaMath = 'D(x,z) = ∫ I(x,z,t) dt';
-        formulaExplanation = `
-            <div>${LANGS[currentLang].popup_enhanced_desc || '参数涉及胶厚、前烘温度、时间等影响A,B,C的值。'}</div>
-            <div>• I(x,z,t): 光强度分布</div>
-        `;
+        valueUnit = 'mJ<span class="fraction"><span class="numerator">1</span><span class="denominator">cm²</span></span>';
+        formulaTitle = '增强Dill模型曝光剂量计算：';
+        
+        // 根据波形类型显示不同公式
+        if (params.sine_type === 'multi') {
+            formulaMath = 'D(x,y,z) = ∫ I(x,y,z,t) dt';
+            formulaMath += '<br>I(x,y,z) = I<sub>0</sub> × (1 + V × cos(Kx·x + Ky·y + φ)) × e<sup>-∫[A(z_h,T,t_B)·M+B(z_h,T,t_B)]dz</sup>';
+            formulaExplanation = `
+                <div>• I<sub>0</sub>: 初始光强度 (${params.I0})</div>
+                <div>• V: 干涉条纹可见度 (${params.V})</div>
+                <div>• Kx: x方向空间频率 (${params.Kx} rad<span class="fraction"><span class="numerator">1</span><span class="denominator">μm</span></span>)</div>
+                <div>• Ky: y方向空间频率 (${params.Ky} rad<span class="fraction"><span class="numerator">1</span><span class="denominator">μm</span></span>)</div>
+                <div>• φ: 相位值 (${params.phi_expr})</div>
+                <div>• z_h: 胶厚 (${params.z_h} μm)</div>
+                <div>• T: 前烘温度 (${params.T} °C)</div>
+                <div>• t_B: 前烘时间 (${params.t_B} min)</div>
+                <div>• A(z_h,T,t_B): 光敏剂吸收率，与胶厚、前烘温度、前烘时间相关</div>
+                <div>• B(z_h,T,t_B): 基底吸收率，与胶厚、前烘温度、前烘时间相关</div>
+            `;
+        } else if (params.sine_type === '3d') {
+            formulaMath = 'D(x,y,z) = ∫ I(x,y,z,t) dt';
+            formulaMath += '<br>I(x,y,z) = I<sub>0</sub> × (1 + V × cos(Kx·x + Ky·y + Kz·z + φ)) × e<sup>-∫[A(z_h,T,t_B)·M+B(z_h,T,t_B)]dz</sup>';
+            formulaExplanation = `
+                <div>• I<sub>0</sub>: 初始光强度 (${params.I0})</div>
+                <div>• V: 干涉条纹可见度 (${params.V})</div>
+                <div>• Kx: x方向空间频率 (${params.Kx} rad<span class="fraction"><span class="numerator">1</span><span class="denominator">μm</span></span>)</div>
+                <div>• Ky: y方向空间频率 (${params.Ky} rad<span class="fraction"><span class="numerator">1</span><span class="denominator">μm</span></span>)</div>
+                <div>• Kz: z方向空间频率 (${params.Kz} rad<span class="fraction"><span class="numerator">1</span><span class="denominator">μm</span></span>)</div>
+                <div>• φ: 相位值 (${params.phi_expr})</div>
+                <div>• z_h: 胶厚 (${params.z_h} μm)</div>
+                <div>• T: 前烘温度 (${params.T} °C)</div>
+                <div>• t_B: 前烘时间 (${params.t_B} min)</div>
+                <div>• A(z_h,T,t_B): 光敏剂吸收率，与胶厚、前烘温度、前烘时间相关</div>
+                <div>• B(z_h,T,t_B): 基底吸收率，与胶厚、前烘温度、前烘时间相关</div>
+            `;
+        } else {
+            formulaMath = 'D(x,z) = ∫ I(x,z,t) dt';
+            formulaMath += '<br>I(x,z) = I<sub>0</sub> × (1 + V × cos(K·x)) × e<sup>-∫[A(z_h,T,t_B)·M+B(z_h,T,t_B)]dz</sup>';
+            formulaExplanation = `
+                <div>• I<sub>0</sub>: 初始光强度 (${params.I0})</div>
+                <div>• V: 干涉条纹可见度 (${params.V})</div>
+                <div>• K: 空间频率 (${params.K} rad<span class="fraction"><span class="numerator">1</span><span class="denominator">μm</span></span>)</div>
+                <div>• z_h: 胶厚 (${params.z_h} μm)</div>
+                <div>• T: 前烘温度 (${params.T} °C)</div>
+                <div>• t_B: 前烘时间 (${params.t_B} min)</div>
+                <div>• A(z_h,T,t_B): 光敏剂吸收率，与胶厚、前烘温度、前烘时间相关</div>
+                <div>• B(z_h,T,t_B): 基底吸收率，与胶厚、前烘温度、前烘时间相关</div>
+            `;
+        }
+        
+                 // 计算当前点的光强和相位（根据波形类型）
+         let currentIntensity = 0;
+         let phaseValue = 0;
+         
+         if (params.sine_type === 'multi') {
+             phaseValue = params.Kx * x + (params.Ky || 0) * 0; // y坐标在这里不可用，假设为0
+             currentIntensity = params.I0 * (1 + params.V * Math.cos(phaseValue));
+         } else if (params.sine_type === '3d') {
+             phaseValue = params.Kx * x + (params.Ky || 0) * 0 + (params.Kz || 0) * 0; // y,z坐标在这里不可用
+             currentIntensity = params.I0 * (1 + params.V * Math.cos(phaseValue));
+         } else {
+             phaseValue = params.K * x;
+             currentIntensity = params.I0 * (1 + params.V * Math.cos(phaseValue));
+         }
+         
+         additionalInfo = `
+             <div class="point-info-section">
+                 <h4>📈 ${LANGS[currentLang].popup_section_calculated_values || '计算值详情'}</h4>
+                 <div class="info-grid responsive-grid">
+                     <div class="info-item"><span class="info-label">当前光强 I(x,z):</span><span class="info-value">${currentIntensity.toFixed(3)} mW<span class="fraction"><span class="numerator">1</span><span class="denominator">cm²</span></span></span></div>
+                     <div class="info-item"><span class="info-label">该点曝光剂量:</span><span class="info-value">${y.toFixed(3)} mJ<span class="fraction"><span class="numerator">1</span><span class="denominator">cm²</span></span></span></div>
+                     <div class="info-item"><span class="info-label">曝光时间:</span><span class="info-value">${params.t_exp} s</span></div>
+                     <div class="info-item"><span class="info-label">干涉条纹相位:</span><span class="info-value">${phaseValue.toFixed(3)} rad</span></div>
+                     <div class="info-item"><span class="info-label">A,B,C参数:</span><span class="info-value">由z_h=${params.z_h}μm, T=${params.T}°C, t_B=${params.t_B}min决定</span></div>
+                 </div>
+             </div>
+         `;
+        
     } else if (plotType === 'thickness') {
         valueLabel = '光刻胶厚度:';
         valueUnit = '(归一化)';
-        formulaTitle = '增强Dill模型光刻胶厚度:';
-        formulaMath = '∂M/∂t = -I·M·C(z_h,T,t_B)';
+        formulaTitle = '增强Dill模型光刻胶厚度计算：';
+        
+        // 根据波形类型显示不同公式
+        if (params.sine_type === 'multi') {
+            formulaMath = '∂M/∂t = -I(x,y,z)·M·C(z_h,T,t_B)';
+            formulaMath += '<br>M(x,y,z) = M<sub>0</sub> × e<sup>-C(z_h,T,t_B) × D(x,y,z)</sup>';
+            formulaMath += '<br>I(x,y,z) = I<sub>0</sub> × (1 + V × cos(Kx·x + Ky·y + φ)) × e<sup>-∫[A·M+B]dz</sup>';
+        } else if (params.sine_type === '3d') {
+            formulaMath = '∂M/∂t = -I(x,y,z)·M·C(z_h,T,t_B)';
+            formulaMath += '<br>M(x,y,z) = M<sub>0</sub> × e<sup>-C(z_h,T,t_B) × D(x,y,z)</sup>';
+            formulaMath += '<br>I(x,y,z) = I<sub>0</sub> × (1 + V × cos(Kx·x + Ky·y + Kz·z + φ)) × e<sup>-∫[A·M+B]dz</sup>';
+        } else {
+            formulaMath = '∂M/∂t = -I(x,z)·M·C(z_h,T,t_B)';
+            formulaMath += '<br>M(x,z) = M<sub>0</sub> × e<sup>-C(z_h,T,t_B) × D(x,z)</sup>';
+        }
+        
         formulaExplanation = `
-            <div>• M: ${LANGS[currentLang].popup_param_M_enh || '归一化光敏剂浓度'}</div>
-            <div>• C(z_h,T,t_B): ${LANGS[currentLang].popup_param_C_enh || '光敏速率常数'}</div>
+            <div>• M<sub>0</sub>: 初始PAC浓度 (${params.M0})</div>
+            <div>• C(z_h,T,t_B): 光敏速率常数，与胶厚、前烘温度、前烘时间相关</div>
+            <div>• D(x,z): 该点曝光剂量</div>
+            <div>• z_h: 胶厚 (${params.z_h} μm)</div>
+            <div>• T: 前烘温度 (${params.T} °C)</div>
+            <div>• t_B: 前烘时间 (${params.t_B} min)</div>
+            ${params.sine_type === 'multi' || params.sine_type === '3d' ? 
+                `<div>• Kx: X方向空间频率 (${params.Kx} rad<span class="fraction"><span class="numerator">1</span><span class="denominator">μm</span></span>)</div>
+                <div>• Ky: Y方向空间频率 (${params.Ky} rad<span class="fraction"><span class="numerator">1</span><span class="denominator">μm</span></span>)</div>
+                ${params.sine_type === '3d' ? `<div>• Kz: Z方向空间频率 (${params.Kz} rad<span class="fraction"><span class="numerator">1</span><span class="denominator">μm</span></span>)</div>` : ''}
+                <div>• φ: 相位表达式 (${params.phi_expr || '0'})</div>` : 
+                `<div>• K: 空间频率 (${params.K} rad<span class="fraction"><span class="numerator">1</span><span class="denominator">μm</span></span>)</div>`
+            }
         `;
+        
+                 // 计算当前点的厚度相关参数（根据波形类型）
+         let thicknessPhaseValue = 0;
+         let exposureDoseAtPoint = 0;
+         
+         if (params.sine_type === 'multi') {
+             thicknessPhaseValue = params.Kx * x + (params.Ky || 0) * 0; // y坐标在这里不可用
+             exposureDoseAtPoint = params.I0 * params.t_exp * (1 + params.V * Math.cos(thicknessPhaseValue));
+         } else if (params.sine_type === '3d') {
+             thicknessPhaseValue = params.Kx * x + (params.Ky || 0) * 0 + (params.Kz || 0) * 0; // y,z坐标在这里不可用
+             exposureDoseAtPoint = params.I0 * params.t_exp * (1 + params.V * Math.cos(thicknessPhaseValue));
+         } else {
+             thicknessPhaseValue = params.K * x;
+             exposureDoseAtPoint = params.I0 * params.t_exp * (1 + params.V * Math.cos(thicknessPhaseValue));
+         }
+         
+         additionalInfo = `
+             <div class="point-info-section">
+                 <h4>📈 ${LANGS[currentLang].popup_section_calculated_values || '计算值详情'}</h4>
+                 <div class="info-grid responsive-grid">
+                     <div class="info-item"><span class="info-label">该点厚度值:</span><span class="info-value">${y.toFixed(3)} (归一化)</span></div>
+                     <div class="info-item"><span class="info-label">初始PAC浓度:</span><span class="info-value">${params.M0}</span></div>
+                     <div class="info-item"><span class="info-label">该点曝光剂量:</span><span class="info-value">${exposureDoseAtPoint.toFixed(3)} mJ<span class="fraction"><span class="numerator">1</span><span class="denominator">cm²</span></span></span></div>
+                     <div class="info-item"><span class="info-label">光敏速率:</span><span class="info-value">C(${params.z_h},${params.T},${params.t_B})</span></div>
+                     <div class="info-item"><span class="info-label">干涉条纹相位:</span><span class="info-value">${thicknessPhaseValue.toFixed(3)} rad</span></div>
+                     <div class="info-item"><span class="info-label">厚度变化:</span><span class="info-value">M = ${params.M0} × e^(-C×${exposureDoseAtPoint.toFixed(3)})</span></div>
+                 </div>
+             </div>
+         `;
+        
     } else if (plotType === 'heatmap') {
         valueLabel = '曝光剂量:';
-        valueUnit = 'mJ/cm²';
+        valueUnit = 'mJ<span class="fraction"><span class="numerator">1</span><span class="denominator">cm²</span></span>';
         formulaTitle = '增强Dill模型二维曝光剂量:';
-        formulaMath = 'D(x,y,z) based on A,B,C which depend on z_h, T, t_B';
-         formulaExplanation = `
-            <div>• Kx: (${params.Kx || params.K})</div>
-            <div>• Ky: (${params.Ky || 'N/A'})</div>
-            <div>• φ(t): (${params.phi_expr || '0'})</div>
+        formulaMath = 'D(x,y,z) = ∫ I(x,y,z,t) dt';
+        formulaMath += '<br>I(x,y,z) = I<sub>0</sub> × (1 + V × cos(Kx·x + Ky·y + φ)) × e<sup>-∫[A·M+B]dz</sup>';
+        
+        formulaExplanation = `
+            <div>• I<sub>0</sub>: 初始光强度 (${params.I0})</div>
+            <div>• V: 干涉条纹可见度 (${params.V})</div>
+            <div>• Kx: X方向空间频率 (${params.Kx || params.K} rad<span class="fraction"><span class="numerator">1</span><span class="denominator">μm</span></span>)</div>
+            <div>• Ky: Y方向空间频率 (${params.Ky || 'N/A'} rad<span class="fraction"><span class="numerator">1</span><span class="denominator">μm</span></span>)</div>
+            <div>• φ: 相位表达式 (${params.phi_expr || '0'})</div>
+            <div>• z_h: 胶厚 (${params.z_h} μm)</div>
+            <div>• T: 前烘温度 (${params.T} °C)</div>
+            <div>• t_B: 前烘时间 (${params.t_B} min)</div>
+            <div>• A,B,C: 与胶厚、前烘温度、前烘时间相关的参数</div>
         `;
+        
     } else if (plotType === 'surface3d') {
         valueLabel = '值:';
         valueUnit = '';
         formulaTitle = '增强Dill模型三维分布:';
         formulaMath = '∂I/∂z = -I·[A(z_h,T,t_B)·M+B(z_h,T,t_B)]<br>∂M/∂t = -I·M·C(z_h,T,t_B)';
+        formulaMath += '<br>I(x,y,z) = I<sub>0</sub> × (1 + V × cos(Kx·x + Ky·y + Kz·z + φ)) × e<sup>-∫[A·M+B]dz</sup>';
+        
         formulaExplanation = `
             <div>• z_h: 胶厚 (${params.z_h} µm)</div>
             <div>• T: 前烘温度 (${params.T} °C)</div>
             <div>• t_B: 前烘时间 (${params.t_B} min)</div>
-            <div>• I0: 初始光强 (${params.I0})</div>
-            <div>• M0: 初始PAC浓度 (${params.M0})</div>
-            <div>• Kx: X方向空间频率 (${params.Kx} rad/μm)</div>
-            <div>• Ky: Y方向空间频率 (${params.Ky} rad/μm)</div>
-            <div>• Kz: Z方向空间频率 (${params.Kz} rad/μm)</div>
-            <div>• φ(t): 相位表达式 (${params.phi_expr || '0'})</div>
-            <div>• A(z_h,T,t_B): 光敏吸收率</div>
-            <div>• B(z_h,T,t_B): 基底吸收率</div>
-            <div>• C(z_h,T,t_B): 光敏速率常数</div>
+            <div>• I<sub>0</sub>: 初始光强 (${params.I0})</div>
+            <div>• M<sub>0</sub>: 初始PAC浓度 (${params.M0})</div>
+            <div>• V: 干涉条纹可见度 (${params.V})</div>
+            <div>• Kx: X方向空间频率 (${params.Kx} rad<span class="fraction"><span class="numerator">1</span><span class="denominator">μm</span></span>)</div>
+            <div>• Ky: Y方向空间频率 (${params.Ky} rad<span class="fraction"><span class="numerator">1</span><span class="denominator">μm</span></span>)</div>
+            <div>• Kz: Z方向空间频率 (${params.Kz} rad<span class="fraction"><span class="numerator">1</span><span class="denominator">μm</span></span>)</div>
+            <div>• φ: 相位表达式 (${params.phi_expr || '0'})</div>
+            <div>• A(z_h,T,t_B): 光敏吸收率，与胶厚、前烘温度、前烘时间相关</div>
+            <div>• B(z_h,T,t_B): 基底吸收率，与胶厚、前烘温度、前烘时间相关</div>
+            <div>• C(z_h,T,t_B): 光敏速率常数，与胶厚、前烘温度、前烘时间相关</div>
         `;
         
         if (plotType.includes('thickness')) {
@@ -3693,14 +4123,15 @@ function getEnhancedDillPopupHtmlContent(x, y, setName, params, plotType) {
             </div>
         </div>
         <div class="point-info-section">
-            <h4>📋 ${LANGS[currentLang].popup_section_params_enhanced || '参数组: 增强Dill'}</h4>
+            <h4>📋 ${LANGS[currentLang].popup_section_params_enhanced || '参数组: 增强Dill模型'}</h4>
             <div class="info-grid responsive-grid">
                 <div class="info-item"><span class="info-label">z_h:</span><span class="info-value">${params.z_h} µm</span></div>
                 <div class="info-item"><span class="info-label">T:</span><span class="info-value">${params.T} °C</span></div>
                 <div class="info-item"><span class="info-label">t_B:</span><span class="info-value">${params.t_B} min</span></div>
-                <div class="info-item"><span class="info-label">I0:</span><span class="info-value">${params.I0}</span></div>
-                <div class="info-item"><span class="info-label">M0:</span><span class="info-value">${params.M0}</span></div>
-                <div class="info-item"><span class="info-label">t_exp:</span><span class="info-value">${params.t_exp} s</span></div>
+                <div class="info-item"><span class="info-label">I<sub>0</sub>:</span><span class="info-value">${params.I0}</span></div>
+                <div class="info-item"><span class="info-label">M<sub>0</sub>:</span><span class="info-value">${params.M0}</span></div>
+                <div class="info-item"><span class="info-label">t<sub>exp</sub>:</span><span class="info-value">${params.t_exp} s</span></div>
+                <div class="info-item"><span class="info-label">V:</span><span class="info-value">${params.V}</span></div>
                 ${params.sine_type === 'multi' ? `
                 <div class="info-item"><span class="info-label">Kx:</span><span class="info-value">${params.Kx}</span></div>
                 <div class="info-item"><span class="info-label">Ky:</span><span class="info-value">${params.Ky}</span></div>
@@ -3723,6 +4154,7 @@ function getEnhancedDillPopupHtmlContent(x, y, setName, params, plotType) {
                 <div class="formula-explanation">${formulaExplanation}</div>
             </div>
         </div>
+        ${additionalInfo}
     `;
 }
 
@@ -3738,74 +4170,239 @@ function getCarPopupHtmlContent(x, y, setName, params, plotType) {
         valueLabel = '光酸浓度:';
         valueUnit = '(归一化)';
         formulaTitle = 'CAR模型光酸生成计算:';
-        formulaMath = '[H<sup>+</sup>] = η × D(x)';
-        formulaExplanation = `
-            <div>• η: 光酸产生效率 (${params.acid_gen_efficiency})</div>
-            <div>• D(x): 曝光剂量 (mJ<span class="fraction"><span class="numerator">1</span><span class="denominator">cm²</span></span>)</div>
-        `;
+        
+        // 根据波形类型显示不同公式
+        if (params.sine_type === 'multi') {
+            formulaMath = '[H<sup>+</sup>] = η × D(x,y)';
+            formulaMath += '<br>D(x,y) = I<sub>avg</sub> × t<sub>exp</sub> × (1 + V × cos(Kx·x + Ky·y + φ))';
+            formulaExplanation = `
+                <div>• η: 光酸产生效率 (${params.acid_gen_efficiency})</div>
+                <div>• I<sub>avg</sub>: 平均光强度 (${params.I_avg} mW/cm²)</div>
+                <div>• V: 干涉条纹可见度 (${params.V})</div>
+                <div>• Kx: x方向空间频率 (${params.Kx} rad/μm)</div>
+                <div>• Ky: y方向空间频率 (${params.Ky} rad/μm)</div>
+                <div>• φ: 相位值 (${params.phi_expr || '0'})</div>
+                <div>• t<sub>exp</sub>: 曝光时间 (${params.t_exp} s)</div>
+            `;
+        } else if (params.sine_type === '3d') {
+            formulaMath = '[H<sup>+</sup>] = η × D(x,y,z)';
+            formulaMath += '<br>D(x,y,z) = I<sub>avg</sub> × t<sub>exp</sub> × (1 + V × cos(Kx·x + Ky·y + Kz·z + φ))';
+            formulaExplanation = `
+                <div>• η: 光酸产生效率 (${params.acid_gen_efficiency})</div>
+                <div>• I<sub>avg</sub>: 平均光强度 (${params.I_avg} mW/cm²)</div>
+                <div>• V: 干涉条纹可见度 (${params.V})</div>
+                <div>• Kx: x方向空间频率 (${params.Kx} rad/μm)</div>
+                <div>• Ky: y方向空间频率 (${params.Ky} rad/μm)</div>
+                <div>• Kz: z方向空间频率 (${params.Kz} rad/μm)</div>
+                <div>• φ: 相位值 (${params.phi_expr || '0'})</div>
+                <div>• t<sub>exp</sub>: 曝光时间 (${params.t_exp} s)</div>
+            `;
+        } else {
+            // 1D模式：增加详细的计算过程
+            formulaMath = '[H<sup>+</sup>] = η × D(x)';
+            formulaMath += '<br>D(x) = I<sub>avg</sub> × t<sub>exp</sub> × (1 + V × cos(K·x))';
+            formulaExplanation = `
+                <div>• η: 光酸产生效率 (${params.acid_gen_efficiency})</div>
+                <div>• I<sub>avg</sub>: 平均光强度 (${params.I_avg} mW/cm²)</div>
+                <div>• V: 干涉条纹可见度 (${params.V})</div>
+                <div>• K: 空间频率 (${params.K} rad/μm)</div>
+                <div>• t<sub>exp</sub>: 曝光时间 (${params.t_exp} s)</div>
+            `;
+        }
+        
+        // 为1D模式添加详细的计算值信息
+        if (!params.sine_type || params.sine_type === '1d') {
+            // 计算当前点的光强和相位
+            let phaseValue = params.K * x;
+            let currentIntensity = params.I_avg * (1 + params.V * Math.cos(phaseValue));
+            let exposureDoseAtPoint = currentIntensity * params.t_exp;
+            let acidConcentration = params.acid_gen_efficiency * exposureDoseAtPoint;
+            
+            additionalInfo = `
+                <div class="point-info-section">
+                    <h4>📈 计算值详情</h4>
+                    <div class="info-grid responsive-grid">
+                        <div class="info-item"><span class="info-label">当前光强 I(x):</span><span class="info-value">${currentIntensity.toFixed(3)} mW<span class="fraction"><span class="numerator">1</span><span class="denominator">cm²</span></span></span></div>
+                        <div class="info-item"><span class="info-label">该点曝光剂量:</span><span class="info-value">${exposureDoseAtPoint.toFixed(3)} mJ<span class="fraction"><span class="numerator">1</span><span class="denominator">cm²</span></span></span></div>
+                        <div class="info-item"><span class="info-label">该点光酸浓度:</span><span class="info-value">${y.toFixed(3)} (归一化)</span></div>
+                        <div class="info-item"><span class="info-label">干涉条纹相位:</span><span class="info-value">${phaseValue.toFixed(3)} rad</span></div>
+                        <div class="info-item"><span class="info-label">光酸生成过程:</span><span class="info-value">[H⁺] = ${params.acid_gen_efficiency} × ${exposureDoseAtPoint.toFixed(3)}</span></div>
+                        <div class="info-item"><span class="info-label">CAR模型阶段:</span><span class="info-value">1. 曝光 → 2. 光酸生成</span></div>
+                    </div>
+                </div>
+            `;
+        }
     } else if (plotType === 'thickness') {
         valueLabel = '光刻胶厚度:';
         valueUnit = '(归一化)';
         formulaTitle = 'CAR模型脱保护度计算:';
-        formulaMath = 'M = 1-e<sup>-k·[H⁺]<sub>diff</sub>·A</sup>';
-        formulaExplanation = `
-            <div>• k: 反应速率常数 (${params.reaction_rate})</div>
-            <div>• [H⁺]<sub>diff</sub>: 扩散后光酸浓度</div>
-            <div>• A: 放大因子 (${params.amplification})</div>
-            <div>• 对比度: γ = ${params.contrast}</div>
-        `;
+        
+        // 根据波形类型显示不同公式
+        if (params.sine_type === 'multi' || params.sine_type === '3d') {
+            const dimText = params.sine_type === 'multi' ? '(x,y)' : '(x,y,z)';
+            formulaMath = `M${dimText} = 1-e<sup>-k·[H⁺]<sub>diff</sub>·A</sup>`;
+            formulaExplanation = `
+                <div>• k: 反应速率常数 (${params.reaction_rate})</div>
+                <div>• [H⁺]<sub>diff</sub>: 扩散后光酸浓度</div>
+                <div>• A: 放大因子 (${params.amplification})</div>
+                <div>• 对比度: γ = ${params.contrast}</div>
+                ${params.sine_type === 'multi' ? `
+                <div>• Kx: x方向空间频率 (${params.Kx} rad/μm)</div>
+                <div>• Ky: y方向空间频率 (${params.Ky} rad/μm)</div>
+                <div>• φ: 相位值 (${params.phi_expr || '0'})</div>` : `
+                <div>• Kx: x方向空间频率 (${params.Kx} rad/μm)</div>
+                <div>• Ky: y方向空间频率 (${params.Ky} rad/μm)</div>
+                <div>• Kz: z方向空间频率 (${params.Kz} rad/μm)</div>
+                <div>• φ: 相位值 (${params.phi_expr || '0'})</div>`}
+            `;
+        } else {
+            // 1D模式：增加详细的计算过程
+            formulaMath = 'M(x) = 1-e<sup>-k·[H⁺]<sub>diff</sub>·A</sup>';
+            formulaMath += '<br>厚度(x) = M(x)<sup>γ</sup>';
+            formulaExplanation = `
+                <div>• k: 反应速率常数 (${params.reaction_rate})</div>
+                <div>• [H⁺]<sub>diff</sub>: 扩散后光酸浓度</div>
+                <div>• A: 放大因子 (${params.amplification})</div>
+                <div>• γ: 对比度因子 (${params.contrast})</div>
+                <div>• l<sub>diff</sub>: 扩散长度 (${params.diffusion_length} μm)</div>
+            `;
+        }
+        
+        // 为1D模式添加详细的计算值信息
+        if (!params.sine_type || params.sine_type === '1d') {
+            // 计算当前点的完整CAR过程
+            let phaseValue = params.K * x;
+            let currentIntensity = params.I_avg * (1 + params.V * Math.cos(phaseValue));
+            let exposureDoseAtPoint = currentIntensity * params.t_exp;
+            let initialAcidConcentration = params.acid_gen_efficiency * exposureDoseAtPoint;
+            // 简化扩散计算（实际扩散是高斯滤波）
+            let diffusedAcidConcentration = initialAcidConcentration; // 简化显示
+            let deprotectionDegree = 1 - Math.exp(-params.reaction_rate * diffusedAcidConcentration * params.amplification);
+            let finalThickness = Math.pow(deprotectionDegree, params.contrast);
+            
+            additionalInfo = `
+                <div class="point-info-section">
+                    <h4>📈 计算值详情</h4>
+                    <div class="info-grid responsive-grid">
+                        <div class="info-item"><span class="info-label">该点厚度值:</span><span class="info-value">${y.toFixed(3)} (归一化)</span></div>
+                        <div class="info-item"><span class="info-label">脱保护度:</span><span class="info-value">${deprotectionDegree.toFixed(3)}</span></div>
+                        <div class="info-item"><span class="info-label">初始光酸浓度:</span><span class="info-value">${initialAcidConcentration.toFixed(3)}</span></div>
+                        <div class="info-item"><span class="info-label">扩散后光酸浓度:</span><span class="info-value">${diffusedAcidConcentration.toFixed(3)}</span></div>
+                        <div class="info-item"><span class="info-label">干涉条纹相位:</span><span class="info-value">${phaseValue.toFixed(3)} rad</span></div>
+                        <div class="info-item"><span class="info-label">化学放大过程:</span><span class="info-value">M = 1-e^(-${params.reaction_rate}×${diffusedAcidConcentration.toFixed(3)}×${params.amplification})</span></div>
+                        <div class="info-item"><span class="info-label">厚度计算:</span><span class="info-value">厚度 = ${deprotectionDegree.toFixed(3)}^${params.contrast}</span></div>
+                        <div class="info-item"><span class="info-label">CAR模型阶段:</span><span class="info-value">1. 曝光 → 2. 光酸生成 → 3. 扩散 → 4. 脱保护 → 5. 显影</span></div>
+                    </div>
+                </div>
+            `;
+        }
     } else if (plotType === 'car_acid_concentration') {
         valueLabel = '光酸浓度:';
         valueUnit = '(归一化)';
         formulaTitle = 'CAR模型过程模拟:';
-        formulaMath = '[H⁺] = η·D(x,y,z)<br>扩散: [H⁺]<sub>diff</sub> = G([H⁺], l<sub>diff</sub>)<br>M = 1-e<sup>-k·[H⁺]<sub>diff</sub>·A</sup>';
+        
+        // 根据波形类型显示不同公式
+        if (params.sine_type === 'multi') {
+            formulaMath = '[H⁺] = η·D(x,y)<br>扩散: [H⁺]<sub>diff</sub> = G([H⁺], l<sub>diff</sub>)<br>M = 1-e<sup>-k·[H⁺]<sub>diff</sub>·A</sup>';
+        } else if (params.sine_type === '3d') {
+            formulaMath = '[H⁺] = η·D(x,y,z)<br>扩散: [H⁺]<sub>diff</sub> = G([H⁺], l<sub>diff</sub>)<br>M = 1-e<sup>-k·[H⁺]<sub>diff</sub>·A</sup>';
+        } else {
+            formulaMath = '[H⁺] = η·D(x)<br>扩散: [H⁺]<sub>diff</sub> = G([H⁺], l<sub>diff</sub>)<br>M = 1-e<sup>-k·[H⁺]<sub>diff</sub>·A</sup>';
+        }
+        
         formulaExplanation = `
             <div>• 扩散长度: ${params.diffusion_length} μm</div>
             <div>• 光酸产生效率: ${params.acid_gen_efficiency}</div>
+            ${params.sine_type === 'multi' || params.sine_type === '3d' ? `
+            <div>• Kx: x方向空间频率 (${params.Kx} rad/μm)</div>
+            <div>• Ky: y方向空间频率 (${params.Ky} rad/μm)</div>
+            ${params.sine_type === '3d' ? `<div>• Kz: z方向空间频率 (${params.Kz} rad/μm)</div>` : ''}
+            <div>• φ: 相位值 (${params.phi_expr || '0'})</div>` : ''}
         `;
     } else if (plotType === 'car_deprotection_degree') {
         valueLabel = '脱保护度:';
         valueUnit = '(0-1)';
         formulaTitle = 'CAR模型脱保护度:';
-        formulaMath = 'M = 1-e<sup>-k·[H⁺]<sub>diff</sub>·A</sup>';
+        
+        // 根据波形类型显示不同公式
+        if (params.sine_type === 'multi') {
+            formulaMath = 'M(x,y) = 1-e<sup>-k·[H⁺]<sub>diff</sub>·A</sup>';
+        } else if (params.sine_type === '3d') {
+            formulaMath = 'M(x,y,z) = 1-e<sup>-k·[H⁺]<sub>diff</sub>·A</sup>';
+        } else {
+            formulaMath = 'M = 1-e<sup>-k·[H⁺]<sub>diff</sub>·A</sup>';
+        }
+        
         formulaExplanation = `
             <div>• k: 反应速率 (${params.reaction_rate})</div>
             <div>• A: 放大因子 (${params.amplification})</div>
+            ${params.sine_type === 'multi' || params.sine_type === '3d' ? `
+            <div>• Kx: x方向空间频率 (${params.Kx} rad/μm)</div>
+            <div>• Ky: y方向空间频率 (${params.Ky} rad/μm)</div>
+            ${params.sine_type === '3d' ? `<div>• Kz: z方向空间频率 (${params.Kz} rad/μm)</div>` : ''}
+            <div>• φ: 相位值 (${params.phi_expr || '0'})</div>` : ''}
         `;
     } else if (plotType === 'car_thickness') {
         valueLabel = '光刻胶厚度:';
         valueUnit = '(归一化)';
         formulaTitle = 'CAR模型厚度计算:';
-        formulaMath = '厚度 = f(M, γ) = M<sup>γ</sup>';
+        
+        // 根据波形类型显示不同公式
+        if (params.sine_type === 'multi') {
+            formulaMath = '厚度(x,y) = f(M, γ) = M<sup>γ</sup>';
+        } else if (params.sine_type === '3d') {
+            formulaMath = '厚度(x,y,z) = f(M, γ) = M<sup>γ</sup>';
+        } else {
+            formulaMath = '厚度 = f(M, γ) = M<sup>γ</sup>';
+        }
+        
         formulaExplanation = `
             <div>• M: 脱保护度</div>
             <div>• γ: 对比度因子 (${params.contrast})</div>
+            ${params.sine_type === 'multi' || params.sine_type === '3d' ? `
+            <div>• Kx: x方向空间频率 (${params.Kx} rad/μm)</div>
+            <div>• Ky: y方向空间频率 (${params.Ky} rad/μm)</div>
+            ${params.sine_type === '3d' ? `<div>• Kz: z方向空间频率 (${params.Kz} rad/μm)</div>` : ''}
+            <div>• φ: 相位值 (${params.phi_expr || '0'})</div>` : ''}
         `;
     } else if (plotType === 'heatmap') {
         valueLabel = '值:';
         valueUnit = '(归一化)';
         formulaTitle = 'CAR模型二维分布:';
-        formulaMath = '依赖于具体参数和阶段';
+        formulaMath = '[H<sup>+</sup>](x,y) = η × I<sub>avg</sub> × t<sub>exp</sub> × (1 + V × cos(Kx·x + Ky·y + φ))';
+        formulaMath += '<br>扩散: [H⁺]<sub>diff</sub>(x,y) = G([H⁺], l<sub>diff</sub>)';
+        formulaMath += '<br>M(x,y) = 1-e<sup>-k·[H⁺]<sub>diff</sub>(x,y)·A</sup>';
+        
         formulaExplanation = `
             <div>• I<sub>avg</sub>: 平均光强度 (${params.I_avg} mW<span class="fraction"><span class="numerator">1</span><span class="denominator">cm²</span></span>)</div>
             <div>• t<sub>exp</sub>: 曝光时间 (${params.t_exp} s)</div>
             <div>• η: 光酸产生效率 (${params.acid_gen_efficiency})</div>
             <div>• l<sub>diff</sub>: 扩散长度 (${params.diffusion_length} μm)</div>
+            <div>• Kx: x方向空间频率 (${params.Kx || params.K} rad/μm)</div>
+            <div>• Ky: y方向空间频率 (${params.Ky || 'N/A'} rad/μm)</div>
+            <div>• φ: 相位值 (${params.phi_expr || '0'})</div>
         `;
     } else if (plotType === 'surface3d') {
         valueLabel = '值:';
         valueUnit = '(归一化)';
         formulaTitle = 'CAR模型三维分布:';
-        formulaMath = '[H⁺] = η·D(x,y,z)<br>扩散: [H⁺]<sub>diff</sub> = G([H⁺], l<sub>diff</sub>)<br>M = 1-e<sup>-k·[H⁺]<sub>diff</sub>·A</sup>';
+        formulaMath = '[H<sup>+</sup>](x,y,z) = η × I<sub>avg</sub> × t<sub>exp</sub> × (1 + V × cos(Kx·x + Ky·y + Kz·z + φ))';
+        formulaMath += '<br>扩散: [H⁺]<sub>diff</sub>(x,y,z) = G([H⁺], l<sub>diff</sub>)';
+        formulaMath += '<br>M(x,y,z) = 1-e<sup>-k·[H⁺]<sub>diff</sub>(x,y,z)·A</sup>';
+        
         formulaExplanation = `
             <div>• η: 光酸产生效率 (${params.acid_gen_efficiency})</div>
             <div>• l<sub>diff</sub>: 扩散长度 (${params.diffusion_length} μm)</div>
             <div>• k: 反应速率 (${params.reaction_rate})</div>
             <div>• A: 放大因子 (${params.amplification})</div>
             <div>• γ: 对比度 (${params.contrast})</div>
+            <div>• Kx: x方向空间频率 (${params.Kx} rad/μm)</div>
+            <div>• Ky: y方向空间频率 (${params.Ky} rad/μm)</div>
+            <div>• Kz: z方向空间频率 (${params.Kz} rad/μm)</div>
+                        <div>• φ: 相位值 (${params.phi_expr || '0'})</div>
         `;
     }
-    
+     
     return `
         <div class="point-info-section">
             <h4>🎯 位置信息</h4>
@@ -4450,15 +5047,22 @@ function initPhaseExpressionDropdowns() {
                 // 触发input事件以便执行校验和UI更新
                 item.input.dispatchEvent(new Event('input', { bubbles: true }));
 
-                // REMOVED: Automatic preview plot generation on select change.
-                // The user now needs to explicitly click the preview button.
-                // if (validatePhaseExpr(item.input.value)) {
-                //     if (typeof item.drawFunc === 'function') {
-                //         item.drawFunc(true); 
-                //     } else {
-                //         console.error("Draw function is not defined for:", item.select.id);
-                //     }
-                // }
+                // 检查当前预览是否正在显示，如果是，则自动更新预览
+                if (item.previewPlotElement && item.previewPlotElement.style.display !== 'none') {
+                    if (validatePhaseExpr(item.input.value)) {
+                        if (typeof item.drawFunc === 'function') {
+                            // 获取当前的t值（如果有滑块的话）
+                            let currentT = 0;
+                            const tSlider = document.querySelector(`#${item.select.id.replace('_select', '_t_slider').replace('_3d', '-3d').replace('phi_expr', 'phi-expr')}`);
+                            if (tSlider) {
+                                currentT = parseFloat(tSlider.value) || 0;
+                            }
+                            item.drawFunc(false, currentT); // 不滚动到图表，使用当前t值
+                        } else {
+                            console.error("Draw function is not defined for:", item.select.id);
+                        }
+                    }
+                }
             } else {
                 item.input.focus();
             }
@@ -4580,7 +5184,152 @@ function setSelectedOptionBasedOnValue(selectElem, value) {
 }
 
 // 增强Dill模型2D预览绘图函数
-function enhancedDrawPreviewPlot(scrollToPlot = false) {
+// 工具函数：生成二维正弦分布
+function generate2DSine(Kx, Ky, V, phi_expr, xRange, yRange, yPoints = 100, t = 0) {
+    const xPoints = 100;
+    const x = Array.from({length: xPoints}, (_, i) => xRange[0] + (xRange[1]-xRange[0])*i/(xPoints-1));
+    const y = Array.from({length: yPoints}, (_, i) => yRange[0] + (yRange[1]-yRange[0])*i/(yPoints-1));
+    const z = [];
+    let phiFunc;
+    try {
+        // 支持PI和E常量
+        const expr = phi_expr.replace(/\bPI\b/g, 'Math.PI').replace(/\bE\b/g, 'Math.E').replace(/\b(sin|cos|tan|exp|abs|sqrt)\b/g, 'Math.$1');
+        phiFunc = new Function('t', 'return ' + expr);
+    } catch {
+        phiFunc = () => 0;
+    }
+    for (let j = 0; j < yPoints; j++) {
+        const row = [];
+        for (let i = 0; i < xPoints; i++) {
+            const phi = phiFunc(t);
+            row.push(1 + V * Math.cos(Kx * x[i] + Ky * y[j] + phi));
+        }
+        z.push(row);
+    }
+    return {x, y, z};
+}
+
+// 工具函数：生成三维正弦分布
+function generate3DSine(Kx, Ky, Kz, V, phi_expr, xRange, yRange, zRange, xPoints = 20, yPoints = 20, t = 0) {
+    const zPoints = 20;
+    const x = Array.from({length: xPoints}, (_, i) => xRange[0] + (xRange[1]-xRange[0])*i/(xPoints-1));
+    const y = Array.from({length: yPoints}, (_, i) => yRange[0] + (yRange[1]-yRange[0])*i/(yPoints-1));
+    const z = Array.from({length: zPoints}, (_, i) => zRange[0] + (zRange[1]-zRange[0])*i/(zPoints-1));
+    const values = [];
+    let phiFunc;
+    try {
+        // 支持PI和E常量
+        const expr = phi_expr.replace(/\bPI\b/g, 'Math.PI').replace(/\bE\b/g, 'Math.E').replace(/\b(sin|cos|tan|exp|abs|sqrt)\b/g, 'Math.$1');
+        phiFunc = new Function('t', 'return ' + expr);
+    } catch {
+        phiFunc = () => 0;
+    }
+    
+    // 为isosurface创建展平的数组
+    for (let k = 0; k < zPoints; k++) {
+        for (let j = 0; j < yPoints; j++) {
+            for (let i = 0; i < xPoints; i++) {
+                const phi = phiFunc(t);
+                const value = 1 + V * Math.cos(Kx * x[i] + Ky * y[j] + Kz * z[k] + phi);
+                values.push(value);
+            }
+        }
+    }
+    
+    // 为isosurface创建坐标网格
+    const xGrid = [], yGrid = [], zGrid = [];
+    for (let k = 0; k < zPoints; k++) {
+        for (let j = 0; j < yPoints; j++) {
+            for (let i = 0; i < xPoints; i++) {
+                xGrid.push(x[i]);
+                yGrid.push(y[j]);
+                zGrid.push(z[k]);
+            }
+        }
+    }
+    
+    return {x: xGrid, y: yGrid, z: zGrid, values};
+}
+
+// Dill模型2D预览绘图函数
+function dillDrawPreviewPlot(scrollToPlot = false, t = 0) {
+    const input = document.getElementById('phi_expr');
+    const kxInput = document.getElementById('Kx');
+    const kyInput = document.getElementById('Ky');
+    const vInput = document.getElementById('V'); // 使用V作为Dill模型的对比度参数
+    const plot = document.getElementById('phi-expr-preview-plot');
+    const errDiv = input?.closest('.parameter-item')?.querySelector('.phi-expr-error');
+
+    if (!input || !plot) return;
+
+    let Kx = 2, Ky = 0, V_val = 0.8;
+    if (kxInput) Kx = parseFloat(kxInput.value);
+    if (kyInput) Ky = parseFloat(kyInput.value);
+    if (vInput) V_val = parseFloat(vInput.value);
+    
+    // 获取Y范围参数
+    const yMinInput = document.getElementById('y_min');
+    const yMaxInput = document.getElementById('y_max');
+    const yPointsInput = document.getElementById('y_points');
+    
+    // 默认范围，或从输入框获取
+    let xRange = [0, 10];
+    let yRange = [0, 10];
+    let yPoints = 100;
+    
+    if (yMinInput && yMaxInput) {
+        yRange = [parseFloat(yMinInput.value) || 0, parseFloat(yMaxInput.value) || 10];
+    }
+    if (yPointsInput) {
+        yPoints = parseInt(yPointsInput.value) || 100;
+    }
+
+    const expr = input.value;
+
+    if (!validatePhaseExpr(expr)) {
+        if (errDiv) {
+            errDiv.textContent = LANGS[currentLang]?.phi_expr_invalid_preview || '表达式格式有误，无法预览。';
+            errDiv.style.display = 'block';
+        }
+        return;
+    }
+    if (errDiv) {
+        errDiv.textContent = '';
+        errDiv.style.display = 'none';
+    }
+
+    const plotData = generate2DSine(Kx, Ky, V_val, expr, xRange, yRange, yPoints, t);
+    plot.style.display = 'block';
+    
+    // 显示滑块控制面板
+    const controlsElement = document.getElementById('phi-expr-preview-controls');
+    const tSlider = document.getElementById('phi-expr-t-slider');
+    const tValueDisplay = controlsElement?.querySelector('.t-value');
+    
+    if (controlsElement && plot.style.display !== 'none') {
+        controlsElement.style.display = 'block';
+        if (tSlider && tValueDisplay) {
+            tSlider.value = t;
+            tValueDisplay.textContent = t.toFixed(2);
+        }
+    }
+    
+    Plotly.newPlot(plot, [{
+        z: plotData.z, x: plotData.x, y: plotData.y, type: 'heatmap', colorscale: 'Viridis',
+        colorbar: {title: 'I(x,y)'}
+    }], {
+        title: `Dill 二维正弦分布预览 (t=${t.toFixed(2)})`,
+        xaxis: {title: 'x'},
+        yaxis: {title: 'y'},
+        margin: {t:40, l:40, r:20, b:10}, height: 260
+    }, {displayModeBar: false});
+
+    if (scrollToPlot) {
+        setTimeout(()=>{plot.scrollIntoView({behavior:'smooth', block:'center'});}, 200);
+    }
+}
+
+function enhancedDrawPreviewPlot(scrollToPlot = false, t = 0) {
     const input = document.getElementById('enhanced_phi_expr');
     const kxInput = document.getElementById('enhanced_Kx');
     const kyInput = document.getElementById('enhanced_Ky');
@@ -4598,13 +5347,18 @@ function enhancedDrawPreviewPlot(scrollToPlot = false) {
     // 获取Y范围参数
     const yMinInput = document.getElementById('enhanced_y_min');
     const yMaxInput = document.getElementById('enhanced_y_max');
+    const yPointsInput = document.getElementById('enhanced_y_points');
     
     // 默认范围，或从输入框获取
     let xRange = [0, 10];
     let yRange = [0, 10];
+    let yPoints = 100;
     
     if (yMinInput && yMaxInput) {
         yRange = [parseFloat(yMinInput.value) || 0, parseFloat(yMaxInput.value) || 10];
+    }
+    if (yPointsInput) {
+        yPoints = parseInt(yPointsInput.value) || 100;
     }
 
     const expr = input.value;
@@ -4621,13 +5375,27 @@ function enhancedDrawPreviewPlot(scrollToPlot = false) {
         errDiv.style.display = 'none';
     }
 
-    const plotData = generate2DSine(Kx, Ky, V_val, expr, xRange, yRange);
+    const plotData = generate2DSine(Kx, Ky, V_val, expr, xRange, yRange, yPoints, t);
     plot.style.display = 'block';
+    
+    // 显示滑块控制面板
+    const controlsElement = document.getElementById('enhanced-phi-expr-preview-controls');
+    const tSlider = document.getElementById('enhanced-phi-expr-t-slider');
+    const tValueDisplay = controlsElement?.querySelector('.t-value');
+    
+    if (controlsElement && plot.style.display !== 'none') {
+        controlsElement.style.display = 'block';
+        if (tSlider && tValueDisplay) {
+            tSlider.value = t;
+            tValueDisplay.textContent = t.toFixed(2);
+        }
+    }
+    
     Plotly.newPlot(plot, [{
         z: plotData.z, x: plotData.x, y: plotData.y, type: 'heatmap', colorscale: 'Viridis',
         colorbar: {title: 'I(x,y)'}
     }], {
-        title: LANGS[currentLang]?.preview_2d_title || '二维正弦分布预览',
+        title: `Enhanced Dill 二维正弦分布预览 (t=${t.toFixed(2)})`,
         xaxis: {title: 'x'},
         yaxis: {title: 'y'},
         margin: {t:40, l:40, r:20, b:10}, height: 260
@@ -4639,7 +5407,7 @@ function enhancedDrawPreviewPlot(scrollToPlot = false) {
 }
 
 // 增强Dill模型3D预览绘图函数
-function enhancedDraw3DPreviewPlot(scrollToPlot = false) {
+function enhancedDraw3DPreviewPlot(scrollToPlot = false, t = 0) {
     const input = document.getElementById('enhanced_phi_expr_3d');
     const kxInput = document.getElementById('enhanced_Kx_3d');
     const kyInput = document.getElementById('enhanced_Ky_3d');
@@ -4680,8 +5448,21 @@ function enhancedDraw3DPreviewPlot(scrollToPlot = false) {
         errDiv.style.display = 'none'; 
     }
 
-    const plotData = generate3DSine(Kx, Ky, Kz, V_val, expr, xRange, yRange, zRange);
+    const plotData = generate3DSine(Kx, Ky, Kz, V_val, expr, xRange, yRange, zRange, 20, 20, t);
     plot.style.display = 'block';
+    
+    // 显示滑块控制面板
+    const controlsElement = document.getElementById('enhanced-phi-expr-3d-preview-controls');
+    const tSlider = document.getElementById('enhanced-phi-expr-3d-t-slider');
+    const tValueDisplay = controlsElement?.querySelector('.t-value');
+    
+    if (controlsElement && plot.style.display !== 'none') {
+        controlsElement.style.display = 'block';
+        if (tSlider && tValueDisplay) {
+            tSlider.value = t;
+            tValueDisplay.textContent = t.toFixed(2);
+        }
+    }
     
     const data = [{
         type: 'isosurface',
@@ -4697,7 +5478,7 @@ function enhancedDraw3DPreviewPlot(scrollToPlot = false) {
     }];
     
     Plotly.newPlot(plot, data, {
-        title: LANGS[currentLang]?.preview_3d_title || '三维正弦分布预览',
+        title: `Enhanced Dill 三维正弦分布预览 (t=${t.toFixed(2)})`,
         scene: {
             xaxis: {title: 'X'},
             yaxis: {title: 'Y'},
@@ -4713,7 +5494,7 @@ function enhancedDraw3DPreviewPlot(scrollToPlot = false) {
 }
 
 // CAR模型2D预览绘图函数
-function carDrawPreviewPlot(scrollToPlot = false) {
+function carDrawPreviewPlot(scrollToPlot = false, t = 0) {
     const input = document.getElementById('car_phi_expr');
     const kxInput = document.getElementById('car_Kx');
     const kyInput = document.getElementById('car_Ky');
@@ -4731,13 +5512,18 @@ function carDrawPreviewPlot(scrollToPlot = false) {
     // 获取Y范围参数
     const yMinInput = document.getElementById('car_y_min');
     const yMaxInput = document.getElementById('car_y_max');
+    const yPointsInput = document.getElementById('car_y_points');
     
     // 默认范围，或从输入框获取
     let xRange = [0, 10];
     let yRange = [0, 10];
+    let yPoints = 100;
     
     if (yMinInput && yMaxInput) {
         yRange = [parseFloat(yMinInput.value) || 0, parseFloat(yMaxInput.value) || 10];
+    }
+    if (yPointsInput) {
+        yPoints = parseInt(yPointsInput.value) || 100;
     }
 
     const expr = input.value;
@@ -4754,13 +5540,27 @@ function carDrawPreviewPlot(scrollToPlot = false) {
         errDiv.style.display = 'none';
     }
 
-    const plotData = generate2DSine(Kx, Ky, V_val, expr, xRange, yRange);
+    const plotData = generate2DSine(Kx, Ky, V_val, expr, xRange, yRange, yPoints, t);
     plot.style.display = 'block';
+    
+    // 显示滑块控制面板
+    const controlsElement = document.getElementById('car-phi-expr-preview-controls');
+    const tSlider = document.getElementById('car-phi-expr-t-slider');
+    const tValueDisplay = controlsElement?.querySelector('.t-value');
+    
+    if (controlsElement && plot.style.display !== 'none') {
+        controlsElement.style.display = 'block';
+        if (tSlider && tValueDisplay) {
+            tSlider.value = t;
+            tValueDisplay.textContent = t.toFixed(2);
+        }
+    }
+    
     Plotly.newPlot(plot, [{
         z: plotData.z, x: plotData.x, y: plotData.y, type: 'heatmap', colorscale: 'Viridis',
         colorbar: {title: 'I(x,y)'}
     }], {
-        title: LANGS[currentLang]?.preview_2d_title || '二维正弦分布预览',
+        title: `CAR 二维正弦分布预览 (t=${t.toFixed(2)})`,
         xaxis: {title: 'x'},
         yaxis: {title: 'y'},
         margin: {t:40, l:40, r:20, b:10}, height: 260
@@ -4772,7 +5572,7 @@ function carDrawPreviewPlot(scrollToPlot = false) {
 }
 
 // CAR模型3D预览绘图函数
-function carDraw3DPreviewPlot(scrollToPlot = false) {
+function carDraw3DPreviewPlot(scrollToPlot = false, t = 0) {
     const input = document.getElementById('car_phi_expr_3d');
     const kxInput = document.getElementById('car_Kx_3d');
     const kyInput = document.getElementById('car_Ky_3d');
@@ -4813,8 +5613,21 @@ function carDraw3DPreviewPlot(scrollToPlot = false) {
         errDiv.style.display = 'none'; 
     }
 
-    const plotData = generate3DSine(Kx, Ky, Kz, V_val, expr, xRange, yRange, zRange);
+    const plotData = generate3DSine(Kx, Ky, Kz, V_val, expr, xRange, yRange, zRange, 20, 20, t);
     plot.style.display = 'block';
+    
+    // 显示滑块控制面板
+    const controlsElement = document.getElementById('car-phi-expr-3d-preview-controls');
+    const tSlider = document.getElementById('car-phi-expr-3d-t-slider');
+    const tValueDisplay = controlsElement?.querySelector('.t-value');
+    
+    if (controlsElement && plot.style.display !== 'none') {
+        controlsElement.style.display = 'block';
+        if (tSlider && tValueDisplay) {
+            tSlider.value = t;
+            tValueDisplay.textContent = t.toFixed(2);
+        }
+    }
     
     const data = [{
         type: 'isosurface',
@@ -4830,7 +5643,7 @@ function carDraw3DPreviewPlot(scrollToPlot = false) {
     }];
     
     Plotly.newPlot(plot, data, {
-        title: LANGS[currentLang]?.preview_3d_title || '三维正弦分布预览',
+        title: `CAR 三维正弦分布预览 (t=${t.toFixed(2)})`,
         scene: {
             xaxis: {title: 'X'},
             yaxis: {title: 'Y'},
@@ -4865,6 +5678,22 @@ function resetModelSpecificComponents() {
             if (typeof Plotly !== 'undefined' && Plotly.purge) {
                 Plotly.purge(plot); // 清除Plotly图表资源
             }
+        }
+    });
+    
+    // 隐藏所有的相位预览控制面板
+    const previewControls = [
+        document.getElementById('phi-expr-preview-controls'),
+        document.getElementById('phi-expr-3d-preview-controls'),
+        document.getElementById('enhanced-phi-expr-preview-controls'),
+        document.getElementById('enhanced-phi-expr-3d-preview-controls'),
+        document.getElementById('car-phi-expr-preview-controls'),
+        document.getElementById('car-phi-expr-3d-preview-controls')
+    ];
+    
+    previewControls.forEach(control => {
+        if (control) {
+            control.style.display = 'none';
         }
     });
     
@@ -5713,6 +6542,31 @@ function getEnhancedDillModelParams() {
     return params;
 }
 
+function getCarModelParams() {
+    const sineType = document.getElementById('car-sine-type')?.value || 'single';
+    const enable4DAnimation = document.getElementById('car_enable_4d_animation')?.checked || false;
+    
+    const params = {
+        model_type: 'car',
+        sine_type: sineType
+    };
+    
+    // 只有在3D模式且启用4D动画时才添加4D动画参数
+    if (enable4DAnimation && sineType === '3d') {
+        params.enable_4d_animation = true;
+        params.t_start = parseFloat(document.getElementById('t_start_car')?.value) || 0;
+        params.t_end = parseFloat(document.getElementById('t_end_car')?.value) || 5;
+        params.time_steps = parseInt(document.getElementById('time_steps_car')?.value) || 20;
+        params.animation_speed = parseInt(document.getElementById('car_animation_speed')?.value) || 500;
+    } else {
+        // 确保4D动画参数不会被传递
+        params.enable_4d_animation = false;
+        console.log('CAR模型4D动画已禁用');
+    }
+    
+    return params;
+}
+
 // 添加缺失的DILL模型4D动画播放控制函数
 
 // DILL模型4D动画播放控制函数
@@ -6098,8 +6952,8 @@ function update3DDillAnimationFrame(frameIndex, exposureFrames, thicknessFrames,
             title: `光强度分布 (t=${timeValue.toFixed(2)}s)`,
             scene: {
                 ...common3DLayout.scene,
-                xaxis: { title: 'X (μm)' },
-                yaxis: { title: 'Y (μm)' },
+                xaxis: { title: 'Z 位置 (μm)' },
+                yaxis: { title: 'Y 位置 (μm)' },
                 zaxis: { title: '光强度' }
             }
         };
@@ -6151,8 +7005,8 @@ function update3DDillAnimationFrame(frameIndex, exposureFrames, thicknessFrames,
             title: `光刻胶厚度分布 (t=${timeValue.toFixed(2)}s)`,
             scene: {
                 ...common3DLayout.scene,
-                xaxis: { title: 'X (μm)' },
-                yaxis: { title: 'Y (μm)' },
+                xaxis: { title: 'Z 位置 (μm)' },
+                yaxis: { title: 'Y 位置 (μm)' },
                 zaxis: { title: '厚度 (μm)' }
             }
         };
@@ -6180,8 +7034,8 @@ function update2DDillAnimationFrame(frameIndex, exposureFrames, thicknessFrames,
         
         const exposureLayout = {
             title: `光强度分布 (t=${timeValue.toFixed(2)}s)`,
-            xaxis: { title: 'X (μm)' },
-            yaxis: { title: 'Y (μm)' },
+            xaxis: { title: 'Z 位置 (μm)' },
+            yaxis: { title: 'Y 位置 (μm)' },
             autosize: true,
             margin: { l: 50, r: 50, b: 50, t: 50 }
         };
@@ -6204,8 +7058,8 @@ function update2DDillAnimationFrame(frameIndex, exposureFrames, thicknessFrames,
         
         const thicknessLayout = {
             title: `光刻胶厚度分布 (t=${timeValue.toFixed(2)}s)`,
-            xaxis: { title: 'X (μm)' },
-            yaxis: { title: 'Y (μm)' },
+            xaxis: { title: 'Z 位置 (μm)' },
+            yaxis: { title: 'Y 位置 (μm)' },
             autosize: true,
             margin: { l: 50, r: 50, b: 50, t: 50 }
         };
@@ -6234,7 +7088,7 @@ function update1DDillAnimationFrame(frameIndex, exposureFrames, thicknessFrames,
         
         const exposureLayout = {
             title: `光强度分布 (t=${timeValue.toFixed(2)}s)`,
-            xaxis: { title: 'X (μm)' },
+            xaxis: { title: 'Z 位置 (μm)' },
             yaxis: { title: '光强度' },
             autosize: true,
             margin: { l: 50, r: 50, b: 50, t: 50 }
@@ -6259,7 +7113,7 @@ function update1DDillAnimationFrame(frameIndex, exposureFrames, thicknessFrames,
         
         const thicknessLayout = {
             title: `光刻胶厚度分布 (t=${timeValue.toFixed(2)}s)`,
-            xaxis: { title: 'X (μm)' },
+            xaxis: { title: 'Z 位置 (μm)' },
             yaxis: { title: '厚度 (μm)' },
             autosize: true,
             margin: { l: 50, r: 50, b: 50, t: 50 }
@@ -6317,6 +7171,14 @@ function updateDill4DTimeSlider(frameIndex) {
         if (sliderDisplay && dill4DAnimationData.time_array) {
             const timeValue = dill4DAnimationData.time_array[frameIndex];
             sliderDisplay.textContent = `t = ${timeValue.toFixed(2)}s`;
+        }
+        
+        // 更新帧数信息显示
+        const frameInfo = document.getElementById('dill-4d-frame-info');
+        if (frameInfo && dill4DAnimationData) {
+            const totalFrames = dill4DAnimationData.time_steps || 
+                               (dill4DAnimationData.exposure_dose_frames ? dill4DAnimationData.exposure_dose_frames.length : 20);
+            frameInfo.textContent = `帧 ${frameIndex + 1}/${totalFrames}`;
         }
     }
 }
@@ -6462,8 +7324,8 @@ function updateEnhancedDill4DAnimationFrame(frameIndex) {
                     title: `曝光剂量分布 (t=${timeValue.toFixed(2)}s) - 多层显示`,
                     scene: {
                         ...common3DLayout.scene,
-                        xaxis: { title: 'X (μm)' },
-                        yaxis: { title: 'Y (μm)' },
+                        xaxis: { title: 'Z 位置 (μm)' },
+                        yaxis: { title: 'Y 位置 (μm)' },
                         zaxis: { title: '曝光剂量 (mJ/cm²)' }
                     }
                 };
@@ -6500,8 +7362,8 @@ function updateEnhancedDill4DAnimationFrame(frameIndex) {
                             title: `曝光剂量分布 (t=${timeValue.toFixed(2)}s) - 表面`,
                             scene: {
                                 ...common3DLayout.scene,
-                                xaxis: { title: 'X (μm)' },
-                                yaxis: { title: 'Y (μm)' },
+                                xaxis: { title: 'Z 位置 (μm)' },
+                                yaxis: { title: 'Y 位置 (μm)' },
                                 zaxis: { title: '曝光剂量 (mJ/cm²)' }
                             }
                         };
@@ -6600,8 +7462,8 @@ function updateEnhancedDill4DAnimationFrame(frameIndex) {
                     title: `厚度分布 (t=${timeValue.toFixed(2)}s) - 多层显示`,
                     scene: {
                         ...common3DLayout.scene,
-                        xaxis: { title: 'X (μm)' },
-                        yaxis: { title: 'Y (μm)' },
+                        xaxis: { title: 'Z 位置 (μm)' },
+                        yaxis: { title: 'Y 位置 (μm)' },
                         zaxis: { title: '相对厚度' }
                     }
                 };
@@ -6617,7 +7479,7 @@ function updateEnhancedDill4DAnimationFrame(frameIndex) {
     // 3. 更新时间显示和进度条
     const timeDisplay = document.getElementById('enhanced-dill-4d-time-display');
     if (timeDisplay) {
-        timeDisplay.textContent = `时间: ${timeValue.toFixed(2)}s`;
+        timeDisplay.textContent = `t = ${timeValue.toFixed(2)}s`;
     }
     
     const progressSlider = document.getElementById('enhanced-dill-4d-time-slider');
@@ -6634,15 +7496,33 @@ function updateEnhancedDill4DAnimationFrame(frameIndex) {
     console.log(`Enhanced DILL 4D动画：帧${frameIndex}更新完成，时间=${timeValue.toFixed(2)}s`)
 }
 
+// 防抖函数
+function debounce(func, delay) {
+    let timeoutId;
+    return function (...args) {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => func.apply(this, args), delay);
+    };
+}
+
+// 防抖的帧更新函数
+const debouncedUpdateDillFrame = debounce((frameIndex) => {
+    updateDill4DAnimationFrame(frameIndex);
+}, 100);
+
 // 重新绑定DILL模型4D动画控制事件
 function setupDill4DAnimationEventListeners() {
     const playBtn = document.getElementById('dill-4d-play-btn');
     const pauseBtn = document.getElementById('dill-4d-pause-btn');
     const resetBtn = document.getElementById('dill-4d-reset-btn');
     const loopBtn = document.getElementById('dill-4d-loop-btn');
+    const timeSlider = document.getElementById('dill-4d-time-slider');
     
     if (playBtn) {
-        playBtn.addEventListener('click', function() {
+        // 清除旧的事件监听器
+        playBtn.replaceWith(playBtn.cloneNode(true));
+        const newPlayBtn = document.getElementById('dill-4d-play-btn');
+        newPlayBtn.addEventListener('click', function() {
             if (dill4DAnimationData) {
                 playDill4DAnimation();
             } else {
@@ -6652,17 +7532,54 @@ function setupDill4DAnimationEventListeners() {
     }
     
     if (pauseBtn) {
-        pauseBtn.addEventListener('click', pauseDill4DAnimation);
+        pauseBtn.replaceWith(pauseBtn.cloneNode(true));
+        const newPauseBtn = document.getElementById('dill-4d-pause-btn');
+        newPauseBtn.addEventListener('click', pauseDill4DAnimation);
     }
     
     if (resetBtn) {
-        resetBtn.addEventListener('click', resetDill4DAnimation);
+        resetBtn.replaceWith(resetBtn.cloneNode(true));
+        const newResetBtn = document.getElementById('dill-4d-reset-btn');
+        newResetBtn.addEventListener('click', resetDill4DAnimation);
     }
     
     if (loopBtn) {
-        loopBtn.addEventListener('click', toggleDill4DLoop);
+        loopBtn.replaceWith(loopBtn.cloneNode(true));
+        const newLoopBtn = document.getElementById('dill-4d-loop-btn');
+        newLoopBtn.addEventListener('click', toggleDill4DLoop);
+    }
+    
+    // 添加时间滑块事件监听器，使用防抖机制
+    if (timeSlider) {
+        timeSlider.replaceWith(timeSlider.cloneNode(true));
+        const newTimeSlider = document.getElementById('dill-4d-time-slider');
+        
+        let isUpdating = false;
+        newTimeSlider.addEventListener('input', function() {
+            if (isUpdating) return;
+            // 暂停当前动画
+            pauseDill4DAnimation();
+            // 更新到选定帧（使用防抖）
+            const frameIndex = parseInt(this.value);
+            dill4DAnimationState.currentFrame = frameIndex;
+            debouncedUpdateDillFrame(frameIndex);
+        });
+        
+        // 添加change事件确保最终状态正确
+        newTimeSlider.addEventListener('change', function() {
+            const frameIndex = parseInt(this.value);
+            dill4DAnimationState.currentFrame = frameIndex;
+            isUpdating = true;
+            updateDill4DAnimationFrame(frameIndex);
+            setTimeout(() => { isUpdating = false; }, 50);
+        });
     }
 }
+
+// 防抖的Enhanced帧更新函数
+const debouncedUpdateEnhancedDillFrame = debounce((frameIndex) => {
+    updateEnhancedDill4DAnimationFrame(frameIndex);
+}, 100);
 
 // 重新绑定Enhanced DILL模型4D动画控制事件
 function setupEnhancedDill4DAnimationEventListeners() {
@@ -6672,18 +7589,21 @@ function setupEnhancedDill4DAnimationEventListeners() {
     const pauseBtn = document.getElementById('enhanced-dill-4d-pause-btn');
     const resetBtn = document.getElementById('enhanced-dill-4d-reset-btn');
     const loopBtn = document.getElementById('enhanced-dill-4d-loop-btn');
+    const timeSlider = document.getElementById('enhanced-dill-4d-time-slider');
     
     console.log('Enhanced DILL 4D动画按钮状态:', {
         playBtn: !!playBtn,
         pauseBtn: !!pauseBtn,
         resetBtn: !!resetBtn,
-        loopBtn: !!loopBtn
+        loopBtn: !!loopBtn,
+        timeSlider: !!timeSlider
     });
     
     if (playBtn) {
-        // 移除旧的事件监听器
-        playBtn.removeEventListener('click', playEnhancedDill4DAnimation);
-        playBtn.addEventListener('click', function() {
+        // 清除旧的事件监听器
+        playBtn.replaceWith(playBtn.cloneNode(true));
+        const newPlayBtn = document.getElementById('enhanced-dill-4d-play-btn');
+        newPlayBtn.addEventListener('click', function() {
             console.log('Enhanced DILL 4D动画播放按钮被点击');
             if (enhancedDill4DAnimationData) {
                 playEnhancedDill4DAnimation();
@@ -6698,27 +7618,59 @@ function setupEnhancedDill4DAnimationEventListeners() {
     }
     
     if (pauseBtn) {
-        pauseBtn.removeEventListener('click', pauseEnhancedDill4DAnimation);
-        pauseBtn.addEventListener('click', pauseEnhancedDill4DAnimation);
+        pauseBtn.replaceWith(pauseBtn.cloneNode(true));
+        const newPauseBtn = document.getElementById('enhanced-dill-4d-pause-btn');
+        newPauseBtn.addEventListener('click', pauseEnhancedDill4DAnimation);
         console.log('Enhanced DILL 4D动画暂停按钮事件已绑定');
     } else {
         console.error('Enhanced DILL 4D动画暂停按钮未找到');
     }
     
     if (resetBtn) {
-        resetBtn.removeEventListener('click', resetEnhancedDill4DAnimation);
-        resetBtn.addEventListener('click', resetEnhancedDill4DAnimation);
+        resetBtn.replaceWith(resetBtn.cloneNode(true));
+        const newResetBtn = document.getElementById('enhanced-dill-4d-reset-btn');
+        newResetBtn.addEventListener('click', resetEnhancedDill4DAnimation);
         console.log('Enhanced DILL 4D动画重置按钮事件已绑定');
     } else {
         console.error('Enhanced DILL 4D动画重置按钮未找到');
     }
     
     if (loopBtn) {
-        loopBtn.removeEventListener('click', toggleEnhancedDill4DLoop);
-        loopBtn.addEventListener('click', toggleEnhancedDill4DLoop);
+        loopBtn.replaceWith(loopBtn.cloneNode(true));
+        const newLoopBtn = document.getElementById('enhanced-dill-4d-loop-btn');
+        newLoopBtn.addEventListener('click', toggleEnhancedDill4DLoop);
         console.log('Enhanced DILL 4D动画循环按钮事件已绑定');
     } else {
         console.error('Enhanced DILL 4D动画循环按钮未找到');
+    }
+    
+    // 添加时间滑块事件监听器，使用防抖机制
+    if (timeSlider) {
+        timeSlider.replaceWith(timeSlider.cloneNode(true));
+        const newTimeSlider = document.getElementById('enhanced-dill-4d-time-slider');
+        
+        let isUpdating = false;
+        newTimeSlider.addEventListener('input', function() {
+            if (isUpdating) return;
+            // 暂停当前动画
+            pauseEnhancedDill4DAnimation();
+            // 更新到选定帧（使用防抖）
+            const frameIndex = parseInt(this.value);
+            enhancedDill4DAnimationState.currentFrame = frameIndex;
+            debouncedUpdateEnhancedDillFrame(frameIndex);
+        });
+        
+        // 添加change事件确保最终状态正确
+        newTimeSlider.addEventListener('change', function() {
+            const frameIndex = parseInt(this.value);
+            enhancedDill4DAnimationState.currentFrame = frameIndex;
+            isUpdating = true;
+            updateEnhancedDill4DAnimationFrame(frameIndex);
+            setTimeout(() => { isUpdating = false; }, 50);
+        });
+        console.log('Enhanced DILL 4D动画时间滑块事件已绑定');
+    } else {
+        console.error('Enhanced DILL 4D动画时间滑块未找到');
     }
     
     console.log('Enhanced DILL 4D动画事件监听器设置完成');

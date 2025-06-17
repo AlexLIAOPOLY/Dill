@@ -1,0 +1,37 @@
+[2025-06-17 08:12:05.725536]
+请求参数: {'model_type': 'enhanced_dill', 'sine_type': 'multi', 'z_h': 10.0, 'T': 100.0, 't_B': 10.0, 'I0': 1.0, 'M0': 1.0, 't_exp': 5.0, 'V': 0.8, 'K': 2, 'Kx': 2.0, 'Ky': 1.0, 'phi_expr': 'cos(t)', 'y_min': 0, 'y_max': 10, 'y_points': 10}
+异常类型: IndexError
+异常信息: index 25 is out of bounds for axis 0 with size 10
+堆栈信息: Traceback (most recent call last):
+  File "/Users/liaowang/Desktop/Dill Model/Dill/dill_model/backend/routes/api.py", line 580, in calculate_data
+    plot_data = model.generate_data(z_h, T, t_B, I0, M0, t_exp_enh, sine_type=sine_type, Kx=Kx, Ky=Ky, V=V, phi_expr=phi_expr, y_range=y_range)
+  File "/Users/liaowang/Desktop/Dill Model/Dill/dill_model/backend/models/enhanced_dill_model.py", line 885, in generate_data
+    sample_x, sample_y = x_coords_xy[25], y_coords_xy[25]  # 中心点
+                                          ~~~~~~~~~~~^^^^
+IndexError: index 25 is out of bounds for axis 0 with size 10
+
+
+[2025-06-17 08:12:31.089682]
+请求参数: {'model_type': 'enhanced_dill', 'sine_type': 'multi', 'z_h': 10.0, 'T': 100.0, 't_B': 10.0, 'I0': 1.0, 'M0': 1.0, 't_exp': 5.0, 'V': 0.8, 'K': 2, 'Kx': 2.0, 'Ky': 1.0, 'phi_expr': 'cos(t)', 'y_min': 0, 'y_max': 10, 'y_points': 10}
+异常类型: IndexError
+异常信息: index 25 is out of bounds for axis 0 with size 10
+堆栈信息: Traceback (most recent call last):
+  File "/Users/liaowang/Desktop/Dill Model/Dill/dill_model/backend/routes/api.py", line 580, in calculate_data
+    plot_data = model.generate_data(z_h, T, t_B, I0, M0, t_exp_enh, sine_type=sine_type, Kx=Kx, Ky=Ky, V=V, phi_expr=phi_expr, y_range=y_range)
+  File "/Users/liaowang/Desktop/Dill Model/Dill/dill_model/backend/models/enhanced_dill_model.py", line 885, in generate_data
+    sample_x, sample_y = x_coords_xy[25], y_coords_xy[25]  # 中心点
+                                          ~~~~~~~~~~~^^^^
+IndexError: index 25 is out of bounds for axis 0 with size 10
+
+
+[2025-06-17 10:50:14.737331]
+请求参数: {'model_type': 'car', 'sine_type': 'multi', 'I_avg': 10.0, 'V': 0.8, 'K': 2, 't_exp': 5.0, 'acid_gen_efficiency': 0.63, 'diffusion_length': 11.6, 'reaction_rate': 0.3, 'amplification': 24.5, 'contrast': 3.0, 'Kx': 2.0, 'Ky': 1.0, 'phi_expr': '0', 'y_min': 0, 'y_max': 10, 'y_points': 100}
+异常类型: UnboundLocalError
+异常信息: cannot access local variable 'plots' where it is not associated with a value
+堆栈信息: Traceback (most recent call last):
+  File "/Users/liaowang/Desktop/Dill Model/Dill/dill_model/backend/routes/api.py", line 270, in calculate
+    return jsonify(format_response(True, data=plots)), 200
+                                              ^^^^^
+UnboundLocalError: cannot access local variable 'plots' where it is not associated with a value
+
+

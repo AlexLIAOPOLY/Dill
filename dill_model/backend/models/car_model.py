@@ -296,9 +296,44 @@ class CARModel:
         # 计算光刻胶厚度分布
         thickness = self.calculate_dissolution(deprotection, contrast)
         
+        # 计算额外信息
+        additionalInfo = {
+            'chemical_amplification_factor': reaction_rate * amplification,
+            'max_acid_concentration': float(np.max(initial_acid)),
+            'min_acid_concentration': float(np.min(initial_acid)),
+            'acid_concentration_range': float(np.max(initial_acid) - np.min(initial_acid)),
+            'max_diffused_acid': float(np.max(diffused_acid)),
+            'min_diffused_acid': float(np.min(diffused_acid)),
+            'diffused_acid_range': float(np.max(diffused_acid) - np.min(diffused_acid)),
+            'max_deprotection': float(np.max(deprotection)),
+            'min_deprotection': float(np.min(deprotection)),
+            'deprotection_range': float(np.max(deprotection) - np.min(deprotection)),
+            'max_thickness': float(np.max(thickness)),
+            'min_thickness': float(np.min(thickness)),
+            'thickness_range': float(np.max(thickness) - np.min(thickness)),
+            'acid_generation_efficiency': acid_gen_efficiency,
+            'diffusion_length': diffusion_length,
+            'reaction_rate': reaction_rate,
+            'amplification_factor': amplification,
+            'contrast_parameter': contrast,
+            'average_acid_concentration': float(np.mean(initial_acid)),
+            'acid_concentration_std': float(np.std(initial_acid)),
+            'average_diffused_acid': float(np.mean(diffused_acid)),
+            'diffused_acid_std': float(np.std(diffused_acid)),
+            'average_deprotection': float(np.mean(deprotection)),
+            'deprotection_std': float(np.std(deprotection)),
+            'average_thickness': float(np.mean(thickness)),
+            'thickness_std': float(np.std(thickness)),
+            'effective_dose_range': float(np.max(exposure_dose)),
+            'diffusion_effectiveness': float(np.std(diffused_acid) / np.std(initial_acid)) if np.std(initial_acid) > 0 else 1.0,
+            'deprotection_efficiency': float(np.mean(deprotection) / np.mean(diffused_acid)) if np.mean(diffused_acid) > 0 else 0.0,
+            'dissolution_contrast': float(np.std(thickness) / np.mean(thickness)) if np.mean(thickness) > 0 else 0.0
+        }
+        
         return {
             'exposure_dose': exposure_dose,
-            'thickness': thickness
+            'thickness': thickness,
+            'additionalInfo': additionalInfo
         }
     
     def generate_data(self, I_avg, V, K, t_exp, acid_gen_efficiency, diffusion_length, reaction_rate, amplification, contrast, sine_type='1d', Kx=None, Ky=None, Kz=None, phi_expr=None, y_range=None, z_range=None, enable_4d_animation=False, t_start=0, t_end=5, time_steps=20):
@@ -455,6 +490,53 @@ class CARModel:
                     
                     logger.info(f"   - 时间步 {t_idx+1}/{time_steps} (t={t:.2f}s) 计算完成")
                 
+                # 计算4D动画的额外信息（基于最后一帧）
+                last_frame_initial_acid = np.array(animation_data['initial_acid_frames'][-1])
+                last_frame_diffused_acid = np.array(animation_data['diffused_acid_frames'][-1])
+                last_frame_deprotection = np.array(animation_data['deprotection_frames'][-1])
+                last_frame_thickness = np.array(animation_data['thickness_frames'][-1])
+                
+                additionalInfo = {
+                    'chemical_amplification_factor': reaction_rate * amplification,
+                    'max_acid_concentration': float(np.max(last_frame_initial_acid)),
+                    'min_acid_concentration': float(np.min(last_frame_initial_acid)),
+                    'acid_concentration_range': float(np.max(last_frame_initial_acid) - np.min(last_frame_initial_acid)),
+                    'max_diffused_acid': float(np.max(last_frame_diffused_acid)),
+                    'min_diffused_acid': float(np.min(last_frame_diffused_acid)),
+                    'diffused_acid_range': float(np.max(last_frame_diffused_acid) - np.min(last_frame_diffused_acid)),
+                    'max_deprotection': float(np.max(last_frame_deprotection)),
+                    'min_deprotection': float(np.min(last_frame_deprotection)),
+                    'deprotection_range': float(np.max(last_frame_deprotection) - np.min(last_frame_deprotection)),
+                    'max_thickness': float(np.max(last_frame_thickness)),
+                    'min_thickness': float(np.min(last_frame_thickness)),
+                    'thickness_range': float(np.max(last_frame_thickness) - np.min(last_frame_thickness)),
+                    'acid_generation_efficiency': acid_gen_efficiency,
+                    'diffusion_length': diffusion_length,
+                    'reaction_rate': reaction_rate,
+                    'amplification_factor': amplification,
+                    'contrast_parameter': contrast,
+                    'average_acid_concentration': float(np.mean(last_frame_initial_acid)),
+                    'acid_concentration_std': float(np.std(last_frame_initial_acid)),
+                    'average_diffused_acid': float(np.mean(last_frame_diffused_acid)),
+                    'diffused_acid_std': float(np.std(last_frame_diffused_acid)),
+                    'average_deprotection': float(np.mean(last_frame_deprotection)),
+                    'deprotection_std': float(np.std(last_frame_deprotection)),
+                    'average_thickness': float(np.mean(last_frame_thickness)),
+                    'thickness_std': float(np.std(last_frame_thickness)),
+                    'effective_dose_range': float(np.max(last_frame_initial_acid) * t_exp * I_avg),
+                    'diffusion_effectiveness': float(np.std(last_frame_diffused_acid) / np.std(last_frame_initial_acid)) if np.std(last_frame_initial_acid) > 0 else 1.0,
+                    'deprotection_efficiency': float(np.mean(last_frame_deprotection) / np.mean(last_frame_diffused_acid)) if np.mean(last_frame_diffused_acid) > 0 else 0.0,
+                    'dissolution_contrast': float(np.std(last_frame_thickness) / np.mean(last_frame_thickness)) if np.mean(last_frame_thickness) > 0 else 0.0,
+                    'spatial_dimensions': '4D (3D + Time)',
+                    'grid_size': f"{x_points} x {y_points}",
+                    'time_range': f"{t_start}s - {t_end}s",
+                    'time_steps': time_steps,
+                    'phase_expression': phi_expr if phi_expr else '0',
+                    'spatial_frequencies': f"Kx={Kx}, Ky={Ky}, Kz={Kz}"
+                }
+                
+                animation_data['additionalInfo'] = additionalInfo
+                
                 logger.info(f"🔸 4D动画数据生成完成，共{time_steps}帧")
                 return animation_data
             
@@ -502,6 +584,44 @@ class CARModel:
                     deprotection = deprotection.T
                     thickness = thickness.T
                 
+                # 计算额外信息（3D情况）
+                additionalInfo = {
+                    'chemical_amplification_factor': reaction_rate * amplification,
+                    'max_acid_concentration': float(np.max(initial_acid)),
+                    'min_acid_concentration': float(np.min(initial_acid)),
+                    'acid_concentration_range': float(np.max(initial_acid) - np.min(initial_acid)),
+                    'max_diffused_acid': float(np.max(diffused_acid)),
+                    'min_diffused_acid': float(np.min(diffused_acid)),
+                    'diffused_acid_range': float(np.max(diffused_acid) - np.min(diffused_acid)),
+                    'max_deprotection': float(np.max(deprotection)),
+                    'min_deprotection': float(np.min(deprotection)),
+                    'deprotection_range': float(np.max(deprotection) - np.min(deprotection)),
+                    'max_thickness': float(np.max(thickness)),
+                    'min_thickness': float(np.min(thickness)),
+                    'thickness_range': float(np.max(thickness) - np.min(thickness)),
+                    'acid_generation_efficiency': acid_gen_efficiency,
+                    'diffusion_length': diffusion_length,
+                    'reaction_rate': reaction_rate,
+                    'amplification_factor': amplification,
+                    'contrast_parameter': contrast,
+                    'average_acid_concentration': float(np.mean(initial_acid)),
+                    'acid_concentration_std': float(np.std(initial_acid)),
+                    'average_diffused_acid': float(np.mean(diffused_acid)),
+                    'diffused_acid_std': float(np.std(diffused_acid)),
+                    'average_deprotection': float(np.mean(deprotection)),
+                    'deprotection_std': float(np.std(deprotection)),
+                    'average_thickness': float(np.mean(thickness)),
+                    'thickness_std': float(np.std(thickness)),
+                    'effective_dose_range': float(np.max(initial_acid) * t_exp * I_avg),
+                    'diffusion_effectiveness': float(np.std(diffused_acid) / np.std(initial_acid)) if np.std(initial_acid) > 0 else 1.0,
+                    'deprotection_efficiency': float(np.mean(deprotection) / np.mean(diffused_acid)) if np.mean(diffused_acid) > 0 else 0.0,
+                    'dissolution_contrast': float(np.std(thickness) / np.mean(thickness)) if np.mean(thickness) > 0 else 0.0,
+                    'spatial_dimensions': '3D',
+                    'grid_size': f"{len(x_coords)} x {len(y_coords)}",
+                    'phase_expression': phi_expr if phi_expr else '0',
+                    'spatial_frequencies': f"Kx={Kx}, Ky={Ky}, Kz={Kz}"
+                }
+                
                 # 返回3D数据
                 return {
                     'x_coords': x_coords.tolist(),
@@ -512,7 +632,8 @@ class CARModel:
                     'deprotection': deprotection.tolist(),
                     'thickness': thickness.tolist(),
                     'sine_type': '3d',
-                    'is_3d': True
+                    'is_3d': True,
+                    'additionalInfo': additionalInfo
                 }
         # 二维正弦波
         elif sine_type == 'multi' and Kx is not None and Ky is not None:
@@ -535,6 +656,42 @@ class CARModel:
                 # 计算光刻胶厚度分布
                 thickness_2d = self.calculate_dissolution(deprotection_2d, contrast)
                 
+                # 计算额外信息（2D情况）
+                additionalInfo = {
+                    'chemical_amplification_factor': reaction_rate * amplification,
+                    'max_acid_concentration': float(np.max(initial_acid_2d)),
+                    'min_acid_concentration': float(np.min(initial_acid_2d)),
+                    'acid_concentration_range': float(np.max(initial_acid_2d) - np.min(initial_acid_2d)),
+                    'max_diffused_acid': float(np.max(diffused_acid_2d)),
+                    'min_diffused_acid': float(np.min(diffused_acid_2d)),
+                    'diffused_acid_range': float(np.max(diffused_acid_2d) - np.min(diffused_acid_2d)),
+                    'max_deprotection': float(np.max(deprotection_2d)),
+                    'min_deprotection': float(np.min(deprotection_2d)),
+                    'deprotection_range': float(np.max(deprotection_2d) - np.min(deprotection_2d)),
+                    'max_thickness': float(np.max(thickness_2d)),
+                    'min_thickness': float(np.min(thickness_2d)),
+                    'thickness_range': float(np.max(thickness_2d) - np.min(thickness_2d)),
+                    'acid_generation_efficiency': acid_gen_efficiency,
+                    'diffusion_length': diffusion_length,
+                    'reaction_rate': reaction_rate,
+                    'amplification_factor': amplification,
+                    'contrast_parameter': contrast,
+                    'average_acid_concentration': float(np.mean(initial_acid_2d)),
+                    'acid_concentration_std': float(np.std(initial_acid_2d)),
+                    'average_diffused_acid': float(np.mean(diffused_acid_2d)),
+                    'diffused_acid_std': float(np.std(diffused_acid_2d)),
+                    'average_deprotection': float(np.mean(deprotection_2d)),
+                    'deprotection_std': float(np.std(deprotection_2d)),
+                    'average_thickness': float(np.mean(thickness_2d)),
+                    'thickness_std': float(np.std(thickness_2d)),
+                    'effective_dose_range': float(np.max(initial_acid_2d) * t_exp * I_avg),
+                    'diffusion_effectiveness': float(np.std(diffused_acid_2d) / np.std(initial_acid_2d)) if np.std(initial_acid_2d) > 0 else 1.0,
+                    'deprotection_efficiency': float(np.mean(deprotection_2d) / np.mean(diffused_acid_2d)) if np.mean(diffused_acid_2d) > 0 else 0.0,
+                    'dissolution_contrast': float(np.std(thickness_2d) / np.mean(thickness_2d)) if np.mean(thickness_2d) > 0 else 0.0,
+                    'spatial_dimensions': '2D',
+                    'grid_size': f"{len(x_np)} x {len(y_axis_points)}"
+                }
+                
                 # 返回热图所需的网格数据结构
                 return {
                     'x_coords': x_np.tolist(),
@@ -548,7 +705,8 @@ class CARModel:
                     'diffused_acid': diffused_acid_2d.flatten().tolist(),
                     'deprotection': deprotection_2d.flatten().tolist(),
                     'thickness': thickness_2d.flatten().tolist(),
-                    'is_2d': True
+                    'is_2d': True,
+                    'additionalInfo': additionalInfo
                 }
             else:
                 # 如果没有提供有效的y_range，回退到一维模式
@@ -558,6 +716,40 @@ class CARModel:
                 deprotection = self.calculate_deprotection(diffused_acid, reaction_rate, amplification)
                 thickness = self.calculate_dissolution(deprotection, contrast)
                 
+                # 计算额外信息
+                additionalInfo = {
+                    'chemical_amplification_factor': reaction_rate * amplification,
+                    'max_acid_concentration': float(np.max(initial_acid)),
+                    'min_acid_concentration': float(np.min(initial_acid)),
+                    'acid_concentration_range': float(np.max(initial_acid) - np.min(initial_acid)),
+                    'max_diffused_acid': float(np.max(diffused_acid)),
+                    'min_diffused_acid': float(np.min(diffused_acid)),
+                    'diffused_acid_range': float(np.max(diffused_acid) - np.min(diffused_acid)),
+                    'max_deprotection': float(np.max(deprotection)),
+                    'min_deprotection': float(np.min(deprotection)),
+                    'deprotection_range': float(np.max(deprotection) - np.min(deprotection)),
+                    'max_thickness': float(np.max(thickness)),
+                    'min_thickness': float(np.min(thickness)),
+                    'thickness_range': float(np.max(thickness) - np.min(thickness)),
+                    'acid_generation_efficiency': acid_gen_efficiency,
+                    'diffusion_length': diffusion_length,
+                    'reaction_rate': reaction_rate,
+                    'amplification_factor': amplification,
+                    'contrast_parameter': contrast,
+                    'average_acid_concentration': float(np.mean(initial_acid)),
+                    'acid_concentration_std': float(np.std(initial_acid)),
+                    'average_diffused_acid': float(np.mean(diffused_acid)),
+                    'diffused_acid_std': float(np.std(diffused_acid)),
+                    'average_deprotection': float(np.mean(deprotection)),
+                    'deprotection_std': float(np.std(deprotection)),
+                    'average_thickness': float(np.mean(thickness)),
+                    'thickness_std': float(np.std(thickness)),
+                    'effective_dose_range': float(np.max(initial_acid) * t_exp * I_avg),
+                    'diffusion_effectiveness': float(np.std(diffused_acid) / np.std(initial_acid)) if np.std(initial_acid) > 0 else 1.0,
+                    'deprotection_efficiency': float(np.mean(deprotection) / np.mean(diffused_acid)) if np.mean(diffused_acid) > 0 else 0.0,
+                    'dissolution_contrast': float(np.std(thickness) / np.mean(thickness)) if np.mean(thickness) > 0 else 0.0
+                }
+                
                 return {
                     'x': x,
                     'initial_acid': initial_acid.tolist(),
@@ -565,7 +757,8 @@ class CARModel:
                     'diffused_acid': diffused_acid.tolist(),
                     'deprotection': deprotection.tolist(),
                     'thickness': thickness.tolist(),
-                    'is_2d': False
+                    'is_2d': False,
+                    'additionalInfo': additionalInfo
                 }
         # 一维正弦波
         else:
@@ -588,6 +781,40 @@ class CARModel:
                 np.isnan(initial_acid).all() or np.isnan(diffused_acid).all() or np.isnan(deprotection).all() or np.isnan(thickness).all()):
                 raise ValueError('CAR模型计算结果无效，可能参数设置不合理或数值溢出。')
             
+            # 计算额外信息
+            additionalInfo = {
+                'chemical_amplification_factor': reaction_rate * amplification,
+                'max_acid_concentration': float(np.max(initial_acid)),
+                'min_acid_concentration': float(np.min(initial_acid)),
+                'acid_concentration_range': float(np.max(initial_acid) - np.min(initial_acid)),
+                'max_diffused_acid': float(np.max(diffused_acid)),
+                'min_diffused_acid': float(np.min(diffused_acid)),
+                'diffused_acid_range': float(np.max(diffused_acid) - np.min(diffused_acid)),
+                'max_deprotection': float(np.max(deprotection)),
+                'min_deprotection': float(np.min(deprotection)),
+                'deprotection_range': float(np.max(deprotection) - np.min(deprotection)),
+                'max_thickness': float(np.max(thickness)),
+                'min_thickness': float(np.min(thickness)),
+                'thickness_range': float(np.max(thickness) - np.min(thickness)),
+                'acid_generation_efficiency': acid_gen_efficiency,
+                'diffusion_length': diffusion_length,
+                'reaction_rate': reaction_rate,
+                'amplification_factor': amplification,
+                'contrast_parameter': contrast,
+                'average_acid_concentration': float(np.mean(initial_acid)),
+                'acid_concentration_std': float(np.std(initial_acid)),
+                'average_diffused_acid': float(np.mean(diffused_acid)),
+                'diffused_acid_std': float(np.std(diffused_acid)),
+                'average_deprotection': float(np.mean(deprotection)),
+                'deprotection_std': float(np.std(deprotection)),
+                'average_thickness': float(np.mean(thickness)),
+                'thickness_std': float(np.std(thickness)),
+                'effective_dose_range': float(np.max(initial_acid) * t_exp * I_avg),
+                'diffusion_effectiveness': float(np.std(diffused_acid) / np.std(initial_acid)) if np.std(initial_acid) > 0 else 1.0,
+                'deprotection_efficiency': float(np.mean(deprotection) / np.mean(diffused_acid)) if np.mean(diffused_acid) > 0 else 0.0,
+                'dissolution_contrast': float(np.std(thickness) / np.mean(thickness)) if np.mean(thickness) > 0 else 0.0
+            }
+            
             # 返回数据
             return {
                 'x': x,
@@ -596,7 +823,8 @@ class CARModel:
                 'diffused_acid': diffused_acid.tolist(),
                 'deprotection': deprotection.tolist(),
                 'thickness': thickness.tolist(),
-                'is_2d': False
+                'is_2d': False,
+                'additionalInfo': additionalInfo
             }
     
     def generate_plots(self, I_avg, V, K, t_exp, acid_gen_efficiency, diffusion_length, reaction_rate, amplification, contrast, sine_type='1d', Kx=None, Ky=None, Kz=None, phi_expr=None, y_range=None, z_range=None):

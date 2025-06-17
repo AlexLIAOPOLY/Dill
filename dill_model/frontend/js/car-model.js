@@ -785,6 +785,22 @@ function setupCar4DAnimationUI() {
 }
 
 /**
+ * 防抖函数
+ */
+function debounceCarFrame(func, delay) {
+    let timeoutId;
+    return function (...args) {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => func.apply(this, args), delay);
+    };
+}
+
+// 防抖的CAR帧更新函数
+const debouncedUpdateCarFrame = debounceCarFrame((frameIndex) => {
+    updateCar4DAnimationFrame(frameIndex);
+}, 100);
+
+/**
  * 设置4D动画控制事件
  */
 function setupCar4DControlEvents() {
@@ -792,11 +808,58 @@ function setupCar4DControlEvents() {
     const pauseBtn = document.getElementById('car-4d-pause-btn');
     const resetBtn = document.getElementById('car-4d-reset-btn');
     const loopBtn = document.getElementById('car-4d-loop-btn');
+    const timeSlider = document.getElementById('car-4d-time-slider');
 
-    if(playBtn) playBtn.addEventListener('click', playCar4DAnimation);
-    if(pauseBtn) pauseBtn.addEventListener('click', pauseCar4DAnimation);
-    if(resetBtn) resetBtn.addEventListener('click', resetCar4DAnimation);
-    if(loopBtn) loopBtn.addEventListener('click', toggleLoopCar4DAnimation);
+    // 清除旧的事件监听器
+    if(playBtn) {
+        playBtn.replaceWith(playBtn.cloneNode(true));
+        const newPlayBtn = document.getElementById('car-4d-play-btn');
+        newPlayBtn.addEventListener('click', playCar4DAnimation);
+    }
+    
+    if(pauseBtn) {
+        pauseBtn.replaceWith(pauseBtn.cloneNode(true));
+        const newPauseBtn = document.getElementById('car-4d-pause-btn');
+        newPauseBtn.addEventListener('click', pauseCar4DAnimation);
+    }
+    
+    if(resetBtn) {
+        resetBtn.replaceWith(resetBtn.cloneNode(true));
+        const newResetBtn = document.getElementById('car-4d-reset-btn');
+        newResetBtn.addEventListener('click', resetCar4DAnimation);
+    }
+    
+    if(loopBtn) {
+        loopBtn.replaceWith(loopBtn.cloneNode(true));
+        const newLoopBtn = document.getElementById('car-4d-loop-btn');
+        newLoopBtn.addEventListener('click', toggleLoopCar4DAnimation);
+    }
+    
+    // 添加时间滑块事件监听器，使用防抖机制
+    if(timeSlider) {
+        timeSlider.replaceWith(timeSlider.cloneNode(true));
+        const newTimeSlider = document.getElementById('car-4d-time-slider');
+        
+        let isUpdating = false;
+        newTimeSlider.addEventListener('input', function() {
+            if (isUpdating) return;
+            // 暂停当前动画
+            pauseCar4DAnimation();
+            // 更新到选定帧（使用防抖）
+            const frameIndex = parseInt(this.value);
+            car4DAnimationState.currentFrame = frameIndex;
+            debouncedUpdateCarFrame(frameIndex);
+        });
+        
+        // 添加change事件确保最终状态正确
+        newTimeSlider.addEventListener('change', function() {
+            const frameIndex = parseInt(this.value);
+            car4DAnimationState.currentFrame = frameIndex;
+            isUpdating = true;
+            updateCar4DAnimationFrame(frameIndex);
+            setTimeout(() => { isUpdating = false; }, 50);
+        });
+    }
 }
 
 /**
@@ -856,7 +919,7 @@ function resetCar4DAnimation() {
 }
 
 /**
- * 更新4D动画控制按钮的可见性
+ * 更新4D动画控制按钮的可见性和状态
  */
 function updateCar4DAnimationButtons() {
     const playBtn = document.getElementById('car-4d-play-btn');
@@ -865,14 +928,50 @@ function updateCar4DAnimationButtons() {
         playBtn.style.display = car4DAnimationState.isPlaying ? 'none' : 'flex';
         pauseBtn.style.display = car4DAnimationState.isPlaying ? 'flex' : 'none';
     }
+    
+    // 更新状态指示器
+    const statusIndicator = document.querySelector('.animation-status');
+    if (statusIndicator) {
+        // 移除所有状态类
+        statusIndicator.classList.remove('status-playing', 'status-paused', 'status-stopped');
+        
+        // 添加当前状态类
+        if (car4DAnimationState.isPlaying) {
+            statusIndicator.classList.add('status-playing');
+            statusIndicator.innerHTML = '<i class="fas fa-circle"></i> 播放中';
+        } else if (car4DAnimationState.currentFrame > 0) {
+            statusIndicator.classList.add('status-paused');
+            statusIndicator.innerHTML = '<i class="fas fa-circle"></i> 已暂停';
+        } else {
+            statusIndicator.classList.add('status-stopped');
+            statusIndicator.innerHTML = '<i class="fas fa-circle"></i> 就绪';
+        }
+    }
 }
 
 /**
- * 更新状态文本 (已移除状态显示功能)
+ * 更新状态文本
  * @param {string} status - 状态文本
  */
 function updateCar4DStatusText(status) {
-    // 状态显示功能已移除
+    // 更新状态指示器
+    const statusIndicator = document.querySelector('.animation-status');
+    if (statusIndicator) {
+        // 根据状态文本设置样式
+        if (status.includes('播放')) {
+            statusIndicator.classList.remove('status-paused', 'status-stopped');
+            statusIndicator.classList.add('status-playing');
+            statusIndicator.innerHTML = '<i class="fas fa-circle"></i> 播放中';
+        } else if (status.includes('暂停')) {
+            statusIndicator.classList.remove('status-playing', 'status-stopped');
+            statusIndicator.classList.add('status-paused');
+            statusIndicator.innerHTML = '<i class="fas fa-circle"></i> 已暂停';
+        } else if (status.includes('重置') || status.includes('就绪')) {
+            statusIndicator.classList.remove('status-playing', 'status-paused');
+            statusIndicator.classList.add('status-stopped');
+            statusIndicator.innerHTML = '<i class="fas fa-circle"></i> 就绪';
+        }
+    }
 }
 
 /**
@@ -1061,12 +1160,34 @@ function updateCar4DAnimationFrame(frameIndex) {
 }
 
 /**
- * 更新时间显示 (已移除时间显示功能)
+ * 更新时间显示
  * @param {number} frameIndex - 当前帧索引
  * @param {number} timeValue - 当前时间值
  */
 function updateCar4DTimeDisplay(frameIndex, timeValue) {
-    // 时间显示功能已移除
+    // 更新时间显示
+    const timeDisplay = document.getElementById('car-4d-time-display');
+    if (timeDisplay) {
+        timeDisplay.textContent = `t = ${timeValue.toFixed(2)}s`;
+    }
+    
+    // 更新帧信息
+    const frameInfo = document.getElementById('car-4d-frame-info');
+    if (frameInfo && car4DAnimationData) {
+        frameInfo.textContent = `帧 ${frameIndex + 1}/${car4DAnimationData.time_steps || car4DAnimationData.initial_acid_frames.length}`;
+    }
+    
+    // 更新滑块位置
+    const timeSlider = document.getElementById('car-4d-time-slider');
+    if (timeSlider) {
+        timeSlider.value = frameIndex;
+        
+        // 确保滑块的最大值与总帧数一致
+        if (car4DAnimationData) {
+            const totalFrames = car4DAnimationData.time_steps || car4DAnimationData.initial_acid_frames.length;
+            timeSlider.max = totalFrames - 1;
+        }
+    }
 }
 
 /**
