@@ -595,8 +595,8 @@ header::before {
 
 .plots-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-    gap: 2rem;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
     margin-top: 1.5rem;
 }
 
@@ -2734,15 +2734,17 @@ input[type="range"]:focus {
 /* ===== 移动端图片展示区域自适应优化（强制覆盖） ===== */
 @media (max-width: 768px) {
   .plots-container {
-    display: block !important;
-    width: 100vw !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.5rem !important;
+    width: 100% !important;
     overflow-x: auto !important;
     padding: 0 0.5rem !important;
   }
   .plot-item {
     width: 100% !important;
-    min-width: 320px !important;
-    margin-bottom: 2rem !important;
+    min-width: 200px !important;
+    margin-bottom: 1rem !important;
     align-items: stretch !important;
   }
   .plot-title {
@@ -2751,18 +2753,18 @@ input[type="range"]:focus {
   }
   .plot-container {
     width: 100% !important;
-    min-width: 280px !important;
-    height: 250px !important;
-    max-width: 100vw !important;
-    overflow-x: auto !important;
+    min-width: 180px !important;
+    height: 220px !important;
+    max-width: 50vw !important;
+    overflow: hidden !important;
     touch-action: pan-x pinch-zoom !important;
   }
   .plot-image {
     width: 100% !important;
-    max-width: 100vw !important;
+    max-width: 45vw !important;
     height: auto !important;
     display: block !important;
-    border-radius: 8px !important;
+    border-radius: 6px !important;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
     margin: 0 auto !important;
     touch-action: pinch-zoom !important;
@@ -3987,4 +3989,468 @@ div[data-i18n="car_formula_ref"] {
     font-size: 0.9rem;
     color: #7f8c8d;
     flex-shrink: 0;
+}
+
+/* 日志统计 */
+.logs-stats {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+/* 坐标轴控制面板样式 */
+.axis-control-panel {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    margin: 10px 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+.axis-control-panel:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: var(--primary-color);
+}
+
+.axis-control-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 8px 8px 0 0;
+    transition: all 0.3s ease;
+}
+
+.axis-control-header:hover {
+    background: rgba(var(--primary-color-rgb, 52, 152, 219), 0.05);
+}
+
+.axis-control-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--dark-color);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.axis-toggle-btn {
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    color: var(--primary-color);
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.axis-toggle-btn:hover {
+    background: rgba(var(--primary-color-rgb, 52, 152, 219), 0.1);
+    transform: scale(1.1);
+}
+
+.axis-toggle-btn i {
+    transition: transform 0.3s ease;
+}
+
+.axis-toggle-btn.expanded i {
+    transform: rotate(180deg);
+}
+
+.axis-control-content {
+    padding: 12px;
+    border-top: 1px solid #dee2e6;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+    to {
+        opacity: 1;
+        max-height: 200px;
+        padding-top: 12px;
+        padding-bottom: 12px;
+    }
+}
+
+.axis-control-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding: 8px 0;
+    border-bottom: 1px dashed #dee2e6;
+}
+
+.axis-control-label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--dark-color);
+}
+
+.reference-info {
+    font-size: 0.8rem;
+    color: #6c757d;
+    font-family: 'Courier New', monospace;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+}
+
+.reference-info.has-reference {
+    color: var(--secondary-color);
+    border-color: var(--secondary-color);
+    background: rgba(46, 204, 113, 0.1);
+}
+
+.axis-control-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.axis-control-btn {
+    flex: 1;
+    min-width: 120px;
+    padding: 6px 10px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    position: relative;
+    overflow: hidden;
+}
+
+.axis-control-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transition: left 0.5s ease;
+}
+
+.axis-control-btn:hover::before {
+    left: 100%;
+}
+
+.save-btn {
+    background: linear-gradient(135deg, var(--secondary-color) 0%, #27ae60 100%);
+    color: white;
+    box-shadow: 0 2px 4px rgba(46, 204, 113, 0.3);
+}
+
+.save-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(46, 204, 113, 0.4);
+}
+
+.restore-btn {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #2980b9 100%);
+    color: white;
+    box-shadow: 0 2px 4px rgba(52, 152, 219, 0.3);
+}
+
+.restore-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(52, 152, 219, 0.4);
+}
+
+.restore-btn:disabled {
+    background: #bdc3c7;
+    color: #7f8c8d;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.auto-btn {
+    background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+    color: white;
+    box-shadow: 0 2px 4px rgba(149, 165, 166, 0.3);
+}
+
+.auto-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(149, 165, 166, 0.4);
+}
+
+/* 成功通知样式 */
+.axis-control-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, var(--secondary-color) 0%, #27ae60 100%);
+    color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+    z-index: 10000;
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.axis-control-notification.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.axis-control-notification i {
+    font-size: 1.1rem;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .axis-control-buttons {
+        flex-direction: column;
+    }
+    
+    .axis-control-btn {
+        min-width: 100%;
+        justify-content: center;
+    }
+    
+    .axis-control-content {
+        padding: 8px;
+    }
+    
+    .axis-control-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+    
+    .reference-info {
+        align-self: stretch;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .axis-control-panel {
+        margin: 8px 0;
+    }
+    
+    .axis-control-header {
+        padding: 6px 8px;
+    }
+    
+    .axis-control-title {
+        font-size: 0.8rem;
+    }
+    
+    .axis-control-btn {
+        padding: 8px;
+        font-size: 0.75rem;
+    }
+}
+
+/* Toggle Switch 样式 */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+    background-color: var(--primary-color);
+}
+
+input:focus + .toggle-slider {
+    box-shadow: 0 0 1px var(--primary-color);
+}
+
+input:checked + .toggle-slider:before {
+    transform: translateX(26px);
+}
+
+.toggle-slider:hover {
+    background-color: #bbb;
+}
+
+input:checked + .toggle-slider:hover {
+    background-color: #2980b9;
+}
+
+/* V评估图表横向布局样式 */
+.v-evaluation-horizontal-plots {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.v-evaluation-horizontal-plots .plot-container {
+    flex: 1;
+    min-width: 0; /* 确保flex子项能够收缩 */
+}
+
+/* 响应式设计：在小屏幕上垂直排列 */
+@media (max-width: 768px) {
+    .v-evaluation-horizontal-plots {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .v-evaluation-horizontal-plots .plot-container {
+        flex: none;
+    }
+}
+
+/* 确保V评估图表容器的布局一致性 */
+#dill-1d-v-evaluation-container .plot-container {
+    margin-bottom: 0; /* 移除底部边距，由flex gap控制间距 */
+}
+
+/* V评估区域的特殊样式 */
+#dill-1d-v-evaluation-section {
+    margin-top: 20px;
+}
+
+#dill-1d-v-evaluation-section .section-title {
+    color: #f39c12;
+    border-left: 4px solid #f39c12;
+    padding-left: 15px;
+}
+
+/* V评估控制按钮样式优化 - 为不同按钮分配不同颜色 */
+/* 播放按钮 - 绿色 */
+#dill-1d-v-evaluation-section .play-btn {
+    background: linear-gradient(135deg, #27ae60, #2ecc71);
+    border: none;
+    color: white;
+}
+
+#dill-1d-v-evaluation-section .play-btn:hover {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+}
+
+/* 暂停按钮 - 橙色 */
+#dill-1d-v-evaluation-section .pause-btn {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+    border: none;
+    color: white;
+}
+
+#dill-1d-v-evaluation-section .pause-btn:hover {
+    background: linear-gradient(135deg, #e67e22, #d35400);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(243, 156, 18, 0.3);
+}
+
+/* 重置按钮 - 蓝色 */
+#dill-1d-v-evaluation-section .reset-btn {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    border: none;
+    color: white;
+}
+
+#dill-1d-v-evaluation-section .reset-btn:hover {
+    background: linear-gradient(135deg, #2980b9, #3498db);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+}
+
+/* 循环按钮 - 绿色和红色切换 */
+#dill-1d-v-evaluation-section .loop-btn {
+    background: linear-gradient(135deg, #27ae60, #2ecc71);
+    color: white;
+    border: 2px solid #27ae60;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+#dill-1d-v-evaluation-section .loop-btn:hover {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+    border-color: #2ecc71;
+}
+
+#dill-1d-v-evaluation-section .loop-btn.loop-off {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: white;
+    border: 2px solid #e74c3c;
+}
+
+#dill-1d-v-evaluation-section .loop-btn.loop-off:hover {
+    background: linear-gradient(135deg, #c0392b, #e74c3c);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+    border-color: #c0392b;
+}
+
+/* V评估时间滑块样式 */
+#dill-1d-v-slider {
+    accent-color: #f39c12;
+}
+
+/* V评估状态显示样式 */
+#dill-1d-v-evaluation-status {
+    color: #f39c12;
+}
+
+#dill-1d-v-display, #dill-1d-v-frame-info {
+    color: #f39c12;
+    font-weight: bold;
 }

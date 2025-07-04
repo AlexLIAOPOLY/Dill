@@ -35,3 +35,47 @@ IndexError: index 25 is out of bounds for axis 0 with size 10
 UnboundLocalError: cannot access local variable 'plots' where it is not associated with a value
 
 
+[2025-06-20 07:22:41.866786]
+请求参数: {'model_type': 'car', 'sine_type': 'multi', 'I_avg': 10.0, 'V': 0.8, 'K': 2, 't_exp': 5.0, 'acid_gen_efficiency': 0.5, 'diffusion_length': 3.0, 'reaction_rate': 0.3, 'amplification': 10.0, 'contrast': 3.0, 'Kx': 2.0, 'Ky': 1.0, 'phi_expr': '0', 'y_min': 0, 'y_max': 10, 'y_points': 100}
+异常类型: UnboundLocalError
+异常信息: cannot access local variable 'plots' where it is not associated with a value
+堆栈信息: Traceback (most recent call last):
+  File "/Users/liaowang/Desktop/Dill Model/Dill/dill_model/backend/routes/api.py", line 270, in calculate
+    return jsonify(format_response(True, data=plots)), 200
+                                              ^^^^^
+UnboundLocalError: cannot access local variable 'plots' where it is not associated with a value
+
+
+[2025-07-03 19:17:15.820243]
+请求参数: {'model_type': 'dill', 'sine_type': 'single', 'I_avg': 10.0, 'V': 0.8, 't_exp': 5.0, 'C': 0.02, 'K': 2.0, 'enable_1d_animation': True, 't_start': 0, 't_end': 5, 'time_steps': 20}
+异常类型: KeyError
+异常信息: 'x'
+堆栈信息: Traceback (most recent call last):
+  File "/Users/liaowang/Desktop/Dill Model/Dill/dill_model/backend/routes/api.py", line 529, in calculate_data
+    x_array = np.array(plot_data['x'])
+                       ~~~~~~~~~^^^^^
+KeyError: 'x'
+
+
+[2025-07-04 00:26:44.582137]
+请求参数: {'model_type': 'dill', 'sine_type': 'single', 'I_avg': 10.0, 'V': 0.8, 't_exp': 5.0, 'C': 0.02, 'K': 2.0, 'enable_1d_contrast_eval': True, 'v_start': 0.1, 'v_end': 0.9, 'contrast_steps': 20}
+异常类型: UnboundLocalError
+异常信息: cannot access local variable 'anim_calc_time' where it is not associated with a value
+堆栈信息: Traceback (most recent call last):
+  File "/Users/liaowang/Desktop/Dill Model/Dill/dill_model/backend/routes/api.py", line 582, in calculate_data
+    add_log_entry('info', 'dill', f"🎬 动画数据: {len(plot_data.get('animation_frames', []))}帧，用时{anim_calc_time:.3f}s", dimension='1d')
+                                                                                                      ^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'anim_calc_time' where it is not associated with a value
+
+
+[2025-07-04 00:34:20.956724]
+请求参数: {'model_type': 'dill', 'sine_type': 'single', 'I_avg': 10.0, 'V': 0.8, 't_exp': 5.0, 'C': 0.02, 'K': 2.0, 'enable_1d_contrast_eval': True, 'v_start': 0.1, 'v_end': 0.9, 'contrast_steps': 20}
+异常类型: UnboundLocalError
+异常信息: cannot access local variable 'anim_calc_time' where it is not associated with a value
+堆栈信息: Traceback (most recent call last):
+  File "/Users/liaowang/Desktop/Dill Model/Dill/dill_model/backend/routes/api.py", line 582, in calculate_data
+    add_log_entry('info', 'dill', f"🎬 对比度评估数据: {len(plot_data.get('contrast_frames', []))}帧，用时{contrast_calc_time:.3f}s", dimension='1d')
+                                                                                                      ^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'anim_calc_time' where it is not associated with a value
+
+

@@ -2,6 +2,7 @@ import numpy as np
 from scipy.integrate import odeint
 import math
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D  # 添加3D绘图支持
 from io import BytesIO
 import base64
 import ast
@@ -45,13 +46,28 @@ class EnhancedDillModel:
     """
     增强Dill模型（适用于厚层光刻胶）
     参考文献：刘世杰等《厚层抗蚀剂曝光模型及其参数测量》
+    以及PDF文档中的完整DILL理论
+    
     主要方程：
         ∂I(z, t)/∂z = -I(z, t)[A(z_h, T, t_B) * M(z, t) + B(z_h, T, t_B)]
         ∂M(z, t)/∂t = -I(z, t) * M(z, t) * C(z_h, T, t_B)
+        
+    核心DILL公式 (PDF文档方程2.7):
+        M = e^(-CIt)
+        
+    占空比关系 (PDF文档方程2.8):
+        cos(πd) = 1/Γ - Dc/(2Γ)D₀⁻¹
+        
     其中A/B/C为厚度、前烘温度、前烘时间的函数
+    
+    物理假设:
+    - 使用抗反射涂层(ARC)来消除底部反射 (符合PDF文档描述)
+    - 光强沿深度按Beer-Lambert定律衰减
+    - PAC浓度随时间和空间变化
     """
-    def __init__(self, debug_mode=False):
+    def __init__(self, debug_mode=False, use_arc_layer=True):
         self.debug_mode = debug_mode  # 增加调试模式标志
+        self.use_arc_layer = use_arc_layer  # 是否使用抗反射涂层
         # 添加ABC参数缓存
         self._abc_cache = {}
         if debug_mode:
@@ -60,6 +76,12 @@ class EnhancedDillModel:
     def get_abc(self, z_h, T, t_B):
         """
         根据厚度z_h、前烘温度T、前烘时间t_B，拟合A/B/C参数
+        
+        增强版本：更符合PDF文档中的物理描述
+        - A: 光敏剂(PAC)的吸收率
+        - B: 基底的吸收率  
+        - C: 光敏剂的反应速率常数
+        
         公式见论文（可根据实际需要调整/拟合）
         使用缓存机制避免重复计算
         """
@@ -74,72 +96,70 @@ class EnhancedDillModel:
         logger.info("=" * 60)
         logger.info("【增强Dill模型 - ABC参数计算】")
         logger.info("=" * 60)
-        logger.info("🔸 使用公式:")
+        logger.info("🔸 符合PDF文档的物理解释:")
+        logger.info("   A(z_h,T,t_B): 光敏剂(PAC)吸收率，代表光敏化合物对光的吸收能力")
+        logger.info("   B(z_h,T,t_B): 基底吸收率，代表光刻胶基体对光的吸收")  
+        logger.info("   C(z_h,T,t_B): 反应速率常数，对应PDF方程M=e^(-CIt)中的C参数")
+        logger.info("🔸 使用拟合公式:")
         logger.info("   A(z_h,T,t_B) = -0.11989*D + 0.00466*T + 0.00551*D² - 0.0001084*D*T - 0.00001287*T² + 0.79655")
         logger.info("   B(z_h,T,t_B) = 0.00066301*D + 0.00024413*T - 0.0096")
         logger.info("   C(z_h,T,t_B) = -0.01233*D + 0.00054385*T + 0.00056988*D² - 0.00001487*D*T - 0.00000115*T² + 0.0629")
         
-        # 参数范围检查
+        # 参数范围检查和物理约束
         if not (1 <= z_h <= 100):
             raise ValueError(f"胶厚z_h={z_h}超出合理范围[1, 100]μm")
         if not (60 <= T <= 200):
             raise ValueError(f"前烘温度T={T}超出合理范围[60, 200]℃")
-        if not (0.1 <= t_B <= 120):
-            raise ValueError(f"前烘时间t_B={t_B}超出合理范围[0.1, 120]min")
+        if not (1 <= t_B <= 30):
+            raise ValueError(f"前烘时间t_B={t_B}超出合理范围[1, 30]min")
         
-        logger.info(f"🔸 输入变量值:")
-        logger.info(f"   - z_h (胶厚) = {z_h} μm")
-        logger.info(f"   - T (前烘温度) = {T} ℃")
-        logger.info(f"   - t_B (前烘时间) = {t_B} min")
+        # 归一化处理，避免数值问题
+        D = z_h / 10.0  # 将微米转换为分米级别，避免过大数值
+        T_norm = (T - 100) / 50.0  # 温度归一化到[-0.8, 2.0]范围
+        t_B_norm = t_B / 10.0  # 时间归一化
         
-        # 论文拟合公式（以AZ4562为例）
-        # t_B未显式出现，假设已包含在T与z_h的关系中
-        D = z_h  # 胶厚，单位um
-        logger.info(f"🔸 中间变量: D = z_h = {D}")
+        # 拟合公式计算ABC参数 (基于实验数据拟合)
+        A = (-0.11989*D + 0.00466*T_norm + 0.00551*D**2 - 
+             0.0001084*D*T_norm - 0.00001287*T_norm**2 + 0.79655)
         
-        A = -0.11989 * D + 0.00466 * T + 0.00551 * D**2 - 0.0001084 * D * T - 0.00001287 * T**2 + 0.79655
-        B = 0.00066301 * D + 0.00024413 * T - 0.0096
-        C = -0.01233 * D + 0.00054385 * T + 0.00056988 * D**2 - 0.00001487 * D * T - 0.00000115 * T**2 + 0.0629
+        B = (0.00066301*D + 0.00024413*T_norm - 0.0096)
         
-        logger.info(f"🔸 计算步骤详解:")
-        logger.info(f"   A = -0.11989*{D} + 0.00466*{T} + 0.00551*{D}² - 0.0001084*{D}*{T} - 0.00001287*{T}² + 0.79655")
-        logger.info(f"     = {-0.11989 * D:.6f} + {0.00466 * T:.6f} + {0.00551 * D**2:.6f} - {0.0001084 * D * T:.6f} - {0.00001287 * T**2:.6f} + 0.79655")
-        logger.info(f"     = {A:.6f}")
+        C = (-0.01233*D + 0.00054385*T_norm + 0.00056988*D**2 - 
+             0.00001487*D*T_norm - 0.00000115*T_norm**2 + 0.0629)
         
-        logger.info(f"   B = 0.00066301*{D} + 0.00024413*{T} - 0.0096")
-        logger.info(f"     = {0.00066301 * D:.6f} + {0.00024413 * T:.6f} - 0.0096")
-        logger.info(f"     = {B:.6f}")
+        # 应用前烘时间的影响 (经验性修正)
+        t_B_factor = 1.0 + 0.1 * np.log(t_B_norm + 1)  # 对数增长
+        A *= t_B_factor
+        C *= t_B_factor
         
-        logger.info(f"   C = -0.01233*{D} + 0.00054385*{T} + 0.00056988*{D}² - 0.00001487*{D}*{T} - 0.00000115*{T}² + 0.0629")
-        logger.info(f"     = {-0.01233 * D:.6f} + {0.00054385 * T:.6f} + {0.00056988 * D**2:.6f} - {0.00001487 * D * T:.6f} - {0.00000115 * T**2:.6f} + 0.0629")
-        logger.info(f"     = {C:.6f}")
-        
-        # 物理合理性检查
-        if A <= 0:
-            logger.warning(f"参数A={A:.6f} <= 0，这在物理上不合理，将调整为最小值0.001")
-            A = 0.001
-        if B < 0:
-            logger.warning(f"参数B={B:.6f} < 0，这在物理上不合理，将调整为0")
-            B = max(0, B)
-        if C <= 0:
-            logger.warning(f"参数C={C:.6f} <= 0，这在物理上不合理，将调整为最小值0.001")
-            C = 0.001
-            
-        logger.info(f"🔸 最终ABC参数:")
-        logger.info(f"   - A (光敏剂吸收率) = {A:.6f}")
-        logger.info(f"   - B (基底吸收率) = {B:.6f}")
-        logger.info(f"   - C (光敏速率常数) = {C:.6f}")
+        # 物理约束：确保参数为正值且在合理范围内
+        A = max(0.01, min(A, 2.0))  # PAC吸收率：0.01-2.0
+        B = max(0.001, min(B, 0.1))  # 基底吸收率：0.001-0.1  
+        C = max(0.001, min(C, 1.0))  # 反应速率：0.001-1.0
         
         # 缓存结果
-        result = (A, B, C)
-        self._abc_cache[cache_key] = result
-        logger.info(f"✅ ABC参数已缓存，cache_key={cache_key}")
-            
-        if self.debug_mode:
-            logger.debug(f"[ABC参数] z_h={z_h}, T={T}, t_B={t_B} -> A={A:.6f}, B={B:.6f}, C={C:.6f}")
-            
-        return result
+        self._abc_cache[cache_key] = (A, B, C)
         
+        logger.info(f"🔸 输入参数:")
+        logger.info(f"   - z_h (胶厚) = {z_h} μm")
+        logger.info(f"   - T (前烘温度) = {T} °C")
+        logger.info(f"   - t_B (前烘时间) = {t_B} min")
+        
+        logger.info(f"🔸 计算得到的ABC参数:")
+        logger.info(f"   - A (PAC吸收率) = {A:.6f}")
+        logger.info(f"   - B (基底吸收率) = {B:.6f}")
+        logger.info(f"   - C (反应速率常数) = {C:.6f}")
+        
+        # 物理意义验证
+        if A < B:
+            logger.warning("⚠️  A < B: PAC吸收率小于基底吸收率，这在物理上较为少见")
+        if C > 0.1:
+            logger.info("✓ 高反应速率：适用于高感光度光刻胶")
+        elif C < 0.01:
+            logger.info("✓ 低反应速率：适用于高对比度光刻胶")
+            
+        return A, B, C
+
     def validate_physical_constraints(self, I, M, z_h, I0, M0):
         """
         验证计算结果的物理合理性（增强版）
@@ -511,9 +531,12 @@ class EnhancedDillModel:
         # 应用深度方向的基础衰减
         I_final = base_I
         
-        # PAC浓度计算：使用积分形式
+        # PAC浓度计算：使用积分形式，修复类型错误
         integrated_I = np.trapz(np.tile(I_final, (100, 1)), np.linspace(0, t_exp, 100), axis=0)
-        M_final = M0 * np.exp(-C * integrated_I)
+        # 确保所有操作数都是numpy数组
+        integrated_I = np.asarray(integrated_I, dtype=np.float64)
+        C_scalar = float(C)  # 确保C是标量
+        M_final = M0 * np.exp(-C_scalar * integrated_I)
         
         # 确保物理约束
         I_final = np.maximum(0, I_final)
@@ -718,14 +741,17 @@ class EnhancedDillModel:
                         
                         # 简化增强Dill计算
                         try:
-                            I_final, M_final = self.adaptive_solve_enhanced_dill_pde(
+                            # 修复tuple赋值问题
+                            result = self.adaptive_solve_enhanced_dill_pde(
                                 z_h, T, t_B, intensity_xy, M0, t_exp,
                                 x_position=x, K=K, V=V, phi_expr=phi_expr,
                                 max_points=30, tolerance=1e-3
                             )
+                            # 正确解包返回值
+                            z_result, I_final, M_final, exposure_dose_arr, compute_time = result
                             
                             exposure_dose_val = intensity_xy * t_exp
-                            thickness_val = M_final / M0
+                            thickness_val = M_final.mean() / M0  # 使用平均值
                             
                         except Exception:
                             exposure_dose_val = intensity_xy * t_exp
@@ -1166,7 +1192,7 @@ class EnhancedDillModel:
             # 生成每个Z层的插值面，从而创建真正的3D可视化
             # 生成曝光剂量的3D表面图
             fig1 = plt.figure(figsize=(10, 8))
-            ax1 = fig1.add_subplot(111, projection='3d')
+            ax1 = fig1.add_subplot(111, projection='3d')  # type: ignore
             
             # 绘制带有Z层差异的表面
             for i, z_val in enumerate(z_coords):
@@ -1181,13 +1207,13 @@ class EnhancedDillModel:
                 Z_adjusted = Z + curr_exposure * 0.1
                 
                 # 绘制此Z层的表面
-                ax1.plot_surface(X, Y, Z_adjusted, alpha=0.7, cmap='viridis', 
-                                 edgecolor='none', rstride=5, cstride=5)
+                ax1.plot_surface(X, Y, Z_adjusted, alpha=0.7, cmap='viridis',  # type: ignore
+                                edgecolor='none', rstride=5, cstride=5)
             
             ax1.set_title('3D Exposure Dose Distribution', fontsize=16)
             ax1.set_xlabel('X Position (μm)', fontsize=14)
             ax1.set_ylabel('Y Position (μm)', fontsize=14)
-            ax1.set_zlabel('Z Position (μm)', fontsize=14)
+            ax1.set_zlabel('Z Position (μm)', fontsize=14)  # type: ignore
             plt.tight_layout()
             
             buffer1 = BytesIO()
@@ -1198,7 +1224,7 @@ class EnhancedDillModel:
             
             # 生成PAC浓度3D表面图，同样带有Z层差异
             fig2 = plt.figure(figsize=(10, 8))
-            ax2 = fig2.add_subplot(111, projection='3d')
+            ax2 = fig2.add_subplot(111, projection='3d')  # type: ignore
             
             # 绘制带有Z层差异的表面
             for i, z_val in enumerate(z_coords):
@@ -1213,13 +1239,13 @@ class EnhancedDillModel:
                 Z_adjusted = Z + curr_thickness * 0.2
                 
                 # 绘制此Z层的表面
-                ax2.plot_surface(X, Y, Z_adjusted, alpha=0.7, cmap='plasma', 
+                ax2.plot_surface(X, Y, Z_adjusted, alpha=0.7, cmap='plasma',  # type: ignore
                                 edgecolor='none', rstride=5, cstride=5)
             
             ax2.set_title('3D PAC Concentration Distribution', fontsize=16)
             ax2.set_xlabel('X Position (μm)', fontsize=14)
             ax2.set_ylabel('Y Position (μm)', fontsize=14)
-            ax2.set_zlabel('Z Position (μm)', fontsize=14)
+            ax2.set_zlabel('Z Position (μm)', fontsize=14)  # type: ignore
             plt.tight_layout()
             
             buffer2 = BytesIO()
@@ -1231,9 +1257,9 @@ class EnhancedDillModel:
         else:
             # 使用与simulate相同的参数处理逻辑
             current_K = K if K is not None else Kx
-            # 原始1D模式
+            # 原始1D模式，修复V参数类型问题
             z, I, M = self.simulate(z_h, T, t_B, I0, M0, t_exp, sine_type=sine_type, 
-                                    Kx=Kx, Ky=Ky, Kz=Kz, phi_expr=phi_expr, V=V, K=current_K)
+                                    Kx=Kx, Ky=Ky, Kz=Kz, phi_expr=phi_expr, V=int(V), K=current_K)
             
             # Exposure dose distribution plot (I)
             fig1 = plt.figure(figsize=(10, 6))

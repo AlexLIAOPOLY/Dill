@@ -16,6 +16,28 @@ window.currentCalculationInfo = {
     dimension: '1D'
 };
 
+// 坐标轴控制全局变量
+let axisReferenceRanges = {
+    exposure: {
+        xaxis: null,
+        yaxis: null
+    },
+    thickness: {
+        xaxis: null,
+        yaxis: null
+    }
+};
+
+// DILL 1D V评估动画控制变量
+let dill1DVEvaluationState = {
+    animationData: null,
+    totalFrames: 0,
+    currentFrame: 0,
+    isPlaying: false,
+    intervalId: null,
+    isLooping: false
+};
+
 // 文档加载完成后执行
 document.addEventListener('DOMContentLoaded', function() {
     // 初始化波形类型标题国际化
@@ -103,11 +125,22 @@ function initApp() {
     bindSliderEvents();
     bindPhiExprUI();
     
+    // 触发初始波形类型变化事件以设置正确的初始显示状态
+    setTimeout(() => {
+        const dillSineType = document.getElementById('dill-sine-type');
+        if (dillSineType) {
+            dillSineType.dispatchEvent(new Event('change'));
+            console.log('✅ 已触发DILL波形类型初始化事件，当前值:', dillSineType.value);
+        }
+    }, 100);
+    
     // 初始化4D动画控制
     console.log('🔍 [DEBUG] 初始化4D动画控制...');
     try {
         setupDill4DAnimationControls();
         setupEnhancedDill4DAnimationControls();
+        setupDill1DAnimationControls();  // 添加1D动画控制初始化
+        setupDill1DVEvaluationControls(); // 添加1D V评估控制初始化
         console.log('✅ 4D动画控制初始化成功');
     } catch (error) {
         console.error('❌ 4D动画控制初始化失败:', error);
@@ -308,11 +341,17 @@ function initApp() {
         }
     });
 
-    // 新增：所有参数输入框变动时清空结果
+    // 新增：所有参数输入框变动时提示重新计算
     const allInputs = document.querySelectorAll('input, select');
     allInputs.forEach(input => {
-        input.addEventListener('input', clearAllCharts);
-        input.addEventListener('change', clearAllCharts);
+        input.addEventListener('input', function() {
+            clearAllCharts();
+            showRecalculationNotice();
+        });
+        input.addEventListener('change', function() {
+            clearAllCharts();
+            showRecalculationNotice();
+        });
     });
 
     // 切换模型详细说明的显示状态
@@ -783,42 +822,107 @@ function getParameterValues() {
     const modelType = document.getElementById('model-select').value;
     let params = { model_type: modelType };
     if (modelType === 'dill') {
-        const sineType = document.getElementById('dill-sine-type').value;
+        const sineTypeElement = document.getElementById('dill-sine-type');
+        const sineType = sineTypeElement ? sineTypeElement.value : 'single';
         params.sine_type = sineType;
-        params.I_avg = parseFloat(document.getElementById('I_avg').value);
-        params.V = parseFloat(document.getElementById('V').value);
-        params.t_exp = parseFloat(document.getElementById('t_exp').value);
-        params.C = parseFloat(document.getElementById('C').value);
-        if (sineType === 'multi') {
-            params.Kx = parseFloat(document.getElementById('Kx').value);
-            params.Ky = parseFloat(document.getElementById('Ky').value);
-            params.phi_expr = document.getElementById('phi_expr').value;
+        
+        // 添加空值检查的参数获取
+        const I_avg_elem = document.getElementById('I_avg');
+        const V_elem = document.getElementById('V');
+        const t_exp_elem = document.getElementById('t_exp');
+        const C_elem = document.getElementById('C');
+        
+        params.I_avg = I_avg_elem ? parseFloat(I_avg_elem.value) || 1.0 : 1.0;
+        params.V = V_elem ? parseFloat(V_elem.value) || 0.8 : 0.8;
+        params.t_exp = t_exp_elem ? parseFloat(t_exp_elem.value) || 5.0 : 5.0;
+        params.C = C_elem ? parseFloat(C_elem.value) || 0.01 : 0.01;
+        if (sineType === 'single') {
+            // 首先设置K参数（必需参数）
+            const K_elem = document.getElementById('K');
+            params.K = K_elem ? parseFloat(K_elem.value) || 2.0 : 2.0;
+            
+            // 检查1D动画参数
+            const enable1DAnimationElem = document.getElementById('enable_1d_animation_dill');
+            const enable1DAnimation = enable1DAnimationElem ? enable1DAnimationElem.checked || false : false;
+            if (enable1DAnimation) {
+                params.enable_1d_animation = true;
+                const t_start_1d_elem = document.getElementById('t_start_1d_dill');
+                const t_end_1d_elem = document.getElementById('t_end_1d_dill');
+                const time_steps_1d_elem = document.getElementById('time_steps_1d_dill');
+                
+                params.t_start = t_start_1d_elem ? parseFloat(t_start_1d_elem.value) || 0 : 0;
+                params.t_end = t_end_1d_elem ? parseFloat(t_end_1d_elem.value) || 5 : 5;
+                params.time_steps = time_steps_1d_elem ? parseInt(time_steps_1d_elem.value) || 20 : 20;
+                console.log('DILL模型1D模式启用时间动画:', params.enable_1d_animation, '时间范围:', params.t_start, '-', params.t_end, '步数:', params.time_steps);
+            }
+            
+            // 检查1D V评估参数
+            const enable1DVEvaluationElem = document.getElementById('enable_1d_v_evaluation_dill');
+            const enable1DVEvaluation = enable1DVEvaluationElem ? enable1DVEvaluationElem.checked || false : false;
+            if (enable1DVEvaluation) {
+                params.enable_1d_v_evaluation = true;
+                const v_start_1d_elem = document.getElementById('v_start_1d_dill');
+                const v_end_1d_elem = document.getElementById('v_end_1d_dill');
+                const v_steps_1d_elem = document.getElementById('v_steps_1d_dill');
+                
+                params.v_start = v_start_1d_elem ? parseFloat(v_start_1d_elem.value) || 0.1 : 0.1;
+                params.v_end = v_end_1d_elem ? parseFloat(v_end_1d_elem.value) || 1.0 : 1.0;
+                params.time_steps = v_steps_1d_elem ? parseInt(v_steps_1d_elem.value) || 20 : 20;
+                console.log('DILL模型1D模式启用V评估:', params.enable_1d_v_evaluation, 'V范围:', params.v_start, '-', params.v_end, '步数:', params.time_steps);
+            }
+        } else if (sineType === 'multi') {
+            const Kx_elem = document.getElementById('Kx');
+            const Ky_elem = document.getElementById('Ky');
+            const phi_expr_elem = document.getElementById('phi_expr');
+            const y_min_elem = document.getElementById('y_min');
+            const y_max_elem = document.getElementById('y_max');
+            const y_points_elem = document.getElementById('y_points');
+            
+            params.Kx = Kx_elem ? parseFloat(Kx_elem.value) || 2.0 : 2.0;
+            params.Ky = Ky_elem ? parseFloat(Ky_elem.value) || 0.0 : 0.0;
+            params.phi_expr = phi_expr_elem ? phi_expr_elem.value || '0' : '0';
             // y范围参数
-            params.y_min = parseFloat(document.getElementById('y_min').value);
-            params.y_max = parseFloat(document.getElementById('y_max').value);
-            params.y_points = parseInt(document.getElementById('y_points').value);
+            params.y_min = y_min_elem ? parseFloat(y_min_elem.value) || 0.0 : 0.0;
+            params.y_max = y_max_elem ? parseFloat(y_max_elem.value) || 10.0 : 10.0;
+            params.y_points = y_points_elem ? parseInt(y_points_elem.value) || 100 : 100;
         } else if (sineType === '3d') {
-            params.Kx = parseFloat(document.getElementById('Kx_3d').value);
-            params.Ky = parseFloat(document.getElementById('Ky_3d').value);
-            params.Kz = parseFloat(document.getElementById('Kz_3d').value);
-            params.phi_expr = document.getElementById('phi_expr_3d').value;
+            const Kx_3d_elem = document.getElementById('Kx_3d');
+            const Ky_3d_elem = document.getElementById('Ky_3d');
+            const Kz_3d_elem = document.getElementById('Kz_3d');
+            const phi_expr_3d_elem = document.getElementById('phi_expr_3d');
+            const x_min_3d_elem = document.getElementById('x_min_3d');
+            const x_max_3d_elem = document.getElementById('x_max_3d');
+            const y_min_3d_elem = document.getElementById('y_min_3d');
+            const y_max_3d_elem = document.getElementById('y_max_3d');
+            const z_min_3d_elem = document.getElementById('z_min_3d');
+            const z_max_3d_elem = document.getElementById('z_max_3d');
+            
+            params.Kx = Kx_3d_elem ? parseFloat(Kx_3d_elem.value) || 2.0 : 2.0;
+            params.Ky = Ky_3d_elem ? parseFloat(Ky_3d_elem.value) || 2.0 : 2.0;
+            params.Kz = Kz_3d_elem ? parseFloat(Kz_3d_elem.value) || 2.0 : 2.0;
+            params.phi_expr = phi_expr_3d_elem ? phi_expr_3d_elem.value || '0' : '0';
             // 为3D模式添加K参数
             params.K = params.Kx;
             // 三维范围参数
-            params.x_min = parseFloat(document.getElementById('x_min_3d').value);
-            params.x_max = parseFloat(document.getElementById('x_max_3d').value);
-            params.y_min = parseFloat(document.getElementById('y_min_3d').value);
-            params.y_max = parseFloat(document.getElementById('y_max_3d').value);
-            params.z_min = parseFloat(document.getElementById('z_min_3d').value);
-            params.z_max = parseFloat(document.getElementById('z_max_3d').value);
+            params.x_min = x_min_3d_elem ? parseFloat(x_min_3d_elem.value) || 0.0 : 0.0;
+            params.x_max = x_max_3d_elem ? parseFloat(x_max_3d_elem.value) || 10.0 : 10.0;
+            params.y_min = y_min_3d_elem ? parseFloat(y_min_3d_elem.value) || 0.0 : 0.0;
+            params.y_max = y_max_3d_elem ? parseFloat(y_max_3d_elem.value) || 10.0 : 10.0;
+            params.z_min = z_min_3d_elem ? parseFloat(z_min_3d_elem.value) || 0.0 : 0.0;
+            params.z_max = z_max_3d_elem ? parseFloat(z_max_3d_elem.value) || 10.0 : 10.0;
             
             // 检查4D动画参数
-            const enable4DAnimation = document.getElementById('enable_4d_animation_dill')?.checked || false;
+            const enable4DAnimationElem = document.getElementById('enable_4d_animation_dill');
+            const enable4DAnimation = enable4DAnimationElem ? enable4DAnimationElem.checked || false : false;
             if (enable4DAnimation) {
                 params.enable_4d_animation = true;
-                params.t_start = parseFloat(document.getElementById('t_start_dill')?.value) || 0;
-                params.t_end = parseFloat(document.getElementById('t_end_dill')?.value) || 5;
-                params.time_steps = parseInt(document.getElementById('time_steps_dill')?.value) || 20;
+                const t_start_elem = document.getElementById('t_start_dill');
+                const t_end_elem = document.getElementById('t_end_dill');
+                const time_steps_elem = document.getElementById('time_steps_dill');
+                
+                params.t_start = t_start_elem ? parseFloat(t_start_elem.value) || 0 : 0;
+                params.t_end = t_end_elem ? parseFloat(t_end_elem.value) || 5 : 5;
+                params.time_steps = time_steps_elem ? parseInt(time_steps_elem.value) || 20 : 20;
                 console.log('DILL模型3D模式启用4D动画:', params.enable_4d_animation, '时间范围:', params.t_start, '-', params.t_end, '步数:', params.time_steps);
                 console.log('4D动画相位表达式:', params.phi_expr);
                 
@@ -830,67 +934,108 @@ function getParameterValues() {
                 }
             }
         } else {
-            params.K = parseFloat(document.getElementById('K').value);
+            const K_elem = document.getElementById('K');
+            params.K = K_elem ? parseFloat(K_elem.value) || 2.0 : 2.0;
         }
     } else if (modelType === 'enhanced_dill') {
-        const sineType = document.getElementById('enhanced-dill-sine-type').value;
+        const sineTypeElement = document.getElementById('enhanced-dill-sine-type');
+        const sineType = sineTypeElement ? sineTypeElement.value : 'single';
         params.sine_type = sineType;
-        params.z_h = parseFloat(document.getElementById('z_h').value) || 1.0;
-        params.T = parseFloat(document.getElementById('T').value) || 95.0;
-        params.t_B = parseFloat(document.getElementById('t_B').value) || 90.0;
-        params.I0 = parseFloat(document.getElementById('I0').value) || 1.0;
-        params.M0 = parseFloat(document.getElementById('M0').value) || 1.0;
-        params.t_exp = parseFloat(document.getElementById('t_exp_enhanced').value) || 5.0;
+        
+        // 添加空值检查的参数获取
+        const z_h_elem = document.getElementById('z_h');
+        const T_elem = document.getElementById('T');
+        const t_B_elem = document.getElementById('t_B');
+        const I0_elem = document.getElementById('I0');
+        const M0_elem = document.getElementById('M0');
+        const t_exp_enhanced_elem = document.getElementById('t_exp_enhanced');
+        const enhanced_V_elem = document.getElementById('enhanced_V');
+        
+        params.z_h = z_h_elem ? parseFloat(z_h_elem.value) || 1.0 : 1.0;
+        params.T = T_elem ? parseFloat(T_elem.value) || 95.0 : 95.0;
+        params.t_B = t_B_elem ? parseFloat(t_B_elem.value) || 90.0 : 90.0;
+        params.I0 = I0_elem ? parseFloat(I0_elem.value) || 1.0 : 1.0;
+        params.M0 = M0_elem ? parseFloat(M0_elem.value) || 1.0 : 1.0;
+        params.t_exp = t_exp_enhanced_elem ? parseFloat(t_exp_enhanced_elem.value) || 5.0 : 5.0;
         
         // 确保V参数在所有模式下都存在，并有合理的默认值
-        params.V = parseFloat(document.getElementById('enhanced_V')?.value) || 0.8;
+        params.V = enhanced_V_elem ? parseFloat(enhanced_V_elem.value) || 0.8 : 0.8;
         
         // 添加增强Dill模型的干涉条纹可见度(V)参数
         if (sineType === 'single') {
-            params.K = parseFloat(document.getElementById('enhanced_K').value) || 2.0;
+            const enhanced_K_elem = document.getElementById('enhanced_K');
+            params.K = enhanced_K_elem ? parseFloat(enhanced_K_elem.value) || 2.0 : 2.0;
             console.log(`Enhanced Dill 1D模式: V=${params.V}, K=${params.K}`);
         }
         
         // 优化：无论 single 还是 multi 都传递 K
-        if (!params.K && document.getElementById('enhanced_K')) {
-            params.K = parseFloat(document.getElementById('enhanced_K').value) || 2.0;
+        if (!params.K) {
+            const enhanced_K_elem = document.getElementById('enhanced_K');
+            if (enhanced_K_elem) {
+                params.K = parseFloat(enhanced_K_elem.value) || 2.0;
+            } else {
+                params.K = 2.0;
+            }
         }
         
         if (sineType === 'multi') {
-            params.Kx = parseFloat(document.getElementById('enhanced_Kx').value) || 2.0;
-            params.Ky = parseFloat(document.getElementById('enhanced_Ky').value) || 0.0;
-            params.phi_expr = document.getElementById('enhanced_phi_expr').value || '0';
+            const enhanced_Kx_elem = document.getElementById('enhanced_Kx');
+            const enhanced_Ky_elem = document.getElementById('enhanced_Ky');
+            const enhanced_phi_expr_elem = document.getElementById('enhanced_phi_expr');
+            const enhanced_y_min_elem = document.getElementById('enhanced_y_min');
+            const enhanced_y_max_elem = document.getElementById('enhanced_y_max');
+            const enhanced_y_points_elem = document.getElementById('enhanced_y_points');
+            
+            params.Kx = enhanced_Kx_elem ? parseFloat(enhanced_Kx_elem.value) || 2.0 : 2.0;
+            params.Ky = enhanced_Ky_elem ? parseFloat(enhanced_Ky_elem.value) || 0.0 : 0.0;
+            params.phi_expr = enhanced_phi_expr_elem ? enhanced_phi_expr_elem.value || '0' : '0';
             // 添加Y轴范围参数
-            params.y_min = parseFloat(document.getElementById('enhanced_y_min').value) || 0.0;
-            params.y_max = parseFloat(document.getElementById('enhanced_y_max').value) || 10.0;
-            params.y_points = parseInt(document.getElementById('enhanced_y_points').value) || 100;
+            params.y_min = enhanced_y_min_elem ? parseFloat(enhanced_y_min_elem.value) || 0.0 : 0.0;
+            params.y_max = enhanced_y_max_elem ? parseFloat(enhanced_y_max_elem.value) || 10.0 : 10.0;
+            params.y_points = enhanced_y_points_elem ? parseInt(enhanced_y_points_elem.value) || 100 : 100;
             
             // 确保K参数存在
             if (!params.K) {
                 params.K = params.Kx;
             }
         } else if (sineType === '3d') {
-            params.Kx = parseFloat(document.getElementById('enhanced_Kx_3d').value) || 2.0;
-            params.Ky = parseFloat(document.getElementById('enhanced_Ky_3d').value) || 2.0;
-            params.Kz = parseFloat(document.getElementById('enhanced_Kz_3d').value) || 2.0;
-            params.phi_expr = document.getElementById('enhanced_phi_expr_3d').value || '0';
+            const enhanced_Kx_3d_elem = document.getElementById('enhanced_Kx_3d');
+            const enhanced_Ky_3d_elem = document.getElementById('enhanced_Ky_3d');
+            const enhanced_Kz_3d_elem = document.getElementById('enhanced_Kz_3d');
+            const enhanced_phi_expr_3d_elem = document.getElementById('enhanced_phi_expr_3d');
+            const enhanced_x_min_3d_elem = document.getElementById('enhanced_x_min_3d');
+            const enhanced_x_max_3d_elem = document.getElementById('enhanced_x_max_3d');
+            const enhanced_y_min_3d_elem = document.getElementById('enhanced_y_min_3d');
+            const enhanced_y_max_3d_elem = document.getElementById('enhanced_y_max_3d');
+            const enhanced_z_min_3d_elem = document.getElementById('enhanced_z_min_3d');
+            const enhanced_z_max_3d_elem = document.getElementById('enhanced_z_max_3d');
+            
+            params.Kx = enhanced_Kx_3d_elem ? parseFloat(enhanced_Kx_3d_elem.value) || 2.0 : 2.0;
+            params.Ky = enhanced_Ky_3d_elem ? parseFloat(enhanced_Ky_3d_elem.value) || 2.0 : 2.0;
+            params.Kz = enhanced_Kz_3d_elem ? parseFloat(enhanced_Kz_3d_elem.value) || 2.0 : 2.0;
+            params.phi_expr = enhanced_phi_expr_3d_elem ? enhanced_phi_expr_3d_elem.value || '0' : '0';
             // 为3D模式添加K参数
             params.K = params.Kx;
             // 三维范围参数
-            params.x_min = parseFloat(document.getElementById('enhanced_x_min_3d').value) || 0.0;
-            params.x_max = parseFloat(document.getElementById('enhanced_x_max_3d').value) || 10.0;
-            params.y_min = parseFloat(document.getElementById('enhanced_y_min_3d').value) || 0.0;
-            params.y_max = parseFloat(document.getElementById('enhanced_y_max_3d').value) || 10.0;
-            params.z_min = parseFloat(document.getElementById('enhanced_z_min_3d').value) || 0.0;
-            params.z_max = parseFloat(document.getElementById('enhanced_z_max_3d').value) || 10.0;
+            params.x_min = enhanced_x_min_3d_elem ? parseFloat(enhanced_x_min_3d_elem.value) || 0.0 : 0.0;
+            params.x_max = enhanced_x_max_3d_elem ? parseFloat(enhanced_x_max_3d_elem.value) || 10.0 : 10.0;
+            params.y_min = enhanced_y_min_3d_elem ? parseFloat(enhanced_y_min_3d_elem.value) || 0.0 : 0.0;
+            params.y_max = enhanced_y_max_3d_elem ? parseFloat(enhanced_y_max_3d_elem.value) || 10.0 : 10.0;
+            params.z_min = enhanced_z_min_3d_elem ? parseFloat(enhanced_z_min_3d_elem.value) || 0.0 : 0.0;
+            params.z_max = enhanced_z_max_3d_elem ? parseFloat(enhanced_z_max_3d_elem.value) || 10.0 : 10.0;
             
             // 检查增强DILL模型4D动画参数
-            const enable4DAnimation = document.getElementById('enable_4d_animation_enhanced_dill')?.checked || false;
+            const enable4DAnimationElem = document.getElementById('enable_4d_animation_enhanced_dill');
+            const enable4DAnimation = enable4DAnimationElem ? enable4DAnimationElem.checked || false : false;
             if (enable4DAnimation) {
                 params.enable_4d_animation = true;
-                params.t_start = parseFloat(document.getElementById('t_start_enhanced_dill')?.value) || 0;
-                params.t_end = parseFloat(document.getElementById('t_end_enhanced_dill')?.value) || 5;
-                params.time_steps = parseInt(document.getElementById('time_steps_enhanced_dill')?.value) || 20;
+                const t_start_elem = document.getElementById('t_start_enhanced_dill');
+                const t_end_elem = document.getElementById('t_end_enhanced_dill');
+                const time_steps_elem = document.getElementById('time_steps_enhanced_dill');
+                
+                params.t_start = t_start_elem ? parseFloat(t_start_elem.value) || 0 : 0;
+                params.t_end = t_end_elem ? parseFloat(t_end_elem.value) || 5 : 5;
+                params.time_steps = time_steps_elem ? parseInt(time_steps_elem.value) || 20 : 20;
                 console.log('Enhanced DILL模型3D模式启用4D动画:', params.enable_4d_animation, '时间范围:', params.t_start, '-', params.t_end, '步数:', params.time_steps);
                 console.log('Enhanced DILL 4D动画相位表达式:', params.phi_expr);
                 
@@ -921,16 +1066,28 @@ function getParameterValues() {
             enable_4d_animation: params.enable_4d_animation
         });
     } else if (modelType === 'car') {
-        const sineType = document.getElementById('car-sine-type').value;
+        const sineTypeElement = document.getElementById('car-sine-type');
+        const sineType = sineTypeElement ? sineTypeElement.value : 'single';
         params.sine_type = sineType;
-        params.I_avg = parseFloat(document.getElementById('car_I_avg').value);
-        params.V = parseFloat(document.getElementById('car_V').value);
-        params.t_exp = parseFloat(document.getElementById('car_t_exp').value);
-        params.acid_gen_efficiency = parseFloat(document.getElementById('car_acid_gen_efficiency').value);
-        params.diffusion_length = parseFloat(document.getElementById('car_diffusion_length').value);
-        params.reaction_rate = parseFloat(document.getElementById('car_reaction_rate').value);
-        params.amplification = parseFloat(document.getElementById('car_amplification').value);
-        params.contrast = parseFloat(document.getElementById('car_contrast').value);
+        
+        // 添加空值检查的参数获取
+        const car_I_avg_elem = document.getElementById('car_I_avg');
+        const car_V_elem = document.getElementById('car_V');
+        const car_t_exp_elem = document.getElementById('car_t_exp');
+        const car_acid_gen_efficiency_elem = document.getElementById('car_acid_gen_efficiency');
+        const car_diffusion_length_elem = document.getElementById('car_diffusion_length');
+        const car_reaction_rate_elem = document.getElementById('car_reaction_rate');
+        const car_amplification_elem = document.getElementById('car_amplification');
+        const car_contrast_elem = document.getElementById('car_contrast');
+        
+        params.I_avg = car_I_avg_elem ? parseFloat(car_I_avg_elem.value) : 1.0;
+        params.V = car_V_elem ? parseFloat(car_V_elem.value) : 0.8;
+        params.t_exp = car_t_exp_elem ? parseFloat(car_t_exp_elem.value) : 5.0;
+        params.acid_gen_efficiency = car_acid_gen_efficiency_elem ? parseFloat(car_acid_gen_efficiency_elem.value) : 0.5;
+        params.diffusion_length = car_diffusion_length_elem ? parseFloat(car_diffusion_length_elem.value) : 0.02;
+        params.reaction_rate = car_reaction_rate_elem ? parseFloat(car_reaction_rate_elem.value) : 0.5;
+        params.amplification = car_amplification_elem ? parseFloat(car_amplification_elem.value) : 5.0;
+        params.contrast = car_contrast_elem ? parseFloat(car_contrast_elem.value) : 4.0;
         
         // 确保参数有效，提供默认值
         params.I_avg = isNaN(params.I_avg) ? 1.0 : params.I_avg;
@@ -947,13 +1104,20 @@ function getParameterValues() {
         params.visibility = params.V;             // 可见度别名
         
         if (sineType === 'multi') {
-            params.Kx = parseFloat(document.getElementById('car_Kx').value);
-            params.Ky = parseFloat(document.getElementById('car_Ky').value);
-            params.phi_expr = document.getElementById('car_phi_expr').value;
+            const car_Kx_elem = document.getElementById('car_Kx');
+            const car_Ky_elem = document.getElementById('car_Ky');
+            const car_phi_expr_elem = document.getElementById('car_phi_expr');
+            const car_y_min_elem = document.getElementById('car_y_min');
+            const car_y_max_elem = document.getElementById('car_y_max');
+            const car_y_points_elem = document.getElementById('car_y_points');
+            
+            params.Kx = car_Kx_elem ? parseFloat(car_Kx_elem.value) : 2.0;
+            params.Ky = car_Ky_elem ? parseFloat(car_Ky_elem.value) : 0.0;
+            params.phi_expr = car_phi_expr_elem ? car_phi_expr_elem.value : '0';
             // 使用CAR模型自己的Y轴范围参数
-            params.y_min = parseFloat(document.getElementById('car_y_min').value);
-            params.y_max = parseFloat(document.getElementById('car_y_max').value);
-            params.y_points = parseInt(document.getElementById('car_y_points').value);
+            params.y_min = car_y_min_elem ? parseFloat(car_y_min_elem.value) : 0.0;
+            params.y_max = car_y_max_elem ? parseFloat(car_y_max_elem.value) : 10.0;
+            params.y_points = car_y_points_elem ? parseInt(car_y_points_elem.value) : 100;
             
             // 参数有效性校验
             params.Kx = isNaN(params.Kx) ? 2.0 : params.Kx;
@@ -963,19 +1127,30 @@ function getParameterValues() {
             params.y_max = isNaN(params.y_max) ? 10.0 : params.y_max;
             params.y_points = isNaN(params.y_points) ? 100 : params.y_points;
         } else if (sineType === '3d') {
-            params.Kx = parseFloat(document.getElementById('car_Kx_3d').value);
-            params.Ky = parseFloat(document.getElementById('car_Ky_3d').value);
-            params.Kz = parseFloat(document.getElementById('car_Kz_3d').value);
-            params.phi_expr = document.getElementById('car_phi_expr_3d').value;
+            const car_Kx_3d_elem = document.getElementById('car_Kx_3d');
+            const car_Ky_3d_elem = document.getElementById('car_Ky_3d');
+            const car_Kz_3d_elem = document.getElementById('car_Kz_3d');
+            const car_phi_expr_3d_elem = document.getElementById('car_phi_expr_3d');
+            const car_x_min_3d_elem = document.getElementById('car_x_min_3d');
+            const car_x_max_3d_elem = document.getElementById('car_x_max_3d');
+            const car_y_min_3d_elem = document.getElementById('car_y_min_3d');
+            const car_y_max_3d_elem = document.getElementById('car_y_max_3d');
+            const car_z_min_3d_elem = document.getElementById('car_z_min_3d');
+            const car_z_max_3d_elem = document.getElementById('car_z_max_3d');
+            
+            params.Kx = car_Kx_3d_elem ? parseFloat(car_Kx_3d_elem.value) : 2.0;
+            params.Ky = car_Ky_3d_elem ? parseFloat(car_Ky_3d_elem.value) : 2.0;
+            params.Kz = car_Kz_3d_elem ? parseFloat(car_Kz_3d_elem.value) : 2.0;
+            params.phi_expr = car_phi_expr_3d_elem ? car_phi_expr_3d_elem.value : '0';
             // 为3D模式添加K参数
             params.K = params.Kx;
             // 三维范围参数
-            params.x_min = parseFloat(document.getElementById('car_x_min_3d').value);
-            params.x_max = parseFloat(document.getElementById('car_x_max_3d').value);
-            params.y_min = parseFloat(document.getElementById('car_y_min_3d').value);
-            params.y_max = parseFloat(document.getElementById('car_y_max_3d').value);
-            params.z_min = parseFloat(document.getElementById('car_z_min_3d').value);
-            params.z_max = parseFloat(document.getElementById('car_z_max_3d').value);
+            params.x_min = car_x_min_3d_elem ? parseFloat(car_x_min_3d_elem.value) : 0.0;
+            params.x_max = car_x_max_3d_elem ? parseFloat(car_x_max_3d_elem.value) : 10.0;
+            params.y_min = car_y_min_3d_elem ? parseFloat(car_y_min_3d_elem.value) : 0.0;
+            params.y_max = car_y_max_3d_elem ? parseFloat(car_y_max_3d_elem.value) : 10.0;
+            params.z_min = car_z_min_3d_elem ? parseFloat(car_z_min_3d_elem.value) : 0.0;
+            params.z_max = car_z_max_3d_elem ? parseFloat(car_z_max_3d_elem.value) : 10.0;
             
             // 参数有效性校验
             params.Kx = isNaN(params.Kx) ? 2.0 : params.Kx;
@@ -989,8 +1164,8 @@ function getParameterValues() {
             params.z_min = isNaN(params.z_min) ? 0.0 : params.z_min;
             params.z_max = isNaN(params.z_max) ? 10.0 : params.z_max;
         } else {
-            params.K = parseFloat(document.getElementById('car_K').value);
-            params.K = isNaN(params.K) ? 2.0 : params.K;
+            const car_K_elem = document.getElementById('car_K');
+            params.K = car_K_elem ? parseFloat(car_K_elem.value) || 2.0 : 2.0;
         }
         
         // 无论模式如何，都确保K参数存在
@@ -1604,6 +1779,176 @@ function displayInteractiveResults(data) {
                 updateDill4DAnimationFrame(0);
             }, 100);
         }
+    }
+
+    // 检测并处理DILL模型1D动画数据
+    if (currentModelType === 'dill' && data.enable_1d_animation === true) {
+        console.log('检测到DILL模型1D动画数据，设置1D动画界面');
+        console.log('1D动画数据详情:', {
+            enable_1d_animation: data.enable_1d_animation,
+            has_animation_frames: !!data.animation_frames,
+            animation_frames_length: data.animation_frames ? data.animation_frames.length : 0,
+            time_steps: data.time_steps,
+            sine_type: data.sine_type
+        });
+        
+        // 存储1D动画数据
+        dill1DAnimationState.animationData = data.animation_frames;
+        dill1DAnimationState.totalFrames = data.animation_frames ? data.animation_frames.length : (data.time_steps || 20);
+        dill1DAnimationState.currentFrame = 0;
+        
+        console.log('设置DILL 1D动画总帧数:', dill1DAnimationState.totalFrames);
+        
+        // 修复：静态图表应使用用户当前输入参数的计算结果，而不是动画帧数据
+        // 这样确保无论是否勾选1D动画，静态图的处理逻辑都保持一致
+        console.log('使用用户当前输入参数渲染DILL 1D静态图表（而非动画帧数据）');
+        
+        try {
+            // 直接使用后端返回的静态数据（基于用户当前输入的参数计算）
+            // 而不是从animation_frames中选择某一帧
+            const staticData = {
+                x: data.x_coords || data.x,
+                exposure_dose: data.exposure_dose,
+                thickness: data.thickness,
+                x_coords: data.x_coords || data.x,
+                is_1d: true,
+                sine_type: data.sine_type || '1d'
+            };
+            
+            console.log('DILL 1D静态图表数据（基于用户当前参数）:', {
+                x_length: staticData.x ? staticData.x.length : 0,
+                exposure_range: staticData.exposure_dose ? [Math.min(...staticData.exposure_dose), Math.max(...staticData.exposure_dose)] : 'N/A',
+                thickness_range: staticData.thickness ? [Math.min(...staticData.thickness), Math.max(...staticData.thickness)] : 'N/A',
+                data_source: '用户当前输入参数'
+            });
+            
+            // 渲染静态图表 - 使用与非动画模式相同的数据源
+            createExposurePlot(exposurePlotContainer, staticData);
+            createThicknessPlot(thicknessPlotContainer, staticData);
+            console.log('DILL 1D静态图表渲染完成（使用用户当前参数）');
+        } catch (error) {
+            console.error('DILL 1D静态图表渲染失败:', error);
+            exposurePlotContainer.innerHTML = '<div style="color:red;padding:20px;">DILL 1D静态曝光图渲染失败: ' + error.message + '</div>';
+            thicknessPlotContainer.innerHTML = '<div style="color:red;padding:20px;">DILL 1D静态厚度图渲染失败: ' + error.message + '</div>';
+        }
+        
+        // 显示1D动画区域
+        const dill1DAnimationSection = document.getElementById('dill-1d-animation-section');
+        if (dill1DAnimationSection) {
+            dill1DAnimationSection.style.display = 'block';
+            console.log('DILL 1D动画区域已显示');
+        } else {
+            console.error('未找到1D动画区域元素 #dill-1d-animation-section');
+        }
+        
+        // 设置事件监听器
+        setupDill1DAnimationEventListeners();
+        
+        // 初始化显示第一帧（动画区域）
+        if (dill1DAnimationState.animationData && dill1DAnimationState.animationData.length > 0) {
+            setTimeout(() => {
+                updateDill1DAnimationFrame(0);
+                // 初始状态设置为就绪
+                const frameData = dill1DAnimationState.animationData[0];
+                if (frameData) {
+                    const timeValue = frameData.time_value || frameData.time || frameData.t || 0;
+                    updateDill1DAnimationStatus(`就绪: 第1/${dill1DAnimationState.totalFrames}帧 (t=${timeValue.toFixed(2)}s)`);
+                } else {
+                    updateDill1DAnimationStatus('就绪');
+                }
+            }, 100);
+        }
+    }
+    
+    // 注意：不要在else中隐藏1D动画区域，因为用户可能同时启用1D动画和V评估
+    // 只有在没有启用1D动画时才隐藏1D动画区域
+    if (currentModelType === 'dill' && data.enable_1d_animation !== true) {
+        const dill1DAnimationSection = document.getElementById('dill-1d-animation-section');
+        if (dill1DAnimationSection) {
+            dill1DAnimationSection.style.display = 'none';
+        }
+    }
+
+    // 检测并处理DILL模型1D V评估数据
+    if (currentModelType === 'dill' && data.enable_1d_v_evaluation === true) {
+        console.log('检测到DILL模型1D V评估数据，设置V评估界面');
+        console.log('1D V评估数据详情:', {
+            enable_1d_v_evaluation: data.enable_1d_v_evaluation,
+            has_v_evaluation_frames: !!data.v_evaluation_frames,
+            v_evaluation_frames_length: data.v_evaluation_frames ? data.v_evaluation_frames.length : 0,
+            time_steps: data.time_steps,
+            sine_type: data.sine_type
+        });
+        
+        // 存储1D V评估数据
+        dill1DVEvaluationState.animationData = data.v_evaluation_frames;
+        dill1DVEvaluationState.totalFrames = data.v_evaluation_frames ? data.v_evaluation_frames.length : (data.time_steps || 20);
+        dill1DVEvaluationState.currentFrame = 0;
+        
+        console.log('设置DILL 1D V评估总帧数:', dill1DVEvaluationState.totalFrames);
+        
+        // 静态图表仍使用用户当前输入参数的计算结果
+        console.log('使用用户当前输入参数渲染DILL 1D静态图表（而非V评估帧数据）');
+        
+        try {
+            // 直接使用后端返回的静态数据（基于用户当前输入的参数计算）
+            const staticData = {
+                x: data.x_coords || data.x,
+                exposure_dose: data.exposure_dose,
+                thickness: data.thickness,
+                x_coords: data.x_coords || data.x,
+                is_1d: true,
+                sine_type: data.sine_type || '1d'
+            };
+            
+            console.log('DILL 1D静态图表数据（基于用户当前参数）:', {
+                x_length: staticData.x ? staticData.x.length : 0,
+                exposure_range: staticData.exposure_dose ? [Math.min(...staticData.exposure_dose), Math.max(...staticData.exposure_dose)] : 'N/A',
+                thickness_range: staticData.thickness ? [Math.min(...staticData.thickness), Math.max(...staticData.thickness)] : 'N/A',
+                data_source: '用户当前输入参数'
+            });
+            
+            // 渲染静态图表
+            createExposurePlot(exposurePlotContainer, staticData);
+            createThicknessPlot(thicknessPlotContainer, staticData);
+            console.log('DILL 1D静态图表渲染完成（使用用户当前参数）');
+        } catch (error) {
+            console.error('DILL 1D静态图表渲染失败:', error);
+            exposurePlotContainer.innerHTML = '<div style="color:red;padding:20px;">DILL 1D静态曝光图渲染失败: ' + error.message + '</div>';
+            thicknessPlotContainer.innerHTML = '<div style="color:red;padding:20px;">DILL 1D静态厚度图渲染失败: ' + error.message + '</div>';
+        }
+        
+        // 显示1D V评估区域
+        const dill1DVEvaluationSection = document.getElementById('dill-1d-v-evaluation-section');
+        if (dill1DVEvaluationSection) {
+            dill1DVEvaluationSection.style.display = 'block';
+            console.log('DILL 1D V评估区域已显示');
+        } else {
+            console.error('未找到1D V评估区域元素 #dill-1d-v-evaluation-section');
+        }
+        
+        // 设置事件监听器
+        setupDill1DVEvaluationEventListeners();
+        
+        // 初始化显示第一帧（V评估区域）
+        if (dill1DVEvaluationState.animationData && dill1DVEvaluationState.animationData.length > 0) {
+            setTimeout(() => {
+                updateDill1DVEvaluationFrame(0);
+            }, 100);
+        }
+    }
+    
+    // 注意：不要在else中隐藏V评估区域，因为用户可能同时启用1D动画和V评估
+    // 只有在没有启用V评估时才隐藏V评估区域
+    if (currentModelType === 'dill' && data.enable_1d_v_evaluation !== true) {
+        const dill1DVEvaluationSection = document.getElementById('dill-1d-v-evaluation-section');
+        if (dill1DVEvaluationSection) {
+            dill1DVEvaluationSection.style.display = 'none';
+        }
+    }
+
+    // 继续处理其他4D动画逻辑
+    if (data.enable_4d_animation === true) {
 
         // Enhanced Dill模型的4D动画检测
         if (currentModelType === 'enhanced_dill' && !enhancedDill4DAnimationData) {
@@ -3941,7 +4286,7 @@ function getEnhancedDillPopupHtmlContent(x, y, setName, params, plotType) {
                 <div>• z_h: 胶厚 (${params.z_h} μm)</div>
                 <div>• T: 前烘温度 (${params.T} °C)</div>
                 <div>• t_B: 前烘时间 (${params.t_B} min)</div>
-                <div>• A(z_h,T,t_B): 光敏剂吸收率，与胶厚、前烘温度、前烘时间相关</div>
+                <div>• A(z_h,T,t_B): 光敏吸收率，与胶厚、前烘温度、前烘时间相关</div>
                 <div>• B(z_h,T,t_B): 基底吸收率，与胶厚、前烘温度、前烘时间相关</div>
             `;
         } else if (params.sine_type === '3d') {
@@ -3957,7 +4302,7 @@ function getEnhancedDillPopupHtmlContent(x, y, setName, params, plotType) {
                 <div>• z_h: 胶厚 (${params.z_h} μm)</div>
                 <div>• T: 前烘温度 (${params.T} °C)</div>
                 <div>• t_B: 前烘时间 (${params.t_B} min)</div>
-                <div>• A(z_h,T,t_B): 光敏剂吸收率，与胶厚、前烘温度、前烘时间相关</div>
+                <div>• A(z_h,T,t_B): 光敏吸收率，与胶厚、前烘温度、前烘时间相关</div>
                 <div>• B(z_h,T,t_B): 基底吸收率，与胶厚、前烘温度、前烘时间相关</div>
             `;
         } else {
@@ -3970,7 +4315,7 @@ function getEnhancedDillPopupHtmlContent(x, y, setName, params, plotType) {
                 <div>• z_h: 胶厚 (${params.z_h} μm)</div>
                 <div>• T: 前烘温度 (${params.T} °C)</div>
                 <div>• t_B: 前烘时间 (${params.t_B} min)</div>
-                <div>• A(z_h,T,t_B): 光敏剂吸收率，与胶厚、前烘温度、前烘时间相关</div>
+                <div>• A(z_h,T,t_B): 光敏吸收率，与胶厚、前烘温度、前烘时间相关</div>
                 <div>• B(z_h,T,t_B): 基底吸收率，与胶厚、前烘温度、前烘时间相关</div>
             `;
         }
@@ -4862,6 +5207,8 @@ function initSineWaveTypeSelectors() {
     const dill3dSineParams = document.getElementById('dill-3dsine-params');
     // 添加4D动画参数容器的引用
     const dill4DAnimationGroup = document.querySelector('[data-title="4D动画参数"]');
+    // 添加1D动画参数容器的引用
+    const dill1DAnimationGroup = document.getElementById('dill-1d-animation-params-container');
     
     if (dillSineType && dillMultiSineParams && dill3dSineParams) {
         dillSineType.addEventListener('change', function() {
@@ -4913,10 +5260,389 @@ function initSineWaveTypeSelectors() {
                     }
                 }
             }
+            
+            // 新增：控制1D动画参数的显示/隐藏
+            if (dill1DAnimationGroup) {
+                if (this.value === 'single') {
+                    // 只有在single模式（薄胶1D）下才显示1D动画参数
+                    dill1DAnimationGroup.style.display = 'block';
+                    console.log('✅ DILL 1D模式：1D动画参数组已显示');
+                } else {
+                    // 切换到其他模式时隐藏1D动画参数
+                    dill1DAnimationGroup.style.display = 'none';
+                    
+                    // 如果切换到非1D模式，取消勾选1D动画并隐藏动画区域
+                    const enable1dCheckbox = document.getElementById('enable_1d_animation_dill');
+                    if (enable1dCheckbox) {
+                        enable1dCheckbox.checked = false;
+                        const dill1dParams = document.getElementById('dill_1d_time_params');
+                        if (dill1dParams) dill1dParams.style.display = 'none';
+                        
+                        // 隐藏1D动画区域
+                        const animationSection = document.getElementById('dill-1d-animation-section');
+                        if (animationSection) {
+                            animationSection.style.display = 'none';
+                        }
+                        
+                        // 停止当前播放的动画
+                        if (typeof dill1DAnimationState !== 'undefined' && dill1DAnimationState.intervalId) {
+                            clearInterval(dill1DAnimationState.intervalId);
+                            dill1DAnimationState.intervalId = null;
+                            dill1DAnimationState.isPlaying = false;
+                        }
+                    }
+                    console.log('DILL 非1D模式：1D动画参数组已隐藏');
+                }
+            }
+            
+            // 新增：控制1D V评估参数的显示/隐藏
+            const dill1DVEvaluationGroup = document.getElementById('dill-1d-v-evaluation-params-container');
+            if (dill1DVEvaluationGroup) {
+                if (this.value === 'single') {
+                    // 只有在single模式（薄胶1D）下才显示1D V评估参数
+                    dill1DVEvaluationGroup.style.display = 'block';
+                    console.log('✅ DILL 1D模式：V评估参数组已显示');
+                } else {
+                    // 切换到其他模式时隐藏1D V评估参数
+                    dill1DVEvaluationGroup.style.display = 'none';
+                    
+                    // 如果切换到非1D模式，取消勾选V评估并隐藏评估区域
+                    const enable1dVEvaluationCheckbox = document.getElementById('enable_1d_v_evaluation_dill');
+                    if (enable1dVEvaluationCheckbox) {
+                        enable1dVEvaluationCheckbox.checked = false;
+                        const dillVParams = document.getElementById('dill_1d_v_params');
+                        if (dillVParams) dillVParams.style.display = 'none';
+                        
+                        // 隐藏1D V评估区域
+                        const vEvaluationSection = document.getElementById('dill-1d-v-evaluation-section');
+                        if (vEvaluationSection) {
+                            vEvaluationSection.style.display = 'none';
+                        }
+                        
+                        // 停止当前播放的V评估动画
+                        if (typeof dill1DVEvaluationState !== 'undefined' && dill1DVEvaluationState.intervalId) {
+                            clearInterval(dill1DVEvaluationState.intervalId);
+                            dill1DVEvaluationState.intervalId = null;
+                            dill1DVEvaluationState.isPlaying = false;
+                        }
+                    }
+                    console.log('DILL 非1D模式：V评估参数组已隐藏');
+                }
+            }
+        });
+    }
+}
+
+// 坐标轴控制功能实现
+/**
+ * 初始化坐标轴控制功能
+ */
+function initAxisControlFeature() {
+    console.log('🎯 初始化坐标轴控制功能');
+    
+    // 绑定展开/收起按钮事件
+    bindAxisToggleEvents();
+    
+    // 绑定坐标轴控制按钮事件
+    bindAxisControlEvents();
+    
+    console.log('✅ 坐标轴控制功能初始化完成');
+}
+
+/**
+ * 绑定坐标轴面板展开/收起事件
+ */
+function bindAxisToggleEvents() {
+    // 曝光剂量图表
+    const exposureToggle = document.getElementById('exposure-axis-toggle');
+    const exposureContent = document.getElementById('exposure-axis-control-content');
+    
+    if (exposureToggle && exposureContent) {
+        exposureToggle.addEventListener('click', function() {
+            toggleAxisControlPanel('exposure', exposureToggle, exposureContent);
         });
     }
     
+    // 光刻胶厚度图表
+    const thicknessToggle = document.getElementById('thickness-axis-toggle');
+    const thicknessContent = document.getElementById('thickness-axis-control-content');
+    
+    if (thicknessToggle && thicknessContent) {
+        thicknessToggle.addEventListener('click', function() {
+            toggleAxisControlPanel('thickness', thicknessToggle, thicknessContent);
+        });
+    }
+}
+
+/**
+ * 切换坐标轴控制面板的显示状态
+ */
+function toggleAxisControlPanel(plotType, toggleBtn, contentElement) {
+    const isExpanded = contentElement.style.display !== 'none';
+    
+    if (isExpanded) {
+        // 收起面板
+        contentElement.style.display = 'none';
+        toggleBtn.classList.remove('expanded');
+        toggleBtn.setAttribute('aria-expanded', 'false');
+    } else {
+        // 展开面板
+        contentElement.style.display = 'block';
+        toggleBtn.classList.add('expanded');
+        toggleBtn.setAttribute('aria-expanded', 'true');
+    }
+}
+
+/**
+ * 绑定坐标轴控制按钮事件
+ */
+function bindAxisControlEvents() {
+    // 曝光剂量图表控制
+    bindPlotAxisControls('exposure');
+    
+    // 光刻胶厚度图表控制
+    bindPlotAxisControls('thickness');
+}
+
+/**
+ * 为指定图表绑定坐标轴控制事件
+ */
+function bindPlotAxisControls(plotType) {
+    // 保存参考范围按钮
+    const saveBtn = document.getElementById(`${plotType}-save-reference`);
+    if (saveBtn) {
+        saveBtn.addEventListener('click', function() {
+            saveAxisReference(plotType);
+        });
+    }
+    
+    // 恢复参考范围按钮
+    const restoreBtn = document.getElementById(`${plotType}-restore-reference`);
+    if (restoreBtn) {
+        restoreBtn.addEventListener('click', function() {
+            restoreAxisReference(plotType);
+        });
+    }
+    
+    // 自动缩放按钮
+    const autoBtn = document.getElementById(`${plotType}-auto-scale`);
+    if (autoBtn) {
+        autoBtn.addEventListener('click', function() {
+            autoScaleAxis(plotType);
+        });
+    }
+}
+
+/**
+ * 保存当前坐标轴范围作为参考
+ */
+function saveAxisReference(plotType) {
+    try {
+        const container = document.getElementById(`${plotType}-plot-container`);
+        if (!container || !container._fullLayout) {
+            showAxisNotification('图表未找到或未加载完成', 'error');
+            return;
+        }
+        
+        const layout = container._fullLayout;
+        const xRange = layout.xaxis.range;
+        const yRange = layout.yaxis.range;
+        
+        if (!xRange || !yRange) {
+            showAxisNotification('无法获取当前坐标轴范围', 'error');
+            return;
+        }
+        
+        // 保存参考范围
+        axisReferenceRanges[plotType] = {
+            xaxis: [xRange[0], xRange[1]],
+            yaxis: [yRange[0], yRange[1]]
+        };
+        
+        // 更新显示信息
+        const referenceInfo = document.getElementById(`${plotType}-reference-info`);
+        if (referenceInfo) {
+            const xRangeStr = `X: [${xRange[0].toFixed(2)}, ${xRange[1].toFixed(2)}]`;
+            const yRangeStr = `Y: [${yRange[0].toFixed(3)}, ${yRange[1].toFixed(3)}]`;
+            referenceInfo.textContent = `${xRangeStr}, ${yRangeStr}`;
+            referenceInfo.classList.add('has-reference');
+        }
+        
+        // 启用恢复按钮
+        const restoreBtn = document.getElementById(`${plotType}-restore-reference`);
+        if (restoreBtn) {
+            restoreBtn.disabled = false;
+        }
+        
+        // 保存到localStorage
+        localStorage.setItem(`axisReference_${plotType}`, JSON.stringify(axisReferenceRanges[plotType]));
+        
+        showAxisNotification(`📏 ${plotType === 'exposure' ? '曝光剂量' : '光刻胶厚度'}图表参考范围已保存`, 'success');
+        
+        console.log(`✅ ${plotType}图表参考范围已保存:`, axisReferenceRanges[plotType]);
+        
+    } catch (error) {
+        console.error(`保存${plotType}图表参考范围失败:`, error);
+        showAxisNotification('保存参考范围失败', 'error');
+    }
+}
+
+/**
+ * 恢复到保存的参考范围
+ */
+function restoreAxisReference(plotType) {
+    try {
+        const container = document.getElementById(`${plotType}-plot-container`);
+        if (!container) {
+            showAxisNotification('图表未找到', 'error');
+            return;
+        }
+        
+        let referenceRange = axisReferenceRanges[plotType];
+        
+        // 如果内存中没有，尝试从localStorage加载
+        if (!referenceRange) {
+            const saved = localStorage.getItem(`axisReference_${plotType}`);
+            if (saved) {
+                referenceRange = JSON.parse(saved);
+                axisReferenceRanges[plotType] = referenceRange;
+            }
+        }
+        
+        if (!referenceRange) {
+            showAxisNotification('未找到保存的参考范围', 'error');
+            return;
+        }
+        
+        // 应用参考范围
+        Plotly.relayout(container, {
+            'xaxis.range': referenceRange.xaxis,
+            'yaxis.range': referenceRange.yaxis
+        }).then(() => {
+            showAxisNotification(`📏 已恢复${plotType === 'exposure' ? '曝光剂量' : '光刻胶厚度'}图表参考范围`, 'success');
+            console.log(`✅ ${plotType}图表已恢复到参考范围:`, referenceRange);
+        }).catch(error => {
+            console.error(`恢复${plotType}图表参考范围失败:`, error);
+            showAxisNotification('恢复参考范围失败', 'error');
+        });
+        
+    } catch (error) {
+        console.error(`恢复${plotType}图表参考范围失败:`, error);
+        showAxisNotification('恢复参考范围失败', 'error');
+    }
+}
+
+/**
+ * 自动缩放坐标轴
+ */
+function autoScaleAxis(plotType) {
+    try {
+        const container = document.getElementById(`${plotType}-plot-container`);
+        if (!container) {
+            showAxisNotification('图表未找到', 'error');
+            return;
+        }
+        
+        // 重置坐标轴为自动缩放
+        Plotly.relayout(container, {
+            'xaxis.autorange': true,
+            'yaxis.autorange': true
+        }).then(() => {
+            showAxisNotification(`🔄 ${plotType === 'exposure' ? '曝光剂量' : '光刻胶厚度'}图表已自动缩放`, 'success');
+            console.log(`✅ ${plotType}图表已自动缩放`);
+        }).catch(error => {
+            console.error(`${plotType}图表自动缩放失败:`, error);
+            showAxisNotification('自动缩放失败', 'error');
+        });
+        
+    } catch (error) {
+        console.error(`${plotType}图表自动缩放失败:`, error);
+        showAxisNotification('自动缩放失败', 'error');
+    }
+}
+
+/**
+ * 显示坐标轴控制通知
+ */
+function showAxisNotification(message, type = 'success') {
+    // 移除现有通知
+    const existingNotification = document.querySelector('.axis-control-notification');
+    if (existingNotification) {
+        existingNotification.remove();
+    }
+    
+    // 创建新通知
+    const notification = document.createElement('div');
+    notification.className = 'axis-control-notification';
+    notification.innerHTML = `
+        <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle'}"></i>
+        <span>${message}</span>
+    `;
+    
+    // 添加到页面
+    document.body.appendChild(notification);
+    
+    // 显示通知
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 100);
+    
+    // 自动隐藏
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
+}
+
+/**
+ * 初始化时加载保存的参考范围
+ */
+function loadSavedAxisReferences() {
+    ['exposure', 'thickness'].forEach(plotType => {
+        const saved = localStorage.getItem(`axisReference_${plotType}`);
+        if (saved) {
+            try {
+                const referenceRange = JSON.parse(saved);
+                axisReferenceRanges[plotType] = referenceRange;
+                
+                // 更新显示信息
+                const referenceInfo = document.getElementById(`${plotType}-reference-info`);
+                if (referenceInfo) {
+                    const xRangeStr = `X: [${referenceRange.xaxis[0].toFixed(2)}, ${referenceRange.xaxis[1].toFixed(2)}]`;
+                    const yRangeStr = `Y: [${referenceRange.yaxis[0].toFixed(3)}, ${referenceRange.yaxis[1].toFixed(3)}]`;
+                    referenceInfo.textContent = `${xRangeStr}, ${yRangeStr}`;
+                    referenceInfo.classList.add('has-reference');
+                }
+                
+                // 启用恢复按钮
+                const restoreBtn = document.getElementById(`${plotType}-restore-reference`);
+                if (restoreBtn) {
+                    restoreBtn.disabled = false;
+                }
+                
+                console.log(`📂 已加载${plotType}图表保存的参考范围:`, referenceRange);
+            } catch (error) {
+                console.error(`加载${plotType}图表保存的参考范围失败:`, error);
+            }
+        }
+    });
+}
+
+// 在DOM加载完成后初始化坐标轴控制功能
+document.addEventListener('DOMContentLoaded', function() {
+    // 延迟初始化，确保其他组件已加载
+    setTimeout(() => {
+        initAxisControlFeature();
+        loadSavedAxisReferences();
+    }, 1000);
+});
+    
     // Enhanced Dill模型波形类型选择
+function continueInitSineWaveTypeSelectors() {
     const enhancedDillSineType = document.getElementById('enhanced-dill-sine-type');
     const enhancedDillMultiSineParams = document.getElementById('enhanced-dill-multisine-params');
     const enhancedDill3dSineParams = document.getElementById('enhanced-dill-3dsine-params');
@@ -6433,6 +7159,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // DILL模型4D动画控制按钮事件
     setupDill4DAnimationControls();
     setupEnhancedDill4DAnimationControls();
+    // DILL模型1D动画控制按钮事件
+    setupDill1DAnimationControls();
+    // DILL模型1D V评估参数控制事件
+    setupDill1DVEvaluationParameterControls();
 });
 
 // 设置DILL模型4D动画控制事件
@@ -6490,6 +7220,76 @@ function setupEnhancedDill4DAnimationControls() {
                     enhancedDill4DAnimationState.isPlaying = false;
                 }
             }
+        });
+    }
+}
+
+// 设置DILL模型1D动画控制事件
+function setupDill1DAnimationControls() {
+    const enable1DAnimationDill = document.getElementById('enable_1d_animation_dill');
+    const dill1DTimeParams = document.getElementById('dill_1d_time_params');
+    
+    if (enable1DAnimationDill && dill1DTimeParams) {
+        // 初始状态：根据复选框状态显示/隐藏参数
+        dill1DTimeParams.style.display = enable1DAnimationDill.checked ? 'block' : 'none';
+        
+        enable1DAnimationDill.addEventListener('change', function() {
+            dill1DTimeParams.style.display = this.checked ? 'block' : 'none';
+            
+            // 如果取消勾选，立即隐藏1D动画区域
+            if (!this.checked) {
+                const animationSection = document.getElementById('dill-1d-animation-section');
+                if (animationSection) {
+                    animationSection.style.display = 'none';
+                    console.log('用户取消勾选DILL 1D动画，已隐藏动画区域');
+                }
+                // 停止当前播放的动画
+                if (typeof dill1DAnimationState !== 'undefined' && dill1DAnimationState.intervalId) {
+                    clearInterval(dill1DAnimationState.intervalId);
+                    dill1DAnimationState.intervalId = null;
+                    dill1DAnimationState.isPlaying = false;
+                }
+            }
+        });
+    }
+}
+
+// 设置DILL模型1D V评估控制事件
+function setupDill1DVEvaluationParameterControls() {
+    console.log('设置DILL 1D V评估参数控制');
+    
+    const enable1DVEvaluationDill = document.getElementById('enable_1d_v_evaluation_dill');
+    const dill1DVParams = document.getElementById('dill_1d_v_params');
+    
+    if (enable1DVEvaluationDill && dill1DVParams) {
+        // 初始状态：根据复选框状态显示/隐藏参数
+        dill1DVParams.style.display = enable1DVEvaluationDill.checked ? 'block' : 'none';
+        
+        enable1DVEvaluationDill.addEventListener('change', function() {
+            dill1DVParams.style.display = this.checked ? 'block' : 'none';
+            console.log(`DILL 1D V评估开关状态: ${this.checked ? '启用' : '禁用'}`);
+            
+            // 如果取消勾选，立即隐藏V评估区域
+            if (!this.checked) {
+                const vEvaluationSection = document.getElementById('dill-1d-v-evaluation-section');
+                if (vEvaluationSection) {
+                    vEvaluationSection.style.display = 'none';
+                    console.log('用户取消勾选DILL 1D V评估，已隐藏V评估区域');
+                }
+                // 停止当前播放的V评估动画
+                if (typeof dill1DVEvaluationState !== 'undefined' && dill1DVEvaluationState.intervalId) {
+                    clearInterval(dill1DVEvaluationState.intervalId);
+                    dill1DVEvaluationState.intervalId = null;
+                    dill1DVEvaluationState.isPlaying = false;
+                }
+            }
+        });
+        
+        console.log('DILL 1D V评估参数控制事件已绑定');
+    } else {
+        console.error('DILL 1D V评估控制元素未找到:', {
+            enable1DVEvaluationDill: !!enable1DVEvaluationDill,
+            dill1DVParams: !!dill1DVParams
         });
     }
 }
@@ -6569,6 +7369,343 @@ function getCarModelParams() {
 
 // 添加缺失的DILL模型4D动画播放控制函数
 
+// DILL模型1D动画状态管理
+let dill1DAnimationState = {
+    isPlaying: false,
+    currentFrame: 0,
+    totalFrames: 0,
+    intervalId: null,
+    loopEnabled: false,
+    animationData: null
+};
+
+// DILL模型1D动画播放控制函数
+function playDill1DAnimation() {
+    if (dill1DAnimationState.isPlaying) return;
+    
+    // 如果动画已在结尾且未开启循环，则重置后再播放
+    if (!dill1DAnimationState.loopEnabled && dill1DAnimationState.currentFrame >= dill1DAnimationState.totalFrames - 1) {
+        resetDill1DAnimation();
+    }
+    
+    dill1DAnimationState.isPlaying = true;
+    
+    // 直接更新按钮状态 - 隐藏播放按钮，显示暂停按钮
+    const playBtn = document.getElementById('dill-1d-play-btn');
+    const pauseBtn = document.getElementById('dill-1d-pause-btn');
+    if (playBtn && pauseBtn) {
+        playBtn.style.display = 'none';
+        pauseBtn.style.display = 'inline-flex';
+        console.log('1D动画播放：隐藏播放按钮，显示暂停按钮');
+    } else {
+        console.error('1D动画按钮未找到', { playBtn: !!playBtn, pauseBtn: !!pauseBtn });
+    }
+    
+    // 更新状态指示器
+    const statusElement = document.getElementById('dill-1d-animation-status');
+    if (statusElement) {
+        statusElement.classList.remove('status-paused', 'status-stopped');
+        statusElement.classList.add('status-playing');
+        statusElement.innerHTML = '<i class="fas fa-circle"></i> 播放中';
+    }
+    
+    updateDill1DAnimationStatus('动画播放中...');
+    
+    dill1DAnimationState.intervalId = setInterval(() => {
+        let nextFrame = dill1DAnimationState.currentFrame + 1;
+        
+        if (nextFrame >= dill1DAnimationState.totalFrames) {
+            if (dill1DAnimationState.loopEnabled) {
+                nextFrame = 0; // 循环播放
+            } else {
+                pauseDill1DAnimation(); // 播放到结尾则暂停
+                dill1DAnimationState.currentFrame = dill1DAnimationState.totalFrames - 1; // 确保停在最后一帧
+                updateDill1DAnimationFrame(dill1DAnimationState.currentFrame);
+                return;
+            }
+        }
+        
+        dill1DAnimationState.currentFrame = nextFrame;
+        updateDill1DAnimationFrame(dill1DAnimationState.currentFrame);
+    }, 200);
+}
+
+function pauseDill1DAnimation() {
+    if (!dill1DAnimationState.isPlaying) return;
+    dill1DAnimationState.isPlaying = false;
+    clearInterval(dill1DAnimationState.intervalId);
+    dill1DAnimationState.intervalId = null;
+    
+    // 直接更新按钮状态 - 显示播放按钮，隐藏暂停按钮
+    const playBtn = document.getElementById('dill-1d-play-btn');
+    const pauseBtn = document.getElementById('dill-1d-pause-btn');
+    if (playBtn && pauseBtn) {
+        playBtn.style.display = 'inline-flex';
+        pauseBtn.style.display = 'none';
+        console.log('1D动画暂停：显示播放按钮，隐藏暂停按钮');
+    } else {
+        console.error('1D动画按钮未找到', { playBtn: !!playBtn, pauseBtn: !!pauseBtn });
+    }
+    
+    // 更新状态指示器
+    const statusElement = document.getElementById('dill-1d-animation-status');
+    if (statusElement) {
+        statusElement.classList.remove('status-playing');
+        statusElement.classList.add('status-paused');
+        statusElement.innerHTML = '<i class="fas fa-circle"></i> 已暂停';
+    }
+    
+    // 更新当前帧状态为就绪
+    const frameData = dill1DAnimationState.animationData && dill1DAnimationState.animationData[dill1DAnimationState.currentFrame];
+    if (frameData) {
+        updateDill1DAnimationStatus(`已暂停: 第${dill1DAnimationState.currentFrame + 1}/${dill1DAnimationState.totalFrames}帧`);
+    } else {
+        updateDill1DAnimationStatus('已暂停');
+    }
+}
+
+function resetDill1DAnimation() {
+    pauseDill1DAnimation();
+    dill1DAnimationState.currentFrame = 0;
+    updateDill1DAnimationFrame(0);
+    updateDill1DTimeSlider(0);
+    // 重置后也显示就绪状态
+    const frameData = dill1DAnimationState.animationData && dill1DAnimationState.animationData[0];
+    if (frameData) {
+        updateDill1DAnimationStatus(`就绪: 第1/${dill1DAnimationState.totalFrames}帧 (t=${frameData.time_value.toFixed(2)}s)`);
+    } else {
+        updateDill1DAnimationStatus('就绪');
+    }
+}
+
+function toggleDill1DLoop() {
+    dill1DAnimationState.loopEnabled = !dill1DAnimationState.loopEnabled;
+    const loopBtn = document.getElementById('dill-1d-loop-btn');
+    if (loopBtn) {
+        const textSpan = loopBtn.querySelector('span');
+        if (dill1DAnimationState.loopEnabled) {
+            // 开启循环时：移除 loop-off 类，显示"关闭循环"
+            if (textSpan) textSpan.textContent = '关闭循环';
+            loopBtn.classList.remove('loop-off');
+            loopBtn.setAttribute('title', '关闭循环播放');
+        } else {
+            // 关闭循环时：添加 loop-off 类，显示"开启循环"
+            if (textSpan) textSpan.textContent = '开启循环';
+            loopBtn.classList.add('loop-off');
+            loopBtn.setAttribute('title', '开启循环播放');
+        }
+    }
+    updateDill1DAnimationStatus(dill1DAnimationState.loopEnabled ? '已开启循环播放' : '已关闭循环播放');
+}
+
+function updateDill1DAnimationStatus(status) {
+    const statusElement = document.getElementById('dill-1d-animation-status');
+    if (statusElement) {
+        statusElement.textContent = status;
+    }
+}
+
+// 更新DILL 1D动画按钮状态的显示
+function updateDill1DButtonStates() {
+    const playBtn = document.getElementById('dill-1d-play-btn');
+    const pauseBtn = document.getElementById('dill-1d-pause-btn');
+    
+    console.log('更新DILL 1D按钮状态:', {
+        isPlaying: dill1DAnimationState.isPlaying,
+        playBtn: !!playBtn,
+        pauseBtn: !!pauseBtn
+    });
+    
+    if (playBtn && pauseBtn) {
+        if (dill1DAnimationState.isPlaying) {
+            // 动画播放中：显示暂停按钮，隐藏播放按钮
+            playBtn.style.display = 'none';
+            pauseBtn.style.display = 'inline-flex';
+            console.log('设置为播放状态：显示暂停按钮');
+        } else {
+            // 动画暂停/停止：显示播放按钮，隐藏暂停按钮
+            playBtn.style.display = 'inline-flex';
+            pauseBtn.style.display = 'none';
+            console.log('设置为暂停状态：显示播放按钮');
+        }
+    } else {
+        console.error('DILL 1D动画按钮未找到，无法更新状态');
+    }
+}
+
+function updateDill1DAnimationFrame(frameIndex) {
+    console.log('🎬 开始更新DILL 1D动画帧:', frameIndex);
+    
+    if (!dill1DAnimationState.animationData || frameIndex >= dill1DAnimationState.totalFrames) {
+        console.error('DILL 1D动画数据无效或帧索引超出范围');
+        return;
+    }
+    
+    console.log('DILL 1D动画数据详情:', {
+        'animationData length': dill1DAnimationState.animationData.length,
+        'totalFrames': dill1DAnimationState.totalFrames,
+        'frameIndex': frameIndex,
+        'currentFrameData': dill1DAnimationState.animationData[frameIndex]
+    });
+    
+    const frameData = dill1DAnimationState.animationData[frameIndex];
+    
+    // 获取时间值 - 从不同可能的数据结构中
+    let timeValue = frameIndex * 0.25; // 默认时间值
+    if (frameData && typeof frameData.time !== 'undefined') {
+        timeValue = frameData.time;
+    } else if (frameData && typeof frameData.t !== 'undefined') {
+        timeValue = frameData.t;
+    }
+    
+    console.log('当前帧时间值:', timeValue);
+    
+    // 更新曝光剂量分布图
+    const exposureContainer = document.getElementById('dill-exposure-1d-plot');
+    if (exposureContainer) {
+        console.log('开始更新曝光剂量分布图');
+        
+        // 清除占位符内容
+        exposureContainer.innerHTML = '';
+        
+        // 处理不同的数据格式
+        let exposureX, exposureY;
+        
+        if (frameData && frameData.exposure_data) {
+            // 格式1: frameData.exposure_data.x 和 frameData.exposure_data.y
+            exposureX = frameData.exposure_data.x;
+            exposureY = frameData.exposure_data.y;
+        } else if (frameData && frameData.x && frameData.exposure_dose) {
+            // 格式2: frameData.x 和 frameData.exposure_dose
+            exposureX = frameData.x;
+            exposureY = frameData.exposure_dose;
+        } else if (frameData && Array.isArray(frameData)) {
+            // 格式3: frameData 是数组，使用索引作为x轴
+            exposureX = Array.from({ length: frameData.length }, (_, i) => i);
+            exposureY = frameData;
+        } else {
+            console.warn('未识别的曝光数据格式，使用模拟数据');
+            // 使用模拟数据
+            exposureX = Array.from({ length: 100 }, (_, i) => i * 0.1);
+            exposureY = exposureX.map(x => Math.sin(x + timeValue) * Math.exp(-x/5) + 0.5);
+        }
+        
+        const exposureTrace = {
+            x: exposureX,
+            y: exposureY,
+            type: 'scatter',
+            mode: 'lines+markers',
+            name: `曝光剂量分布 (t=${timeValue.toFixed(2)}s)`,
+            line: { color: '#3498db', width: 3 },
+            marker: { size: 4, color: '#3498db' }
+        };
+        
+        const exposureLayout = {
+            title: `曝光剂量分布 (t=${timeValue.toFixed(2)}s)`,
+            xaxis: { title: 'X 位置 (μm)' },
+            yaxis: { title: '曝光剂量 (mJ/cm²)' },
+            margin: { t: 60, b: 60, l: 80, r: 30 },
+            plot_bgcolor: '#f8f9fa',
+            paper_bgcolor: 'white'
+        };
+        
+        Plotly.newPlot(exposureContainer, [exposureTrace], exposureLayout, { responsive: true });
+        console.log('曝光剂量分布图更新完成');
+    }
+    
+    // 更新光刻胶厚度分布图
+    const thicknessContainer = document.getElementById('dill-thickness-1d-plot');
+    if (thicknessContainer) {
+        console.log('开始更新光刻胶厚度分布图');
+        
+        // 清除占位符内容
+        thicknessContainer.innerHTML = '';
+        
+        // 处理不同的数据格式
+        let thicknessX, thicknessY;
+        
+        if (frameData && frameData.thickness_data) {
+            // 格式1: frameData.thickness_data.x 和 frameData.thickness_data.y
+            thicknessX = frameData.thickness_data.x;
+            thicknessY = frameData.thickness_data.y;
+        } else if (frameData && frameData.x && frameData.thickness) {
+            // 格式2: frameData.x 和 frameData.thickness
+            thicknessX = frameData.x;
+            thicknessY = frameData.thickness;
+        } else if (frameData && frameData.x && frameData.exposure_dose) {
+            // 格式3: 从曝光剂量推导厚度变化
+            thicknessX = frameData.x || exposureX;
+            thicknessY = frameData.exposure_dose ? frameData.exposure_dose.map(dose => Math.max(0, 1 - dose * 0.1)) : null;
+        } else {
+            console.warn('未识别的厚度数据格式，使用模拟数据');
+            // 使用模拟数据
+            thicknessX = Array.from({ length: 100 }, (_, i) => i * 0.1);
+            thicknessY = thicknessX.map(x => Math.max(0, 1 - Math.sin(x + timeValue) * 0.2));
+        }
+        
+        if (thicknessY) {
+            const thicknessTrace = {
+                x: thicknessX,
+                y: thicknessY,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: `光刻胶厚度分布 (t=${timeValue.toFixed(2)}s)`,
+                line: { color: '#e74c3c', width: 3 },
+                marker: { size: 4, color: '#e74c3c' },
+                fill: 'tonexty',
+                fillcolor: 'rgba(231, 76, 60, 0.1)'
+            };
+            
+            const thicknessLayout = {
+                title: `光刻胶厚度分布 (t=${timeValue.toFixed(2)}s)`,
+                xaxis: { title: 'X 位置 (μm)' },
+                yaxis: { title: '相对厚度' },
+                margin: { t: 60, b: 60, l: 80, r: 30 },
+                plot_bgcolor: '#f8f9fa',
+                paper_bgcolor: 'white'
+            };
+            
+            Plotly.newPlot(thicknessContainer, [thicknessTrace], thicknessLayout, { responsive: true });
+            console.log('光刻胶厚度分布图更新完成');
+        }
+    }
+    
+    // 更新时间滑块和显示信息
+    updateDill1DTimeSlider(frameIndex);
+    updateDill1DTimeDisplay(timeValue, frameIndex);
+    
+    // 如果正在播放则显示播放中，否则显示就绪
+    if (dill1DAnimationState.isPlaying) {
+        updateDill1DAnimationStatus(`播放中: 第${frameIndex + 1}/${dill1DAnimationState.totalFrames}帧 (t=${timeValue.toFixed(2)}s)`);
+    } else {
+        updateDill1DAnimationStatus(`就绪: 第${frameIndex + 1}/${dill1DAnimationState.totalFrames}帧 (t=${timeValue.toFixed(2)}s)`);
+    }
+    
+    console.log('✅ DILL 1D动画帧更新完成');
+}
+
+function updateDill1DTimeSlider(frameIndex) {
+    const timeSlider = document.getElementById('dill-1d-time-slider');
+    if (timeSlider) {
+        timeSlider.value = frameIndex;
+        timeSlider.max = dill1DAnimationState.totalFrames - 1;
+    }
+}
+
+function updateDill1DTimeDisplay(timeValue, frameIndex) {
+    // 更新时间显示
+    const timeDisplay = document.getElementById('dill-1d-time-display');
+    if (timeDisplay) {
+        timeDisplay.textContent = `t = ${timeValue.toFixed(2)}s`;
+    }
+    
+    // 更新帧信息显示
+    const frameInfo = document.getElementById('dill-1d-frame-info');
+    if (frameInfo) {
+        frameInfo.textContent = `帧 ${frameIndex + 1}/${dill1DAnimationState.totalFrames}`;
+    }
+}
+
 // DILL模型4D动画播放控制函数
 function playDill4DAnimation() {
     if (dill4DAnimationState.isPlaying) return;
@@ -6616,7 +7753,7 @@ function pauseDill4DAnimation() {
     const playBtn = document.getElementById('dill-4d-play-btn');
     const pauseBtn = document.getElementById('dill-4d-pause-btn');
     if (playBtn && pauseBtn) {
-        playBtn.style.display = 'flex';
+        playBtn.style.display = 'inline-flex';
         pauseBtn.style.display = 'none';
     }
 }
@@ -6692,7 +7829,7 @@ function pauseEnhancedDill4DAnimation() {
     const playBtn = document.getElementById('enhanced-dill-4d-play-btn');
     const pauseBtn = document.getElementById('enhanced-dill-4d-pause-btn');
     if (playBtn && pauseBtn) {
-        playBtn.style.display = 'flex';
+        playBtn.style.display = 'inline-flex';
         pauseBtn.style.display = 'none';
     }
 }
@@ -7674,4 +8811,551 @@ function setupEnhancedDill4DAnimationEventListeners() {
     }
     
     console.log('Enhanced DILL 4D动画事件监听器设置完成');
+}
+
+// 防抖的1D帧更新函数
+const debouncedUpdateDill1DFrame = debounce((frameIndex) => {
+    updateDill1DAnimationFrame(frameIndex);
+}, 100);
+
+// 设置DILL模型1D动画控制事件监听器
+function setupDill1DAnimationEventListeners() {
+    console.log('设置DILL 1D动画事件监听器');
+    
+    const playBtn = document.getElementById('dill-1d-play-btn');
+    const pauseBtn = document.getElementById('dill-1d-pause-btn');
+    const resetBtn = document.getElementById('dill-1d-reset-btn');
+    const loopBtn = document.getElementById('dill-1d-loop-btn');
+    const timeSlider = document.getElementById('dill-1d-time-slider');
+    
+    console.log('DILL 1D动画按钮状态:', {
+        playBtn: !!playBtn,
+        pauseBtn: !!pauseBtn,
+        resetBtn: !!resetBtn,
+        loopBtn: !!loopBtn,
+        timeSlider: !!timeSlider,
+        isPlaying: dill1DAnimationState.isPlaying
+    });
+    
+    if (playBtn) {
+        // 清除旧的事件监听器
+        playBtn.replaceWith(playBtn.cloneNode(true));
+        const newPlayBtn = document.getElementById('dill-1d-play-btn');
+        newPlayBtn.addEventListener('click', function() {
+            console.log('DILL 1D动画播放按钮被点击');
+            if (dill1DAnimationState.animationData) {
+                playDill1DAnimation();
+            } else {
+                console.warn('DILL 1D动画数据不存在');
+                alert('请先计算DILL模型1D动画数据');
+            }
+        });
+        console.log('DILL 1D动画播放按钮事件已绑定');
+    } else {
+        console.error('DILL 1D动画播放按钮未找到');
+    }
+    
+    if (pauseBtn) {
+        pauseBtn.replaceWith(pauseBtn.cloneNode(true));
+        const newPauseBtn = document.getElementById('dill-1d-pause-btn');
+        newPauseBtn.addEventListener('click', function() {
+            console.log('DILL 1D动画暂停按钮被点击');
+            pauseDill1DAnimation();
+        });
+        console.log('DILL 1D动画暂停按钮事件已绑定');
+    } else {
+        console.error('DILL 1D动画暂停按钮未找到');
+    }
+    
+    // 重新设置按钮的正确显示状态
+    updateDill1DButtonStates();
+    
+    if (resetBtn) {
+        resetBtn.replaceWith(resetBtn.cloneNode(true));
+        const newResetBtn = document.getElementById('dill-1d-reset-btn');
+        newResetBtn.addEventListener('click', resetDill1DAnimation);
+        console.log('DILL 1D动画重置按钮事件已绑定');
+    } else {
+        console.error('DILL 1D动画重置按钮未找到');
+    }
+    
+    if (loopBtn) {
+        loopBtn.replaceWith(loopBtn.cloneNode(true));
+        const newLoopBtn = document.getElementById('dill-1d-loop-btn');
+        newLoopBtn.addEventListener('click', toggleDill1DLoop);
+        console.log('DILL 1D动画循环按钮事件已绑定');
+    } else {
+        console.error('DILL 1D动画循环按钮未找到');
+    }
+    
+    // 添加时间滑块事件监听器，使用防抖机制
+    if (timeSlider) {
+        timeSlider.replaceWith(timeSlider.cloneNode(true));
+        const newTimeSlider = document.getElementById('dill-1d-time-slider');
+        
+        let isUpdating = false;
+        newTimeSlider.addEventListener('input', function() {
+            console.log('DILL 1D动画时间滑块拖动:', this.value);
+            if (isUpdating) return;
+            
+            // 暂停当前动画
+            pauseDill1DAnimation();
+            
+            // 更新到选定帧（使用防抖）
+            const frameIndex = parseInt(this.value);
+            dill1DAnimationState.currentFrame = frameIndex;
+            debouncedUpdateDill1DFrame(frameIndex);
+        });
+        
+        // 添加change事件确保最终状态正确
+        newTimeSlider.addEventListener('change', function() {
+            console.log('DILL 1D动画时间滑块选择:', this.value);
+            const frameIndex = parseInt(this.value);
+            dill1DAnimationState.currentFrame = frameIndex;
+            isUpdating = true;
+            updateDill1DAnimationFrame(frameIndex);
+            setTimeout(() => { isUpdating = false; }, 50);
+        });
+        
+        console.log('DILL 1D动画时间滑块事件已绑定');
+    } else {
+        console.error('DILL 1D动画时间滑块未找到');
+    }
+    
+    console.log('DILL 1D动画事件监听器设置完成');
+}
+
+// ================================
+// DILL 1D V评估动画控制功能
+// ================================
+
+// 设置DILL模型1D V评估控制
+function setupDill1DVEvaluationControls() {
+    console.log('设置DILL 1D V评估控制');
+    
+    // 初始化V评估状态
+    dill1DVEvaluationState.currentFrame = 0;
+    dill1DVEvaluationState.isPlaying = false;
+    dill1DVEvaluationState.isLooping = false;
+    
+    console.log('DILL 1D V评估控制设置完成');
+}
+
+// 播放DILL 1D V评估动画
+function playDill1DVEvaluation() {
+    console.log('开始播放DILL 1D V评估动画');
+    
+    if (!dill1DVEvaluationState.animationData || dill1DVEvaluationState.animationData.length === 0) {
+        console.warn('没有V评估动画数据可播放');
+        return;
+    }
+    
+    if (dill1DVEvaluationState.isPlaying) {
+        console.log('V评估动画已在播放中');
+        return;
+    }
+    
+    dill1DVEvaluationState.isPlaying = true;
+    updateDill1DVEvaluationStatus('播放中');
+    
+    // 切换播放按钮和暂停按钮的显示状态
+    const playBtn = document.getElementById('dill-1d-v-play-btn');
+    const pauseBtn = document.getElementById('dill-1d-v-pause-btn');
+    
+    if (playBtn) playBtn.style.display = 'none';
+    if (pauseBtn) pauseBtn.style.display = 'inline-flex';
+    
+    console.log('V评估动画播放状态:', {
+        totalFrames: dill1DVEvaluationState.totalFrames,
+        currentFrame: dill1DVEvaluationState.currentFrame,
+        isLooping: dill1DVEvaluationState.isLooping
+    });
+    
+    dill1DVEvaluationState.intervalId = setInterval(() => {
+        if (dill1DVEvaluationState.currentFrame < dill1DVEvaluationState.totalFrames - 1) {
+            dill1DVEvaluationState.currentFrame++;
+        } else if (dill1DVEvaluationState.isLooping) {
+            dill1DVEvaluationState.currentFrame = 0;
+        } else {
+            pauseDill1DVEvaluation();
+            return;
+        }
+        
+        updateDill1DVEvaluationFrame(dill1DVEvaluationState.currentFrame);
+        updateDill1DVEvaluationTimeSlider(dill1DVEvaluationState.currentFrame);
+    }, 500); // 500ms间隔，可根据需要调整
+}
+
+// 暂停DILL 1D V评估动画
+function pauseDill1DVEvaluation() {
+    console.log('暂停DILL 1D V评估动画');
+    
+    if (dill1DVEvaluationState.intervalId) {
+        clearInterval(dill1DVEvaluationState.intervalId);
+        dill1DVEvaluationState.intervalId = null;
+    }
+    
+    dill1DVEvaluationState.isPlaying = false;
+    // 更新当前帧状态为就绪
+    const frameData = dill1DVEvaluationState.animationData && dill1DVEvaluationState.animationData[dill1DVEvaluationState.currentFrame];
+    if (frameData) {
+        updateDill1DVEvaluationStatus(`就绪: 第${dill1DVEvaluationState.currentFrame + 1}/${dill1DVEvaluationState.totalFrames}帧 (V=${frameData.v_value.toFixed(2)})`);
+    } else {
+        updateDill1DVEvaluationStatus('就绪');
+    }
+    
+    // 切换播放按钮和暂停按钮的显示状态
+    const playBtn = document.getElementById('dill-1d-v-play-btn');
+    const pauseBtn = document.getElementById('dill-1d-v-pause-btn');
+    if (playBtn && pauseBtn) {
+        playBtn.style.display = 'inline-flex';
+        pauseBtn.style.display = 'none';
+    }
+}
+
+// 重置DILL 1D V评估动画
+function resetDill1DVEvaluation() {
+    console.log('重置DILL 1D V评估动画');
+    pauseDill1DVEvaluation();
+    dill1DVEvaluationState.currentFrame = 0;
+    updateDill1DVEvaluationFrame(0);
+    updateDill1DVEvaluationTimeSlider(0);
+    updateDill1DVEvaluationStatus('已重置');
+}
+
+// 切换DILL 1D V评估循环模式
+function toggleDill1DVEvaluationLoop() {
+    dill1DVEvaluationState.isLooping = !dill1DVEvaluationState.isLooping;
+    const loopBtn = document.getElementById('dill-1d-v-loop-btn');
+    if (loopBtn) {
+        const textSpan = loopBtn.querySelector('span');
+        if (dill1DVEvaluationState.isLooping) {
+            // 开启循环时：移除 loop-off 类，显示"关闭循环"
+            if (textSpan) textSpan.textContent = '关闭循环';
+            loopBtn.classList.remove('loop-off');
+            loopBtn.setAttribute('title', '关闭循环播放');
+        } else {
+            // 关闭循环时：添加 loop-off 类，显示"开启循环"
+            if (textSpan) textSpan.textContent = '开启循环';
+            loopBtn.classList.add('loop-off');
+            loopBtn.setAttribute('title', '开启循环播放');
+        }
+    }
+    updateDill1DVEvaluationStatus(dill1DVEvaluationState.isLooping ? '已开启循环播放' : '已关闭循环播放');
+}
+
+// 更新DILL 1D V评估动画状态显示
+function updateDill1DVEvaluationStatus(status) {
+    const statusElement = document.getElementById('dill-1d-v-evaluation-status');
+    if (statusElement) {
+        statusElement.textContent = status;
+    }
+}
+
+// 更新DILL 1D V评估动画帧
+function updateDill1DVEvaluationFrame(frameIndex) {
+    console.log(`更新DILL 1D V评估动画帧: ${frameIndex}/${dill1DVEvaluationState.totalFrames - 1}`);
+    
+    if (!dill1DVEvaluationState.animationData || frameIndex >= dill1DVEvaluationState.animationData.length) {
+        console.error('V评估帧索引超出范围或数据不存在:', frameIndex);
+        return;
+    }
+    
+    try {
+        const frameData = dill1DVEvaluationState.animationData[frameIndex];
+        console.log('V评估帧数据:', {
+            frameIndex: frameIndex,
+            v_value: frameData.v_value,
+            x_length: frameData.x ? frameData.x.length : 0,
+            exposure_length: frameData.exposure_dose ? frameData.exposure_dose.length : 0,
+            thickness_length: frameData.thickness ? frameData.thickness.length : 0
+        });
+        
+        // 获取图表容器
+        const exposureContainer = document.getElementById('dill-v-exposure-1d-plot');
+        const thicknessContainer = document.getElementById('dill-v-thickness-1d-plot');
+        const contrastContainer = document.getElementById('dill-v-comparison-plot');
+        
+        if (!exposureContainer || !thicknessContainer || !contrastContainer) {
+            console.error('V评估图表容器未找到');
+            return;
+        }
+        
+        // 构造图表数据
+        const plotData = {
+            x: frameData.x,
+            x_coords: frameData.x,
+            exposure_dose: frameData.exposure_dose,
+            thickness: frameData.thickness,
+            is_1d: true,
+            sine_type: '1d'
+        };
+        
+        // 更新曝光剂量图表
+        try {
+            exposureContainer.innerHTML = '';
+            createExposurePlot(exposureContainer, plotData);
+            
+            // 添加V值标题
+            const exposureTitle = exposureContainer.parentElement.querySelector('.v-evaluation-plot-title');
+            if (exposureTitle) {
+                exposureTitle.textContent = `曝光剂量分布 (V=${frameData.v_value.toFixed(3)})`;
+            }
+        } catch (error) {
+            console.error('更新V评估曝光剂量图表失败:', error);
+            exposureContainer.innerHTML = '<div style="color:red;padding:20px;">曝光剂量图表更新失败</div>';
+        }
+        
+        // 更新厚度图表
+        try {
+            thicknessContainer.innerHTML = '';
+            createThicknessPlot(thicknessContainer, plotData);
+            
+            // 添加V值标题
+            const thicknessTitle = thicknessContainer.parentElement.querySelector('.v-evaluation-plot-title');
+            if (thicknessTitle) {
+                thicknessTitle.textContent = `光刻胶厚度分布 (V=${frameData.v_value.toFixed(3)})`;
+            }
+        } catch (error) {
+            console.error('更新V评估厚度图表失败:', error);
+            thicknessContainer.innerHTML = '<div style="color:red;padding:20px;">厚度图表更新失败</div>';
+        }
+        
+        // 更新对比分析图表
+        try {
+            contrastContainer.innerHTML = '';
+            createVEvaluationContrastPlot(contrastContainer, dill1DVEvaluationState.animationData, frameIndex);
+        } catch (error) {
+            console.error('更新V评估对比分析图表失败:', error);
+            contrastContainer.innerHTML = '<div style="color:red;padding:20px;">对比分析图表更新失败</div>';
+        }
+        
+        // 更新V值显示和时间滑块
+        updateDill1DVEvaluationVDisplay(frameData.v_value, frameIndex);
+        updateDill1DVEvaluationTimeSlider(frameIndex);
+        
+    } catch (error) {
+        console.error('更新V评估动画帧失败:', error);
+    }
+}
+
+// 创建V评估对比分析图表
+function createVEvaluationContrastPlot(container, allFramesData, currentIndex) {
+    if (!allFramesData || allFramesData.length === 0) {
+        container.innerHTML = '<div style="color:orange;padding:20px;">对比分析数据不足</div>';
+        return;
+    }
+    
+    // 提取V值和对应的最大曝光剂量、最大厚度
+    const vValues = [];
+    const maxExposures = [];
+    const maxThicknesses = [];
+    
+    allFramesData.forEach(frame => {
+        vValues.push(frame.v_value);
+        maxExposures.push(Math.max(...frame.exposure_dose));
+        maxThicknesses.push(Math.max(...frame.thickness));
+    });
+    
+    const trace1 = {
+        x: vValues,
+        y: maxExposures,
+        type: 'scatter',
+        mode: 'lines+markers',
+        name: '最大曝光剂量',
+        line: { color: '#2E86AB', width: 2 },
+        marker: { size: 6 }
+    };
+    
+    const trace2 = {
+        x: vValues,
+        y: maxThicknesses,
+        type: 'scatter',
+        mode: 'lines+markers',
+        name: '最大厚度',
+        line: { color: '#A23B72', width: 2 },
+        marker: { size: 6 },
+        yaxis: 'y2'
+    };
+    
+    // 添加当前V值的竖线
+    const currentV = allFramesData[currentIndex].v_value;
+    const trace3 = {
+        x: [currentV, currentV],
+        y: [Math.min(...maxExposures), Math.max(...maxExposures)],
+        type: 'scatter',
+        mode: 'lines',
+        name: `当前V值 (${currentV.toFixed(3)})`,
+        line: { color: '#f39c12', width: 3, dash: 'dash' },
+        showlegend: true
+    };
+    
+    const layout = {
+        title: 'V值对比分析',
+        xaxis: { 
+            title: 'V值 (对比度)',
+            gridcolor: '#e0e0e0'
+        },
+        yaxis: {
+            title: '最大曝光剂量',
+            side: 'left',
+            gridcolor: '#e0e0e0',
+            titlefont: { color: '#2E86AB' },
+            tickfont: { color: '#2E86AB' }
+        },
+        yaxis2: {
+            title: '最大厚度',
+            side: 'right',
+            overlaying: 'y',
+            titlefont: { color: '#A23B72' },
+            tickfont: { color: '#A23B72' }
+        },
+        legend: {
+            x: 0,
+            y: 1,
+            bgcolor: 'rgba(255,255,255,0.8)'
+        },
+        margin: { l: 60, r: 60, t: 50, b: 50 },
+        plot_bgcolor: '#fafafa',
+        paper_bgcolor: 'white'
+    };
+    
+    const config = {
+        responsive: true,
+        displayModeBar: true,
+        modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d']
+    };
+    
+    Plotly.newPlot(container, [trace1, trace2, trace3], layout, config);
+}
+
+// 更新DILL 1D V评估时间滑块
+function updateDill1DVEvaluationTimeSlider(frameIndex) {
+    const timeSlider = document.getElementById('dill-1d-v-slider');
+    if (timeSlider) {
+        timeSlider.value = frameIndex;
+        
+        // 更新滑块的最大值
+        if (timeSlider.max != dill1DVEvaluationState.totalFrames - 1) {
+            timeSlider.max = dill1DVEvaluationState.totalFrames - 1;
+        }
+    }
+}
+
+// 更新DILL 1D V评估V值显示
+function updateDill1DVEvaluationVDisplay(vValue, frameIndex) {
+    const vDisplay = document.getElementById('dill-1d-v-display');
+    if (vDisplay) {
+        vDisplay.textContent = `V = ${vValue.toFixed(2)}`;
+    }
+    
+    const frameInfo = document.getElementById('dill-1d-v-frame-info');
+    if (frameInfo) {
+        frameInfo.textContent = `帧 ${frameIndex + 1}/${dill1DVEvaluationState.totalFrames}`;
+    }
+}
+
+// 防抖的V评估帧更新函数
+const debouncedUpdateDill1DVEvaluationFrame = debounce((frameIndex) => {
+    updateDill1DVEvaluationFrame(frameIndex);
+}, 100);
+
+// 设置DILL模型1D V评估事件监听器
+function setupDill1DVEvaluationEventListeners() {
+    console.log('设置DILL 1D V评估事件监听器');
+    
+    const playBtn = document.getElementById('dill-1d-v-play-btn');
+    const pauseBtn = document.getElementById('dill-1d-v-pause-btn');
+    const resetBtn = document.getElementById('dill-1d-v-reset-btn');
+    const loopBtn = document.getElementById('dill-1d-v-loop-btn');
+    const timeSlider = document.getElementById('dill-1d-v-slider');
+    
+    console.log('DILL 1D V评估按钮状态:', {
+        playBtn: !!playBtn,
+        pauseBtn: !!pauseBtn,
+        resetBtn: !!resetBtn,
+        loopBtn: !!loopBtn,
+        timeSlider: !!timeSlider
+    });
+    
+    if (playBtn) {
+        // 清除旧的事件监听器
+        playBtn.replaceWith(playBtn.cloneNode(true));
+        const newPlayBtn = document.getElementById('dill-1d-v-play-btn');
+        newPlayBtn.addEventListener('click', function() {
+            console.log('DILL 1D V评估播放按钮被点击');
+            if (dill1DVEvaluationState.animationData) {
+                playDill1DVEvaluation();
+            } else {
+                console.warn('DILL 1D V评估数据不存在');
+                alert('请先计算DILL模型1D V评估数据');
+            }
+        });
+        console.log('DILL 1D V评估播放按钮事件已绑定');
+    } else {
+        console.error('DILL 1D V评估播放按钮未找到');
+    }
+    
+    if (pauseBtn) {
+        pauseBtn.replaceWith(pauseBtn.cloneNode(true));
+        const newPauseBtn = document.getElementById('dill-1d-v-pause-btn');
+        newPauseBtn.addEventListener('click', pauseDill1DVEvaluation);
+        console.log('DILL 1D V评估暂停按钮事件已绑定');
+    } else {
+        console.error('DILL 1D V评估暂停按钮未找到');
+    }
+    
+    if (resetBtn) {
+        resetBtn.replaceWith(resetBtn.cloneNode(true));
+        const newResetBtn = document.getElementById('dill-1d-v-reset-btn');
+        newResetBtn.addEventListener('click', resetDill1DVEvaluation);
+        console.log('DILL 1D V评估重置按钮事件已绑定');
+    } else {
+        console.error('DILL 1D V评估重置按钮未找到');
+    }
+    
+    if (loopBtn) {
+        loopBtn.replaceWith(loopBtn.cloneNode(true));
+        const newLoopBtn = document.getElementById('dill-1d-v-loop-btn');
+        newLoopBtn.addEventListener('click', toggleDill1DVEvaluationLoop);
+        console.log('DILL 1D V评估循环按钮事件已绑定');
+    } else {
+        console.error('DILL 1D V评估循环按钮未找到');
+    }
+    
+    // 添加时间滑块事件监听器，使用防抖机制
+    if (timeSlider) {
+        timeSlider.replaceWith(timeSlider.cloneNode(true));
+        const newTimeSlider = document.getElementById('dill-1d-v-slider');
+        
+        let isUpdating = false;
+        newTimeSlider.addEventListener('input', function() {
+            console.log('DILL 1D V评估时间滑块拖动:', this.value);
+            if (isUpdating) return;
+            
+            // 暂停当前动画
+            pauseDill1DVEvaluation();
+            
+            // 更新到选定帧（使用防抖）
+            const frameIndex = parseInt(this.value);
+            dill1DVEvaluationState.currentFrame = frameIndex;
+            debouncedUpdateDill1DVEvaluationFrame(frameIndex);
+        });
+        
+        // 添加change事件确保最终状态正确
+        newTimeSlider.addEventListener('change', function() {
+            console.log('DILL 1D V评估时间滑块选择:', this.value);
+            const frameIndex = parseInt(this.value);
+            dill1DVEvaluationState.currentFrame = frameIndex;
+            isUpdating = true;
+            updateDill1DVEvaluationFrame(frameIndex);
+            setTimeout(() => { isUpdating = false; }, 50);
+        });
+        
+        console.log('DILL 1D V评估时间滑块事件已绑定');
+    } else {
+        console.error('DILL 1D V评估时间滑块未找到');
+    }
+    
+    console.log('DILL 1D V评估事件监听器设置完成');
 }

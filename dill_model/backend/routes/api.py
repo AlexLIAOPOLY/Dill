@@ -82,6 +82,7 @@ def calculate():
         
         # 根据模型类型验证参数
         if model_type == 'dill':
+            sine_type = data.get('sine_type', '1d')  # 先获取sine_type
             is_valid, message = validate_input(data)
             if not is_valid:
                 print(f"参数校验失败: {message}, 参数: {data}")
@@ -92,7 +93,6 @@ def calculate():
             V = float(data['V'])
             t_exp = float(data['t_exp'])
             C = float(data['C'])
-            sine_type = data.get('sine_type', '1d')
             
             if sine_type == 'multi':
                 Kx = float(data.get('Kx', 0))
@@ -105,9 +105,9 @@ def calculate():
                 
                 # 新增校验: 确保 y_min < y_max 且 y_points > 1
                 if y_min >= y_max:
-                    return jsonify(format_response(False, message_zh="Y轴范围最小值必须小于最大值", message_en="Y-axis range min must be less than max")), 400
+                    return jsonify(format_response(False, message="Y轴范围最小值必须小于最大值")), 400
                 if y_points <= 1:
-                    return jsonify(format_response(False, message_zh="Y轴点数必须大于1才能进行二维计算", message_en="Number of Y-axis points must be greater than 1 for 2D calculation")), 400
+                    return jsonify(format_response(False, message="Y轴点数必须大于1才能进行二维计算")), 400
                 
                 # 如果校验通过，则直接计算y_range
                 y_range = np.linspace(y_min, y_max, y_points).tolist()
@@ -136,7 +136,25 @@ def calculate():
                                            y_range=y_range, z_range=z_range)
             else:
                 K = float(data['K'])
+                # 首先生成基于用户当前输入t_exp的静态数据（无论是否启用动画）
                 plots = model.generate_plots(I_avg, V, K, t_exp, C, sine_type=sine_type)
+                
+                # 检查是否启用1D动画
+                enable_1d_animation = data.get('enable_1d_animation', False)
+                if enable_1d_animation:
+                    # 获取1D动画参数 - 修复参数名不匹配问题
+                    t_exp_start_1d = float(data.get('t_start', 0.1))  # 修复：从 t_exp_start_1d 改为 t_start
+                    t_exp_end_1d = float(data.get('t_end', 50.0))     # 修复：从 t_exp_end_1d 改为 t_end
+                    time_steps_1d = int(data.get('time_steps', 100))  # 修复：从 time_steps_1d 改为 time_steps
+                    
+                    add_progress_log('dill', f"启用1D时间动画 (曝光时间: {t_exp_start_1d}s - {t_exp_end_1d}s, {time_steps_1d}步)", dimension='1d')
+                    
+                    # 生成1D动画数据并合并到静态数据中
+                    animation_data = model.generate_1d_animation_data(I_avg, V, K, t_exp_start_1d, t_exp_end_1d, time_steps_1d, C)
+                    
+                    # 直接合并动画数据（动画数据已不再包含会覆盖静态数据的字段）
+                    plots.update(animation_data)
+                    add_success_log('dill', f"1D动画数据生成完成 ({time_steps_1d}帧)", dimension='1d')
         elif model_type == 'enhanced_dill':
             is_valid, message = validate_enhanced_input(data)
             if not is_valid:
@@ -313,6 +331,9 @@ def calculate_data():
             
             # 检查是否启用4D动画
             enable_4d_animation = data.get('enable_4d_animation', False)
+            
+            # 检查是否启用1D动画
+            enable_1d_animation = data.get('enable_1d_animation', False)
             t_start = float(data.get('t_start', 0)) if enable_4d_animation else 0
             t_end = float(data.get('t_end', 5)) if enable_4d_animation else 5
             time_steps = int(data.get('time_steps', 20)) if enable_4d_animation else 20
@@ -458,18 +479,109 @@ def calculate_data():
             else: # 1D Dill
                 K = float(data['K'])
                 
-                print(f"Dill模型参数 (1D正弦波): I_avg={I_avg}, V={V}, K={K}, t_exp={t_exp}, C={C}")
-                print(f"[Dill-1D] 开始计算一维空间分布，共1000个位置")
+                # 检查启用的功能
+                enable_1d_v_evaluation = data.get('enable_1d_v_evaluation', False)
                 
-                # 添加到日志系统
-                add_log_entry('info', 'dill', f"Dill-1D模型参数 (1D正弦波): I_avg={I_avg}, V={V}, K={K}, t_exp={t_exp}, C={C}", dimension='1d')
-                add_log_entry('progress', 'dill', f"开始计算一维空间分布，共1000个位置", dimension='1d')
+                # 首先生成基于用户当前参数的静态数据（这是所有模式的基础）
+                print(f"Dill模型参数: I_avg={I_avg}, V={V}, K={K}, t_exp={t_exp}, C={C}")
+                print(f"[Dill-1D] 生成静态数据作为基础")
                 
                 calc_start = time.time()
                 plot_data = model.generate_data(I_avg, V, K, t_exp, C, sine_type=sine_type)
-                calc_time = time.time() - calc_start
+                static_calc_time = time.time() - calc_start
+                total_calc_time = static_calc_time
                 
-                if plot_data and 'exposure_dose' in plot_data:
+                # 处理1D动画功能
+                if enable_1d_animation:
+                    # 处理1D动画参数
+                    t_start = float(data.get('t_start', 0.1))
+                    t_end = float(data.get('t_end', 5.0))
+                    time_steps = int(data.get('time_steps', 20))
+                    
+                    print(f"[Dill-1D-Animation] 启用1D时间动画，时间范围: {t_start}s - {t_end}s, {time_steps}步")
+                    add_progress_log('dill', f"启用1D时间动画 (时间范围: {t_start}s - {t_end}s, {time_steps}步)", dimension='1d')
+                    
+                    # 生成动画数据
+                    print(f"[Dill-1D-Animation] 生成动画数据 ({t_start}s - {t_end}s, {time_steps}帧)")
+                    anim_calc_start = time.time()
+                    animation_data = model.generate_1d_animation_data(I_avg, V, K, t_start, t_end, time_steps, C)
+                    anim_calc_time = time.time() - anim_calc_start
+                    total_calc_time += anim_calc_time
+                    
+                    # 添加动画数据到plot_data
+                    plot_data['enable_1d_animation'] = True
+                    plot_data['animation_frames'] = []
+                    
+                    # 处理动画帧数据
+                    if 'frames' in animation_data:
+                        for frame in animation_data['frames']:
+                            frame_data = {
+                                'time': frame['t_exp'],
+                                'x': frame['x_coords'],
+                                'exposure_dose': frame['exposure_data'],
+                                'thickness': frame['thickness_data']
+                            }
+                            plot_data['animation_frames'].append(frame_data)
+                    
+                    print(f"[Dill-1D-Animation] ✅ 动画数据生成完成: {len(plot_data.get('animation_frames', []))}帧，用时{anim_calc_time:.3f}s")
+                    add_log_entry('success', 'dill', f"✅ 1D动画数据生成完成", dimension='1d')
+                    add_success_log('dill', f"1D动画数据生成完成 ({time_steps}帧), 用时{anim_calc_time:.3f}s", dimension='1d')
+                
+                # 处理1D V评估功能
+                if enable_1d_v_evaluation:
+                    # 处理1D V评估参数
+                    v_start = float(data.get('v_start', 0.1))
+                    v_end = float(data.get('v_end', 1.0))
+                    v_time_steps = int(data.get('time_steps', 20))  # V评估使用相同的步数参数
+                    
+                    print(f"[Dill-1D-V-Eval] 启用1D V（对比度）评估，V范围: {v_start} - {v_end}, {v_time_steps}步")
+                    add_progress_log('dill', f"启用1D V（对比度）评估 (V范围: {v_start} - {v_end}, {v_time_steps}步)", dimension='1d')
+                    
+                    # 生成V评估数据
+                    print(f"[Dill-1D-V-Eval] 生成V评估数据 (V: {v_start} - {v_end}, {v_time_steps}帧)")
+                    v_calc_start = time.time()
+                    v_evaluation_data = model.generate_1d_v_animation_data(I_avg, v_start, v_end, v_time_steps, K, t_exp, C)
+                    v_calc_time = time.time() - v_calc_start
+                    total_calc_time += v_calc_time
+                    
+                    # 添加V评估数据到plot_data
+                    plot_data['enable_1d_v_evaluation'] = True
+                    plot_data['v_evaluation_frames'] = []
+                    
+                    # 处理V评估帧数据
+                    if 'frames' in v_evaluation_data:
+                        for frame in v_evaluation_data['frames']:
+                            frame_data = {
+                                'v_value': frame['v_value'],
+                                'x': frame['x_coords'],
+                                'exposure_dose': frame['exposure_data'],
+                                'thickness': frame['thickness_data']
+                            }
+                            plot_data['v_evaluation_frames'].append(frame_data)
+                    
+                    print(f"[Dill-1D-V-Eval] ✅ V评估数据生成完成: {len(plot_data.get('v_evaluation_frames', []))}帧，用时{v_calc_time:.3f}s")
+                    add_log_entry('success', 'dill', f"✅ 1D V评估数据生成完成", dimension='1d')
+                    add_success_log('dill', f"1D V评估数据生成完成 ({v_time_steps}帧), 用时{v_calc_time:.3f}s", dimension='1d')
+                
+                # 如果两个功能都没有启用，输出静态模式信息
+                if not enable_1d_animation and not enable_1d_v_evaluation:
+                    print(f"[Dill-1D] 静态模式，开始计算一维空间分布，共1000个位置")
+                    add_log_entry('info', 'dill', f"Dill-1D模型参数 (1D正弦波): I_avg={I_avg}, V={V}, K={K}, t_exp={t_exp}, C={C}", dimension='1d')
+                    add_log_entry('progress', 'dill', f"开始计算一维空间分布，共1000个位置", dimension='1d')
+                
+                calc_time = total_calc_time
+                
+                # 检查是否为1D动画模式或V评估模式 - 需要区别处理数据结构
+                if enable_1d_animation and plot_data and 'animation_frames' in plot_data:
+                    # 1D动画模式 - 数据在animation_frames中，不需要进度统计
+                    print(f"[Dill-1D-Animation] ✅ 动画数据处理完成，跳过统计分析")
+                    add_log_entry('success', 'dill', f"✅ 1D动画数据处理完成", dimension='1d')
+                elif data.get('enable_1d_v_evaluation', False) and plot_data and 'v_evaluation_frames' in plot_data:
+                    # 1D V评估模式 - 数据在v_evaluation_frames中，不需要进度统计
+                    print(f"[Dill-1D-V-Eval] ✅ V评估数据处理完成，跳过统计分析")
+                    add_log_entry('success', 'dill', f"✅ 1D V评估数据处理完成", dimension='1d')
+                elif plot_data and 'exposure_dose' in plot_data:
+                    # 静态1D模式 - 正常处理统计数据
                     exposure_array = np.array(plot_data['exposure_dose'])
                     thickness_array = np.array(plot_data['thickness'])
                     x_array = np.array(plot_data['x'])
@@ -537,7 +649,12 @@ def calculate_data():
                     add_log_entry('info', 'dill', f"   分辨率估计: {resolution}", dimension='1d')
                     add_log_entry('info', 'dill', f"   光敏速率常数C: {C:.4f} cm²/mJ", dimension='1d')
                 
-                add_success_log('dill', f"一维计算完成，1000点，用时{calc_time:.3f}s", dimension='1d')
+                if enable_1d_animation:
+                    add_success_log('dill', f"1D动画数据生成完成，{len(plot_data.get('animation_frames', []))}帧", dimension='1d')
+                elif data.get('enable_1d_v_evaluation', False):
+                    add_success_log('dill', f"1D V评估数据生成完成，{len(plot_data.get('v_evaluation_frames', []))}帧", dimension='1d')
+                else:
+                    add_success_log('dill', f"一维计算完成，1000点，用时{calc_time:.3f}s", dimension='1d')
         
         elif model_type == 'enhanced_dill':
             is_valid, message = validate_enhanced_input(data)

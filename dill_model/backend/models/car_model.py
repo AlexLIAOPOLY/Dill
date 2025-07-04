@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D  # 添加3D绘图支持
 from io import BytesIO
 import base64
 from scipy.ndimage import gaussian_filter
@@ -16,6 +17,7 @@ import ast
 import re
 import warnings
 import logging  # 添加logging模块
+from typing import Union  # 添加类型注解支持
 
 # 设置日志配置
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -74,7 +76,7 @@ class CARModel:
     def __init__(self):
         pass
     
-    def calculate_acid_generation(self, x, I_avg, V, K=None, t_exp=1, acid_gen_efficiency=1, sine_type='1d', Kx=None, Ky=None, Kz=None, phi_expr=None, y=0, z=0):
+    def calculate_acid_generation(self, x, I_avg, V, K=None, t_exp=1, acid_gen_efficiency=1, sine_type='1d', Kx=None, Ky=None, Kz=None, phi_expr=None, y: Union[float, int, np.ndarray] = 0, z: Union[float, int, np.ndarray] = 0):
         """
         计算初始光酸分布
         
@@ -90,8 +92,8 @@ class CARModel:
             Ky: 正弦波的y方向频率
             Kz: 正弦波的z方向频率
             phi_expr: 相位表达式
-            y: 位置的y坐标
-            z: 位置的z坐标
+            y: 位置的y坐标（支持标量或数组）
+            z: 位置的z坐标（支持标量或数组）
             
         返回:
             初始光酸浓度分布数组
@@ -133,13 +135,18 @@ class CARModel:
             logger.info(f"   - z (Z坐标) = {z}")
         else:
             logger.info(f"   - K (空间频率) = {K}")
-        if sine_type == 'multi' and Kx is not None:
+        
+        # 修复None乘法运算错误
+        if sine_type == 'multi' and Kx is not None and Ky is not None:
             phi = parse_phi_expr(phi_expr, 0) if phi_expr is not None else 0.0
             intensity = I_avg * (1 + V * np.cos(Kx * x + Ky * y + phi))
         elif sine_type == '3d' and Kx is not None and Ky is not None and Kz is not None:
             phi = parse_phi_expr(phi_expr, 0) if phi_expr is not None else 0.0
             intensity = I_avg * (1 + V * np.cos(Kx * x + Ky * y + Kz * z + phi))
         else:
+            # 确保K不为None
+            if K is None:
+                K = 2.0
             intensity = I_avg * (1 + V * np.cos(K * x))
         
         # 计算曝光剂量分布
@@ -248,13 +255,17 @@ class CARModel:
         return thickness
     
     def calculate_exposure_dose(self, x, I_avg, V, K, t_exp, sine_type='1d', Kx=None, Ky=None, Kz=None, phi_expr=None, y=0, z=0):
-        if sine_type == 'multi' and Kx is not None:
+        # 修复None乘法运算错误
+        if sine_type == 'multi' and Kx is not None and Ky is not None:
             phi = parse_phi_expr(phi_expr, 0) if phi_expr is not None else 0.0
             intensity = I_avg * (1 + V * np.cos(Kx * x + Ky * y + phi))
         elif sine_type == '3d' and Kx is not None and Ky is not None and Kz is not None:
             phi = parse_phi_expr(phi_expr, 0) if phi_expr is not None else 0.0
             intensity = I_avg * (1 + V * np.cos(Kx * x + Ky * y + Kz * z + phi))
         else:
+            # 确保K不为None
+            if K is None:
+                K = 2.0
             intensity = I_avg * (1 + V * np.cos(K * x))
         exposure_dose = intensity * t_exp
         return exposure_dose
@@ -977,7 +988,7 @@ class CARModel:
             # 绘制曝光剂量热图
             fig1 = plt.figure(figsize=(8, 6))
             plt.imshow(initial_acid_2d, aspect='auto', origin='lower', 
-                      extent=[min(x), max(x), min(y_axis_points), max(y_axis_points)], cmap='viridis')
+                      extent=(min(x), max(x), min(y_axis_points), max(y_axis_points)), cmap='viridis')
             plt.colorbar(label='曝光剂量 (mJ/cm²)')
             plt.xlabel('X 位置 (μm)')
             plt.ylabel('Y 位置 (μm)')
@@ -992,7 +1003,7 @@ class CARModel:
             # 绘制光刻胶厚度热图
             fig2 = plt.figure(figsize=(8, 6))
             plt.imshow(thickness_2d, aspect='auto', origin='lower', 
-                      extent=[min(x), max(x), min(y_axis_points), max(y_axis_points)], cmap='plasma')
+                      extent=(min(x), max(x), min(y_axis_points), max(y_axis_points)), cmap='plasma')
             plt.colorbar(label='相对厚度')
             plt.xlabel('X 位置 (μm)')
             plt.ylabel('Y 位置 (μm)')
@@ -1079,11 +1090,11 @@ class CARModel:
             # 1. 创建3D表面图 - 初始光酸分布
             fig1 = plt.figure(figsize=(10, 8))
             ax1 = fig1.add_subplot(111, projection='3d')
-            surf1 = ax1.plot_surface(X, Y, initial_acid, cmap='viridis', edgecolor='none')
+            surf1 = ax1.plot_surface(X, Y, initial_acid, cmap='viridis', edgecolor='none')  # type: ignore
             ax1.set_title('3D Initial Acid Distribution', fontsize=16)
             ax1.set_xlabel('X Position (μm)', fontsize=14)
             ax1.set_ylabel('Y Position (μm)', fontsize=14)
-            ax1.set_zlabel('Initial Acid Concentration', fontsize=14)
+            ax1.set_zlabel('Initial Acid Concentration', fontsize=14)  # type: ignore
             fig1.colorbar(surf1, ax=ax1, shrink=0.5, aspect=5)
             plt.tight_layout()
             
@@ -1096,11 +1107,11 @@ class CARModel:
             # 2. 创建3D表面图 - 扩散后光酸分布
             fig2 = plt.figure(figsize=(10, 8))
             ax2 = fig2.add_subplot(111, projection='3d')
-            surf2 = ax2.plot_surface(X, Y, diffused_acid, cmap='viridis', edgecolor='none')
+            surf2 = ax2.plot_surface(X, Y, diffused_acid, cmap='viridis', edgecolor='none')  # type: ignore
             ax2.set_title('3D Diffused Acid Distribution', fontsize=16)
             ax2.set_xlabel('X Position (μm)', fontsize=14)
             ax2.set_ylabel('Y Position (μm)', fontsize=14)
-            ax2.set_zlabel('Acid Concentration After Diffusion', fontsize=14)
+            ax2.set_zlabel('Acid Concentration After Diffusion', fontsize=14)  # type: ignore
             fig2.colorbar(surf2, ax=ax2, shrink=0.5, aspect=5)
             plt.tight_layout()
             
@@ -1113,11 +1124,11 @@ class CARModel:
             # 3. 创建3D表面图 - 脱保护程度分布
             fig3 = plt.figure(figsize=(10, 8))
             ax3 = fig3.add_subplot(111, projection='3d')
-            surf3 = ax3.plot_surface(X, Y, deprotection, cmap='YlOrRd', edgecolor='none')
+            surf3 = ax3.plot_surface(X, Y, deprotection, cmap='YlOrRd', edgecolor='none')  # type: ignore
             ax3.set_title('3D Deprotection Distribution', fontsize=16)
             ax3.set_xlabel('X Position (μm)', fontsize=14)
             ax3.set_ylabel('Y Position (μm)', fontsize=14)
-            ax3.set_zlabel('Deprotection Degree', fontsize=14)
+            ax3.set_zlabel('Deprotection Degree', fontsize=14)  # type: ignore
             fig3.colorbar(surf3, ax=ax3, shrink=0.5, aspect=5)
             plt.tight_layout()
             
@@ -1130,11 +1141,11 @@ class CARModel:
             # 4. 创建3D表面图 - 光刻胶厚度分布
             fig4 = plt.figure(figsize=(10, 8))
             ax4 = fig4.add_subplot(111, projection='3d')
-            surf4 = ax4.plot_surface(X, Y, thickness, cmap='plasma', edgecolor='none')
+            surf4 = ax4.plot_surface(X, Y, thickness, cmap='plasma', edgecolor='none')  # type: ignore
             ax4.set_title('3D Photoresist Thickness Distribution', fontsize=16)
             ax4.set_xlabel('X Position (μm)', fontsize=14)
             ax4.set_ylabel('Y Position (μm)', fontsize=14)
-            ax4.set_zlabel('Relative Thickness', fontsize=14)
+            ax4.set_zlabel('Relative Thickness', fontsize=14)  # type: ignore
             fig4.colorbar(surf4, ax=ax4, shrink=0.5, aspect=5)
             plt.tight_layout()
             

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 import matplotlib
 # 设置Matplotlib后端为非交互式后端
@@ -48,10 +49,69 @@ class DillModel:
     Dill光刻胶模型计算类
     
     实现基于Dill模型的光刻胶曝光剂量分布和厚度分布计算
+    
+    核心公式 (根据PDF文档):
+    - M = e^(-CIt)  (方程 2.7)
+    - cos(πd) = 1/Γ - Dc/(2Γ)D₀⁻¹  (方程 2.8)
+    - Dc = 2D₀[1-Γcos(πd)]  (临界剂量)
+    
+    其中:
+    - M: 归一化PAC浓度
+    - C: 光敏速率常数
+    - I: 光强度
+    - t: 曝光时间
+    - d: 占空比
+    - Γ: 对比度参数
+    - Dc: 临界剂量
+    - D₀: 实际曝光剂量
     """
     
     def __init__(self):
         pass
+    
+    def calculate_duty_cycle_parameters(self, exposure_dose, D0, gamma=1.0):
+        """
+        计算占空比相关参数
+        
+        根据PDF文档方程(2.8): cos(πd) = 1/Γ - Dc/(2Γ)D₀⁻¹
+        
+        参数:
+            exposure_dose: 实际曝光剂量数组
+            D0: 参考曝光剂量
+            gamma: 对比度参数Γ
+            
+        返回:
+            duty_cycle: 占空比数组
+            critical_dose: 临界剂量数组
+        """
+        logger.info("=" * 60)
+        logger.info("【Dill模型 - 占空比计算】")
+        logger.info("=" * 60)
+        logger.info("🔸 使用公式: cos(πd) = 1/Γ - Dc/(2Γ)D₀⁻¹")
+        logger.info("🔸 以及: Dc = 2D₀[1-Γcos(πd)]")
+        logger.info(f"🔸 输入参数:")
+        logger.info(f"   - D₀ (参考曝光剂量) = {D0}")
+        logger.info(f"   - Γ (对比度参数) = {gamma}")
+        
+        # 计算临界剂量 Dc，假设为清除光刻胶所需的最小剂量
+        # 对于正性光刻胶，Dc通常为D0的某个倍数
+        critical_dose = 0.8 * exposure_dose  # 简化假设
+        
+        # 根据方程(2.8)计算占空比
+        # cos(πd) = 1/Γ - Dc/(2Γ)D₀⁻¹
+        cos_pi_d = (1.0 / gamma) - (critical_dose / (2.0 * gamma * D0))
+        
+        # 确保cos值在有效范围内
+        cos_pi_d = np.clip(cos_pi_d, -1.0, 1.0)
+        
+        # 计算占空比 d = arccos(cos_pi_d) / π
+        duty_cycle = np.arccos(cos_pi_d) / np.pi
+        
+        logger.info(f"🔸 计算结果:")
+        logger.info(f"   - 占空比范围: [{np.min(duty_cycle):.4f}, {np.max(duty_cycle):.4f}]")
+        logger.info(f"   - 临界剂量范围: [{np.min(critical_dose):.4f}, {np.max(critical_dose):.4f}]")
+        
+        return duty_cycle, critical_dose
     
     def calculate_intensity_distribution(self, x, I_avg, V, K=None, sine_type='1d', Kx=None, Ky=None, Kz=None, phi_expr=None, y=0, z=0, t=0):
         """
@@ -82,6 +142,14 @@ class DillModel:
             logger.info("🔸 计算模式: 二维正弦波光强分布")
             logger.info("🔸 使用公式: I(x,y) = I_avg * (1 + V * cos(Kx*x + Ky*y + φ))")
             
+            # 参数检查和默认值设置
+            if Kx is None:
+                Kx = K if K is not None else 1.0
+                logger.warning(f"🔸 Kx为None，使用默认值: {Kx}")
+            if Ky is None:
+                Ky = K if K is not None else 1.0
+                logger.warning(f"🔸 Ky为None，使用默认值: {Ky}")
+            
             phi = parse_phi_expr(phi_expr, t) if phi_expr is not None else 0.0
             logger.info(f"🔸 输入变量值:")
             logger.info(f"   - I_avg (平均光强) = {I_avg}")
@@ -105,6 +173,17 @@ class DillModel:
         elif sine_type == '3d':
             logger.info("🔸 计算模式: 三维正弦波光强分布")
             logger.info("🔸 使用公式: I(x,y,z) = I_avg * (1 + V * cos(Kx*x + Ky*y + Kz*z + φ))")
+            
+            # 参数检查和默认值设置
+            if Kx is None:
+                Kx = K if K is not None else 1.0
+                logger.warning(f"🔸 Kx为None，使用默认值: {Kx}")
+            if Ky is None:
+                Ky = K if K is not None else 1.0
+                logger.warning(f"🔸 Ky为None，使用默认值: {Ky}")
+            if Kz is None:
+                Kz = K if K is not None else 1.0
+                logger.warning(f"🔸 Kz为None，使用默认值: {Kz}")
             
             phi = parse_phi_expr(phi_expr, t) if phi_expr is not None else 0.0
             logger.info(f"🔸 输入变量值:")
@@ -130,6 +209,11 @@ class DillModel:
         else:
             logger.info("🔸 计算模式: 一维正弦波光强分布")
             logger.info("🔸 使用公式: I(x) = I_avg * (1 + V * cos(K*x))")
+            
+            # 参数检查和默认值设置
+            if K is None:
+                K = 1.0
+                logger.warning(f"🔸 K为None，使用默认值: {K}")
             
             logger.info(f"🔸 输入变量值:")
             logger.info(f"   - I_avg (平均光强) = {I_avg}")
@@ -225,6 +309,78 @@ class DillModel:
         
         return thickness
     
+    def calculate_enhanced_photoresist_thickness(self, x, I_avg, V, K=None, t_exp=1, C=0.01, 
+                                               gamma=1.0, enable_duty_cycle=False, 
+                                               sine_type='1d', Kx=None, Ky=None, Kz=None, 
+                                               phi_expr=None, y=0, z=0):
+        """
+        计算增强的光刻胶厚度分布，包含占空比和临界剂量概念
+        
+        参数:
+            x: 位置坐标数组
+            I_avg: 平均入射光强度
+            V: 干涉条纹的可见度
+            K: 干涉条纹的空间频率
+            t_exp: 总曝光时间
+            C: 光刻胶光敏速率常数
+            gamma: 对比度参数Γ
+            enable_duty_cycle: 是否启用占空比计算
+            sine_type: 正弦波类型
+            其他参数: 与原方法相同
+            
+        返回:
+            包含厚度、占空比、临界剂量等信息的字典
+        """
+        logger.info("=" * 60)
+        logger.info("【Dill模型 - 增强光刻胶厚度计算】")
+        logger.info("=" * 60)
+        logger.info("🔸 核心公式: M(x) = exp(-C * D(x))")
+        logger.info("🔸 根据PDF文档方程(2.7): M = e^(-CIt)")
+        logger.info(f"🔸 输入参数:")
+        logger.info(f"   - C (光敏速率常数) = {C}")
+        logger.info(f"   - Γ (对比度参数) = {gamma}")
+        logger.info(f"   - 启用占空比计算 = {enable_duty_cycle}")
+        
+        # 计算基础曝光剂量
+        exposure_dose = self.calculate_exposure_dose(x, I_avg, V, K, t_exp, sine_type, Kx, Ky, Kz, phi_expr, y, z)
+        
+        # 基础DILL模型计算 - 符合PDF方程(2.7)
+        thickness = np.exp(-C * exposure_dose)
+        
+        result = {
+            'x': x,
+            'thickness': thickness,
+            'exposure_dose': exposure_dose,
+            'gamma': gamma,
+            'C': C
+        }
+        
+        # 如果启用占空比计算
+        if enable_duty_cycle:
+            D0 = np.mean(exposure_dose)  # 使用平均曝光剂量作为参考
+            duty_cycle, critical_dose = self.calculate_duty_cycle_parameters(exposure_dose, D0, gamma)
+            
+            result.update({
+                'duty_cycle': duty_cycle,
+                'critical_dose': critical_dose,
+                'D0': D0,
+                'enable_duty_cycle': True
+            })
+            
+            logger.info("🔸 占空比分析:")
+            logger.info(f"   - 参考剂量D₀ = {D0:.4f}")
+            logger.info(f"   - 平均占空比 = {np.mean(duty_cycle):.4f}")
+            logger.info(f"   - 平均临界剂量 = {np.mean(critical_dose):.4f}")
+        else:
+            result['enable_duty_cycle'] = False
+        
+        logger.info(f"🔸 最终计算结果:")
+        logger.info(f"   - 光刻胶厚度范围: [{np.min(thickness):.6f}, {np.max(thickness):.6f}]")
+        logger.info(f"   - 光刻胶厚度平均值: {np.mean(thickness):.6f}")
+        logger.info("   注: 厚度值为归一化值，1.0表示未曝光区域，0.0表示完全曝光区域")
+        
+        return result
+
     def generate_data(self, I_avg, V, K, t_exp, C, sine_type='1d', Kx=None, Ky=None, Kz=None, phi_expr=None, y_range=None, z_range=None, enable_4d_animation=False, t_start=0, t_end=5, time_steps=20, x_min=0, x_max=10):
         """
         生成数据，支持一维、二维、三维正弦波和4D动画
@@ -534,6 +690,157 @@ class DillModel:
                     'exposure_dose': exposure_dose.tolist(),
                     'thickness': thickness.tolist()
                 }
+
+    def generate_plots(self, I_avg, V, K, t_exp, C, sine_type='1d', Kx=None, Ky=None, Kz=None, phi_expr=None, y_range=None, z_range=None, enable_4d_animation=False, t_start=0, t_end=5, time_steps=20, x_min=0, x_max=10):
+        """
+        生成图表数据的包装器方法
+        
+        参数:
+            I_avg: 平均入射光强度
+            V: 干涉条纹的可见度
+            K: 干涉条纹的空间频率
+            t_exp: 总曝光时间
+            C: 光刻胶光敏速率常数
+            sine_type: 正弦波类型
+            Kx, Ky, Kz: 空间频率分量
+            phi_expr: 相位表达式
+            y_range, z_range: 坐标范围
+            enable_4d_animation: 是否启用4D动画
+            t_start, t_end: 时间范围
+            time_steps: 时间步数
+            x_min, x_max: x轴范围
+            
+        返回:
+            包含图表数据的字典
+        """
+        logger.info("🎯 调用DillModel.generate_plots方法")
+        return self.generate_data(I_avg, V, K, t_exp, C, sine_type, Kx, Ky, Kz, phi_expr, y_range, z_range, enable_4d_animation, t_start, t_end, time_steps, x_min, x_max)
+
+    def generate_1d_animation_data(self, I_avg, V, K, t_exp_start, t_exp_end, time_steps, C):
+        """
+        生成1D时间动画数据
+        
+        参数:
+            I_avg: 平均入射光强度
+            V: 干涉条纹的可见度
+            K: 干涉条纹的空间频率
+            t_exp_start: 开始曝光时间
+            t_exp_end: 结束曝光时间
+            time_steps: 时间步数
+            C: 光刻胶光敏速率常数
+            
+        返回:
+            包含动画数据的字典
+        """
+        logger.info("=" * 60)
+        logger.info("【Dill模型 - 1D时间动画数据生成】")
+        logger.info("=" * 60)
+        logger.info(f"🔸 曝光时间范围: {t_exp_start}s - {t_exp_end}s")
+        logger.info(f"🔸 时间步数: {time_steps}")
+        logger.info(f"🔸 其他参数: I_avg={I_avg}, V={V}, K={K}, C={C}")
+        
+        # 生成x坐标
+        x = np.linspace(0, 10, 100)
+        
+        # 生成时间序列
+        time_values = np.linspace(t_exp_start, t_exp_end, time_steps)
+        
+        # 为每个时间点生成数据
+        animation_frames = []
+        for i, t_exp in enumerate(time_values):
+            # 计算当前时间点的曝光剂量和厚度分布
+            exposure_dose = self.calculate_exposure_dose(x, I_avg, V, K, t_exp, sine_type='1d')
+            thickness = self.calculate_photoresist_thickness(x, I_avg, V, K, t_exp, C, sine_type='1d')
+            
+            frame_data = {
+                't_exp': float(t_exp),
+                'x_coords': x.tolist(),
+                'exposure_data': exposure_dose.tolist(),
+                'thickness_data': thickness.tolist(),
+                'frame_index': i
+            }
+            animation_frames.append(frame_data)
+            
+            logger.info(f"✅ 生成第 {i+1}/{time_steps} 帧 (t_exp={t_exp:.2f}s)")
+        
+        # 返回动画数据结构（移除会覆盖静态数据的兼容性字段）
+        result = {
+            'model_type': 'dill',
+            'sine_type': '1d',
+            'is_animation': True,
+            'animation_type': '1d_time',
+            'time_steps': time_steps,
+            'time_values': time_values.tolist(),
+            'frames': animation_frames,
+            'x_coords': x.tolist()
+            # 注意：移除了exposure_data, thickness_data, exposure_dose, thickness字段
+            # 这些字段应该来自基于用户当前t_exp的静态数据，而不是动画数据
+        }
+        
+        logger.info(f"🎬 1D时间动画数据生成完成，共{time_steps}帧")
+        return result
+
+    def generate_1d_v_animation_data(self, I_avg, V_start, V_end, time_steps, K, t_exp, C):
+        """
+        生成1D V（对比度）评估动画数据
+        
+        参数:
+            I_avg: 平均入射光强度
+            V_start: 开始V值（对比度）
+            V_end: 结束V值（对比度）
+            time_steps: V值步数
+            K: 干涉条纹的空间频率
+            t_exp: 曝光时间
+            C: 光刻胶光敏速率常数
+            
+        返回:
+            包含V评估动画数据的字典
+        """
+        logger.info("=" * 60)
+        logger.info("【Dill模型 - 1D V（对比度）评估数据生成】")
+        logger.info("=" * 60)
+        logger.info(f"🔸 V值范围: {V_start} - {V_end}")
+        logger.info(f"🔸 V值步数: {time_steps}")
+        logger.info(f"🔸 其他参数: I_avg={I_avg}, K={K}, t_exp={t_exp}, C={C}")
+        
+        # 生成x坐标
+        x = np.linspace(0, 10, 100)
+        
+        # 生成V值序列
+        v_values = np.linspace(V_start, V_end, time_steps)
+        
+        # 为每个V值生成数据
+        animation_frames = []
+        for i, v_val in enumerate(v_values):
+            # 计算当前V值的曝光剂量和厚度分布
+            exposure_dose = self.calculate_exposure_dose(x, I_avg, v_val, K, t_exp, sine_type='1d')
+            thickness = self.calculate_photoresist_thickness(x, I_avg, v_val, K, t_exp, C, sine_type='1d')
+            
+            frame_data = {
+                'v_value': float(v_val),
+                'x_coords': x.tolist(),
+                'exposure_data': exposure_dose.tolist(),
+                'thickness_data': thickness.tolist(),
+                'frame_index': i
+            }
+            animation_frames.append(frame_data)
+            
+            logger.info(f"✅ 生成第 {i+1}/{time_steps} 帧 (V={v_val:.3f})")
+        
+        # 返回V评估动画数据结构
+        result = {
+            'model_type': 'dill',
+            'sine_type': '1d',
+            'is_animation': True,
+            'animation_type': '1d_v_contrast',
+            'time_steps': time_steps,
+            'v_values': v_values.tolist(),
+            'frames': animation_frames,
+            'x_coords': x.tolist()
+        }
+        
+        logger.info(f"🎬 1D V（对比度）评估动画数据生成完成，共{time_steps}帧")
+        return result
 
 def get_model_by_name(model_name):
     """
