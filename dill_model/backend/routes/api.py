@@ -496,7 +496,7 @@ def calculate_data():
                     # 处理1D动画参数
                     t_start = float(data.get('t_start', 0.1))
                     t_end = float(data.get('t_end', 5.0))
-                    time_steps = int(data.get('time_steps', 20))
+                    time_steps = int(data.get('time_steps', 500))
                     
                     print(f"[Dill-1D-Animation] 启用1D时间动画，时间范围: {t_start}s - {t_end}s, {time_steps}步")
                     add_progress_log('dill', f"启用1D时间动画 (时间范围: {t_start}s - {t_end}s, {time_steps}步)", dimension='1d')
@@ -532,7 +532,7 @@ def calculate_data():
                     # 处理1D V评估参数
                     v_start = float(data.get('v_start', 0.1))
                     v_end = float(data.get('v_end', 1.0))
-                    v_time_steps = int(data.get('time_steps', 20))  # V评估使用相同的步数参数
+                    v_time_steps = int(data.get('time_steps', 500))  # V评估使用相同的步数参数
                     
                     print(f"[Dill-1D-V-Eval] 启用1D V（对比度）评估，V范围: {v_start} - {v_end}, {v_time_steps}步")
                     add_progress_log('dill', f"启用1D V（对比度）评估 (V范围: {v_start} - {v_end}, {v_time_steps}步)", dimension='1d')

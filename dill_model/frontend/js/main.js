@@ -852,7 +852,7 @@ function getParameterValues() {
                 
                 params.t_start = t_start_1d_elem ? parseFloat(t_start_1d_elem.value) || 0 : 0;
                 params.t_end = t_end_1d_elem ? parseFloat(t_end_1d_elem.value) || 5 : 5;
-                params.time_steps = time_steps_1d_elem ? parseInt(time_steps_1d_elem.value) || 20 : 20;
+                params.time_steps = time_steps_1d_elem ? parseInt(time_steps_1d_elem.value) || 500 : 500;
                 console.log('DILL模型1D模式启用时间动画:', params.enable_1d_animation, '时间范围:', params.t_start, '-', params.t_end, '步数:', params.time_steps);
             }
             
@@ -867,7 +867,7 @@ function getParameterValues() {
                 
                 params.v_start = v_start_1d_elem ? parseFloat(v_start_1d_elem.value) || 0.1 : 0.1;
                 params.v_end = v_end_1d_elem ? parseFloat(v_end_1d_elem.value) || 1.0 : 1.0;
-                params.time_steps = v_steps_1d_elem ? parseInt(v_steps_1d_elem.value) || 20 : 20;
+                params.time_steps = v_steps_1d_elem ? parseInt(v_steps_1d_elem.value) || 500 : 500;
                 console.log('DILL模型1D模式启用V评估:', params.enable_1d_v_evaluation, 'V范围:', params.v_start, '-', params.v_end, '步数:', params.time_steps);
             }
         } else if (sineType === 'multi') {
@@ -922,7 +922,7 @@ function getParameterValues() {
                 
                 params.t_start = t_start_elem ? parseFloat(t_start_elem.value) || 0 : 0;
                 params.t_end = t_end_elem ? parseFloat(t_end_elem.value) || 5 : 5;
-                params.time_steps = time_steps_elem ? parseInt(time_steps_elem.value) || 20 : 20;
+                params.time_steps = time_steps_elem ? parseInt(time_steps_elem.value) || 500 : 500;
                 console.log('DILL模型3D模式启用4D动画:', params.enable_4d_animation, '时间范围:', params.t_start, '-', params.t_end, '步数:', params.time_steps);
                 console.log('4D动画相位表达式:', params.phi_expr);
                 
@@ -1035,7 +1035,7 @@ function getParameterValues() {
                 
                 params.t_start = t_start_elem ? parseFloat(t_start_elem.value) || 0 : 0;
                 params.t_end = t_end_elem ? parseFloat(t_end_elem.value) || 5 : 5;
-                params.time_steps = time_steps_elem ? parseInt(time_steps_elem.value) || 20 : 20;
+                params.time_steps = time_steps_elem ? parseInt(time_steps_elem.value) || 500 : 500;
                 console.log('Enhanced DILL模型3D模式启用4D动画:', params.enable_4d_animation, '时间范围:', params.t_start, '-', params.t_end, '步数:', params.time_steps);
                 console.log('Enhanced DILL 4D动画相位表达式:', params.phi_expr);
                 
@@ -6382,6 +6382,154 @@ function carDraw3DPreviewPlot(scrollToPlot = false, t = 0) {
     if (scrollToPlot) {
         setTimeout(()=>{plot.scrollIntoView({behavior:'smooth', block:'center'});}, 200);
     }
+}
+
+// V值对比度类型提示功能
+function initVTooltip() {
+    const vInfoIcon = document.getElementById('v-info-icon');
+    const vSlider = document.getElementById('V');
+    const vNumberInput = vSlider ? vSlider.parentElement.querySelector('.number-input') : null;
+    
+    if (vInfoIcon) {
+        vInfoIcon.addEventListener('click', function(event) {
+            event.stopPropagation();
+            showVTooltip();
+        });
+    }
+    
+    // 监听V值变化，动态更新弹窗内容
+    if (vSlider) {
+        vSlider.addEventListener('input', updateVTooltipContent);
+    }
+    if (vNumberInput) {
+        vNumberInput.addEventListener('input', updateVTooltipContent);
+    }
+    
+    // 点击其他地方关闭弹窗
+    document.addEventListener('click', function(event) {
+        const tooltip = document.getElementById('v-tooltip');
+        const overlay = document.querySelector('.v-tooltip-overlay');
+        
+        if (tooltip && tooltip.style.display === 'block' && 
+            !tooltip.contains(event.target) && 
+            event.target !== vInfoIcon) {
+            hideVTooltip();
+        }
+    });
+    
+    // 初始化内容
+    updateVTooltipContent();
+}
+
+function showVTooltip() {
+    const tooltip = document.getElementById('v-tooltip');
+    if (tooltip) {
+        updateVTooltipContent();
+        
+        // 添加覆盖层让背景变暗
+        let overlay = document.querySelector('.v-tooltip-overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.className = 'v-tooltip-overlay';
+            document.body.appendChild(overlay);
+        }
+        overlay.style.display = 'block';
+        
+        // 确保弹窗在body的最顶层，不受覆盖层影响
+        document.body.appendChild(tooltip);
+        
+        // 显示弹窗（在覆盖层之上）
+        tooltip.style.display = 'block';
+        tooltip.style.zIndex = '10001';
+        tooltip.style.opacity = '1';
+        tooltip.style.filter = 'none';
+        
+        // 阻止页面滚动
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function hideVTooltip() {
+    const tooltip = document.getElementById('v-tooltip');
+    const overlay = document.querySelector('.v-tooltip-overlay');
+    
+    if (tooltip) {
+        tooltip.style.display = 'none';
+    }
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
+    
+    // 恢复页面滚动
+    document.body.style.overflow = '';
+}
+
+function updateVTooltipContent() {
+    const vSlider = document.getElementById('V');
+    if (!vSlider) return;
+    
+    const vValue = parseFloat(vSlider.value);
+    
+    // 更新当前V值
+    const currentValueElement = document.getElementById('v-current-value');
+    if (currentValueElement) {
+        currentValueElement.textContent = vValue.toFixed(3);
+    }
+    
+    // 确定对比度类型
+    let contrastType, contrastClass, formula, description;
+    
+    if (vValue < 0.5) {
+        contrastType = '低对比度';
+        contrastClass = 'low-contrast';
+        formula = 'thickness = exp(-C × D(x))';
+        description = '连续的指数衰减，厚度分布呈正弦波形状，无明显阈值效应';
+    } else if (vValue <= 0.8) {
+        contrastType = '中等对比度';
+        contrastClass = 'medium-contrast';
+        const alpha = ((vValue - 0.5) * 10).toFixed(1);
+        formula = `thickness = 1.0 / (1.0 + exp(${alpha} × (D(x) - D_threshold)))`;
+        description = `Sigmoid函数形式的渐进阈值效应，阈值锐度参数α=${alpha}`;
+    } else {
+        contrastType = '高对比度';
+        contrastClass = 'high-contrast';
+        formula = 'thickness = { 0.98 if D(x) ≤ D_threshold; exp(-C×D(x))×0.1 if D(x) > D_threshold }';
+        description = '严格的二值化阈值效应，未曝光区域厚度≈0.98，曝光区域几乎完全溶解';
+    }
+    
+    // 更新对比度类型
+    const typeElement = document.getElementById('v-contrast-type');
+    if (typeElement) {
+        typeElement.textContent = contrastType;
+        typeElement.className = `v-tooltip-type ${contrastClass}`;
+    }
+    
+    // 更新公式
+    const formulaElement = document.getElementById('v-formula');
+    if (formulaElement) {
+        const formulaText = formulaElement.querySelector('.formula-text');
+        if (formulaText) {
+            formulaText.textContent = formula;
+        }
+    }
+    
+    // 更新描述
+    const descriptionElement = document.getElementById('v-description');
+    if (descriptionElement) {
+        descriptionElement.textContent = description;
+    }
+}
+
+// 在页面加载完成后初始化V值提示功能
+document.addEventListener('DOMContentLoaded', function() {
+    initVTooltip();
+});
+
+// 如果页面已经加载完成，立即初始化
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initVTooltip);
+} else {
+    initVTooltip();
 }
 
 /**
