@@ -270,6 +270,7 @@ class DillModel:
     def calculate_photoresist_thickness(self, x, I_avg, V, K=None, t_exp=1, C=0.01, sine_type='1d', Kx=None, Ky=None, Kz=None, phi_expr=None, y=0, z=0):
         """
         计算光刻胶厚度分布，支持一维、二维和三维正弦波
+        现在包含对比度阈值机制，更符合真实光刻胶行为
         
         参数:
             x: 位置坐标数组
@@ -292,15 +293,53 @@ class DillModel:
         logger.info("=" * 60)
         logger.info("【Dill模型 - 光刻胶厚度计算】")
         logger.info("=" * 60)
-        logger.info("🔸 使用公式: M(x) = exp(-C * D(x))")
-        logger.info("🔸 其中 M(x) 为归一化光敏剂浓度，也表示光刻胶剩余厚度")
+        logger.info("🔸 使用改进的对比度阈值模型")
+        logger.info("🔸 基础公式: M(x) = exp(-C * D(x))")
+        logger.info("🔸 高对比度时引入阈值效应")
         logger.info(f"🔸 输入变量值:")
         logger.info(f"   - C (光敏速率常数) = {C}")
+        logger.info(f"   - V (对比度) = {V}")
         
         exposure_dose = self.calculate_exposure_dose(x, I_avg, V, K, t_exp, sine_type, Kx, Ky, Kz, phi_expr, y, z)
-        # 简化的Dill模型计算光刻胶厚度
-        # 实际中可能需要更复杂的模型，这里使用指数衰减模型
-        thickness = np.exp(-C * exposure_dose)
+        
+        # 计算基础厚度（指数衰减模型）
+        basic_thickness = np.exp(-C * exposure_dose)
+        
+        # 对比度阈值机制
+        if V >= 0.5:  # 当对比度较高时启用阈值效应
+            # 计算曝光阈值（基于平均曝光剂量和对比度）
+            avg_dose = np.mean(exposure_dose)
+            dose_range = np.max(exposure_dose) - np.min(exposure_dose)
+            
+            # 阈值随对比度增加而更明显
+            # V=0.5时轻微阈值效应，V→1.0时强阈值效应
+            threshold_sharpness = (V - 0.5) * 10  # 0到5的范围
+            
+            # 使用Sigmoid函数实现阈值效应
+            # 当V较大时，transition变得更锐利
+            dose_threshold = avg_dose
+            thickness = 1.0 / (1.0 + np.exp(threshold_sharpness * (exposure_dose - dose_threshold)))
+            
+            # 在低dose区域保持接近1.0的厚度（未曝光状态）
+            # 在高dose区域快速衰减到接近0（完全曝光状态）
+            
+            # 当V非常高时（>0.8），使用更严格的阈值
+            if V > 0.8:
+                # 计算理想的二值化阈值
+                binary_threshold = avg_dose
+                thickness = np.where(exposure_dose > binary_threshold, 
+                                   basic_thickness * 0.1,  # 几乎完全溶解
+                                   0.98)  # 几乎未被影响
+                logger.info(f"🔸 应用严格阈值效应 (V={V:.3f} > 0.8)")
+                logger.info(f"   - 二值化阈值: {binary_threshold:.4f}")
+            else:
+                logger.info(f"🔸 应用渐进阈值效应 (V={V:.3f})")
+                logger.info(f"   - Sigmoid阈值: {dose_threshold:.4f}")
+                logger.info(f"   - 阈值锐度: {threshold_sharpness:.2f}")
+        else:
+            # 低对比度时使用传统的指数衰减模型
+            thickness = basic_thickness
+            logger.info(f"🔸 使用传统指数衰减模型 (V={V:.3f} < 0.5)")
         
         logger.info(f"🔸 计算结果:")
         logger.info(f"   - 光刻胶厚度范围: [{np.min(thickness):.6f}, {np.max(thickness):.6f}]")
@@ -315,6 +354,7 @@ class DillModel:
                                                phi_expr=None, y=0, z=0):
         """
         计算增强的光刻胶厚度分布，包含占空比和临界剂量概念
+        现在包含对比度阈值机制，更符合真实光刻胶行为
         
         参数:
             x: 位置坐标数组
@@ -334,18 +374,51 @@ class DillModel:
         logger.info("=" * 60)
         logger.info("【Dill模型 - 增强光刻胶厚度计算】")
         logger.info("=" * 60)
+        logger.info("🔸 使用改进的对比度阈值模型")
         logger.info("🔸 核心公式: M(x) = exp(-C * D(x))")
         logger.info("🔸 根据PDF文档方程(2.7): M = e^(-CIt)")
+        logger.info("🔸 高对比度时引入阈值效应")
         logger.info(f"🔸 输入参数:")
         logger.info(f"   - C (光敏速率常数) = {C}")
         logger.info(f"   - Γ (对比度参数) = {gamma}")
+        logger.info(f"   - V (干涉可见度) = {V}")
         logger.info(f"   - 启用占空比计算 = {enable_duty_cycle}")
         
         # 计算基础曝光剂量
         exposure_dose = self.calculate_exposure_dose(x, I_avg, V, K, t_exp, sine_type, Kx, Ky, Kz, phi_expr, y, z)
         
-        # 基础DILL模型计算 - 符合PDF方程(2.7)
-        thickness = np.exp(-C * exposure_dose)
+        # 计算基础厚度（指数衰减模型）
+        basic_thickness = np.exp(-C * exposure_dose)
+        
+        # 对比度阈值机制（与基础函数相同的逻辑）
+        if V >= 0.5:  # 当对比度较高时启用阈值效应
+            # 计算曝光阈值（基于平均曝光剂量和对比度）
+            avg_dose = np.mean(exposure_dose)
+            
+            # 阈值随对比度增加而更明显
+            # V=0.5时轻微阈值效应，V→1.0时强阈值效应
+            threshold_sharpness = (V - 0.5) * 10  # 0到5的范围
+            
+            # 当V非常高时（>0.8），使用更严格的阈值
+            if V > 0.8:
+                # 计算理想的二值化阈值
+                binary_threshold = avg_dose
+                thickness = np.where(exposure_dose > binary_threshold, 
+                                   basic_thickness * 0.1,  # 几乎完全溶解
+                                   0.98)  # 几乎未被影响
+                logger.info(f"🔸 应用严格阈值效应 (V={V:.3f} > 0.8)")
+                logger.info(f"   - 二值化阈值: {binary_threshold:.4f}")
+            else:
+                # 使用Sigmoid函数实现阈值效应
+                dose_threshold = avg_dose
+                thickness = 1.0 / (1.0 + np.exp(threshold_sharpness * (exposure_dose - dose_threshold)))
+                logger.info(f"🔸 应用渐进阈值效应 (V={V:.3f})")
+                logger.info(f"   - Sigmoid阈值: {dose_threshold:.4f}")
+                logger.info(f"   - 阈值锐度: {threshold_sharpness:.2f}")
+        else:
+            # 低对比度时使用传统的指数衰减模型
+            thickness = basic_thickness
+            logger.info(f"🔸 使用传统指数衰减模型 (V={V:.3f} < 0.5)")
         
         result = {
             'x': x,
