@@ -6476,25 +6476,40 @@ function updateVTooltipContent() {
         currentValueElement.textContent = vValue.toFixed(3);
     }
     
-    // 确定对比度类型
-    let contrastType, contrastClass, formula, description;
+    // 确定对比度类型 - 根据用户请求，使用新的静态边界
+    let contrastType, contrastClass, formula, description, stageDescription;
     
-    if (vValue < 0.5) {
-        contrastType = '低对比度';
+    const stage1_end = 0.5;
+    const stage2_start = 0.509;
+    const stage2_end = 0.7;
+
+    // 计算阈值锐度参数（统一公式）
+    const alpha = Math.max(0.1, (vValue - 0.5) * 10).toFixed(1);
+    
+    if (vValue <= stage1_end) {
+        contrastType = '第一阶段：低对比度';
         contrastClass = 'low-contrast';
-        formula = 'thickness = exp(-C × D(x))';
-        description = '连续的指数衰减，厚度分布呈正弦波形状，无明显阈值效应';
-    } else if (vValue <= 0.8) {
-        contrastType = '中等对比度';
+        formula = `M(x) = 1 / [1 + e<sup>α·(D(x) - D<sub>th</sub>)</sup>]`;
+        description = `平缓的Sigmoid阈值效应，α=${alpha}`;
+        stageDescription = `厚度变化平缓，曲线斜率较小，适合精细图案制作`;
+    } else if (vValue > stage1_end && vValue < stage2_start) {
+        contrastType = '过渡阶段';
         contrastClass = 'medium-contrast';
-        const alpha = ((vValue - 0.5) * 10).toFixed(1);
-        formula = `thickness = 1.0 / (1.0 + exp(${alpha} × (D(x) - D_threshold)))`;
-        description = `Sigmoid函数形式的渐进阈值效应，阈值锐度参数α=${alpha}`;
+        formula = `M(x) = 1 / [1 + e<sup>α·(D(x) - D<sub>th</sub>)</sup>]`;
+        description = `Sigmoid效应过渡区，α=${alpha}`;
+        stageDescription = `从平缓到渐进的过渡区域，对比度开始快速变化`;
+    } else if (vValue >= stage2_start && vValue <= stage2_end) {
+        contrastType = '第二阶段：中等对比度';
+        contrastClass = 'medium-contrast';
+        formula = `M(x) = 1 / [1 + e<sup>α·(D(x) - D<sub>th</sub>)</sup>]`;
+        description = `渐进的Sigmoid阈值效应，α=${alpha}`;
+        stageDescription = `厚度开始显著上升，曲线斜率增大，平衡精度与对比度`;
     } else {
-        contrastType = '高对比度';
+        contrastType = '第三阶段：高对比度';
         contrastClass = 'high-contrast';
-        formula = 'thickness = { 0.98 if D(x) ≤ D_threshold; exp(-C×D(x))×0.1 if D(x) > D_threshold }';
-        description = '严格的二值化阈值效应，未曝光区域厚度≈0.98，曝光区域几乎完全溶解';
+        formula = `M(x) = 1 / [1 + e<sup>α·(D(x) - D<sub>th</sub>)</sup>]`;
+        description = `锐利的Sigmoid阈值效应，α=${alpha}`;
+        stageDescription = `厚度基本保持不变，曲线趋于平坦，适合高对比度图案`;
     }
     
     // 更新对比度类型
@@ -6509,7 +6524,7 @@ function updateVTooltipContent() {
     if (formulaElement) {
         const formulaText = formulaElement.querySelector('.formula-text');
         if (formulaText) {
-            formulaText.textContent = formula;
+            formulaText.innerHTML = formula;
         }
     }
     
@@ -6517,6 +6532,24 @@ function updateVTooltipContent() {
     const descriptionElement = document.getElementById('v-description');
     if (descriptionElement) {
         descriptionElement.textContent = description;
+    }
+    
+    // 更新物理意义
+    const physicalElement = document.getElementById('v-physical-meaning');
+    if (physicalElement) {
+        physicalElement.textContent = stageDescription;
+    }
+    
+    // 更新阶段边界信息
+    const stageInfoElement = document.getElementById('v-stage-info');
+    if (stageInfoElement) {
+        stageInfoElement.innerHTML = `
+            <strong>阶段边界：</strong><br>
+            第一阶段：0.100 - ${stage1_end.toFixed(3)}<br>
+            过渡阶段：${stage1_end.toFixed(3)} - ${stage2_start.toFixed(3)}<br>
+            第二阶段：${stage2_start.toFixed(3)} - ${stage2_end.toFixed(3)}<br>
+            第三阶段：${stage2_end.toFixed(3)} - 1.000
+        `;
     }
 }
 
@@ -9287,7 +9320,23 @@ function updateDill1DVEvaluationFrame(frameIndex) {
     }
 }
 
-// 创建V评估对比分析图表
+// 分析曲线变化，动态确定三个阶段的边界
+function analyzeCurveStages(vValues, maxThicknesses) {
+    // 使用静态边界值，替换之前的动态计算
+    // 第一阶段：0-0.509，第二阶段：0.509-0.7，第三阶段：0.7-1.0
+    const stage1_boundary = 0.509;
+    const stage2_boundary = 0.7;
+    
+    console.log('🔍 曲线阶段分析结果（静态边界值）:', {
+        stage1_boundary: stage1_boundary.toFixed(3),
+        stage2_boundary: stage2_boundary.toFixed(3),
+        note: '使用静态边界值：第一阶段(0-0.509)，第二阶段(0.509-0.7)，第三阶段(0.7-1.0)'
+    });
+    
+    return { stage1_boundary, stage2_boundary };
+}
+
+// 创建V评估对比分析图表（带三阶段区域划分和交互动画）
 function createVEvaluationContrastPlot(container, allFramesData, currentIndex) {
     if (!allFramesData || allFramesData.length === 0) {
         container.innerHTML = '<div style="color:orange;padding:20px;">对比分析数据不足</div>';
@@ -9305,14 +9354,25 @@ function createVEvaluationContrastPlot(container, allFramesData, currentIndex) {
         maxThicknesses.push(Math.max(...frame.thickness));
     });
     
+    const minV = Math.min(...vValues);
+    const maxV = Math.max(...vValues);
+    
+    // 动态分析曲线变化，确定三个阶段的边界
+    const { stage1_boundary, stage2_boundary } = analyzeCurveStages(vValues, maxThicknesses);
+    
+    // 将边界存储到全局变量，供其他函数使用
+    window.currentStageBoundaries = { stage1_boundary, stage2_boundary };
+    
+    // 主数据曲线
     const trace1 = {
         x: vValues,
         y: maxExposures,
         type: 'scatter',
         mode: 'lines+markers',
         name: '最大曝光剂量',
-        line: { color: '#2E86AB', width: 2 },
-        marker: { size: 6 }
+        line: { color: '#2E86AB', width: 3 },
+        marker: { size: 8 },
+        hovertemplate: 'V值: %{x:.3f}<br>最大曝光剂量: %{y:.3f}<extra></extra>'
     };
     
     const trace2 = {
@@ -9321,33 +9381,114 @@ function createVEvaluationContrastPlot(container, allFramesData, currentIndex) {
         type: 'scatter',
         mode: 'lines+markers',
         name: '最大厚度',
-        line: { color: '#A23B72', width: 2 },
-        marker: { size: 6 },
-        yaxis: 'y2'
+        line: { color: '#A23B72', width: 3 },
+        marker: { size: 8 },
+        yaxis: 'y2',
+        hovertemplate: 'V值: %{x:.3f}<br>最大厚度: %{y:.3f}<extra></extra>',
+        // 禁用悬停时的加粗效果
+        hoverlabel: { 
+            bgcolor: 'rgba(231, 76, 60, 0.95)', 
+            bordercolor: 'rgba(231, 76, 60, 1)',
+            font: { size: 13, color: 'white' },
+            borderwidth: 2
+        }
     };
     
-    // 添加当前V值的竖线
+    // 添加三个阶段的背景区域
+    const minY = Math.min(...maxExposures);
+    const maxY = Math.max(...maxExposures);
+    
+    // 阶段1: 低对比度区域 (V < 0.509)
+    const stage1_trace = {
+        x: [minV, stage1_boundary, stage1_boundary, minV],
+        y: [minY, minY, maxY, maxY],
+        fill: 'toself',
+        fillcolor: 'rgba(52, 152, 219, 0.15)',
+        line: { width: 0 },
+        name: '第一阶段: 低对比度',
+        showlegend: true,
+        hoverinfo: 'name',
+        hovertemplate: `<b>第一阶段: 低对比度</b><br>V值范围: ${minV.toFixed(3)} - ${stage1_boundary.toFixed(3)}<br>特性: 平缓Sigmoid效应<extra></extra>`
+    };
+    
+    // 阶段2: 中等对比度区域 (0.509 <= V <= 0.7)
+    const stage2_trace = {
+        x: [stage1_boundary, stage2_boundary, stage2_boundary, stage1_boundary],
+        y: [minY, minY, maxY, maxY],
+        fill: 'toself',
+        fillcolor: 'rgba(155, 89, 182, 0.15)',
+        line: { width: 0 },
+        name: '第二阶段: 中等对比度',
+        showlegend: true,
+        hoverinfo: 'name',
+        hovertemplate: `<b>第二阶段: 中等对比度</b><br>V值范围: ${stage1_boundary.toFixed(3)} - ${stage2_boundary.toFixed(3)}<br>特性: 渐进Sigmoid效应<extra></extra>`
+    };
+    
+    // 阶段3: 高对比度区域 (V > 0.7)
+    const stage3_trace = {
+        x: [stage2_boundary, maxV, maxV, stage2_boundary],
+        y: [minY, minY, maxY, maxY],
+        fill: 'toself',
+        fillcolor: 'rgba(231, 76, 60, 0.15)',
+        line: { width: 0 },
+        name: '第三阶段: 高对比度',
+        showlegend: true,
+        hoverinfo: 'name',
+        hovertemplate: `<b>第三阶段: 高对比度</b><br>V值范围: ${stage2_boundary.toFixed(3)} - ${maxV.toFixed(3)}<br>特性: 锐利Sigmoid效应<extra></extra>`
+    };
+    
+    // 添加阶段分界线
+    const boundary1_trace = {
+        x: [stage1_boundary, stage1_boundary],
+        y: [minY, maxY],
+        type: 'scatter',
+        mode: 'lines',
+        name: '阶段分界线 (V=0.509)',
+        line: { color: '#34495e', width: 2, dash: 'dot' },
+        showlegend: false,
+        hovertemplate: '阶段分界线<br>V = 0.509<extra></extra>'
+    };
+    
+    const boundary2_trace = {
+        x: [stage2_boundary, stage2_boundary],
+        y: [minY, maxY],
+        type: 'scatter',
+        mode: 'lines',
+        name: '阶段分界线 (V=0.7)',
+        line: { color: '#34495e', width: 2, dash: 'dot' },
+        showlegend: false,
+        hovertemplate: '阶段分界线<br>V = 0.7<extra></extra>'
+    };
+    
+    // 添加当前V值的竖线（带动画效果）
     const currentV = allFramesData[currentIndex].v_value;
-    const trace3 = {
+    const currentTrace = {
         x: [currentV, currentV],
-        y: [Math.min(...maxExposures), Math.max(...maxExposures)],
+        y: [minY, maxY],
         type: 'scatter',
         mode: 'lines',
         name: `当前V值 (${currentV.toFixed(3)})`,
-        line: { color: '#f39c12', width: 3, dash: 'dash' },
-        showlegend: true
+        line: { color: '#f39c12', width: 4, dash: 'dash' },
+        showlegend: true,
+        hovertemplate: `当前V值: ${currentV.toFixed(3)}<extra></extra>`
     };
     
     const layout = {
-        title: 'V值对比分析',
+        title: {
+            text: 'V值对比分析 - 三阶段变化',
+            font: { size: 16, color: '#2c3e50' }
+        },
         xaxis: { 
             title: 'V值 (对比度)',
-            gridcolor: '#e0e0e0'
+            gridcolor: '#e0e0e0',
+            showgrid: true,
+            range: [Math.min(...vValues) - 0.05, Math.max(...vValues) + 0.05]
         },
         yaxis: {
             title: '最大曝光剂量',
             side: 'left',
             gridcolor: '#e0e0e0',
+            showgrid: true,
             titlefont: { color: '#2E86AB' },
             tickfont: { color: '#2E86AB' }
         },
@@ -9359,22 +9500,82 @@ function createVEvaluationContrastPlot(container, allFramesData, currentIndex) {
             tickfont: { color: '#A23B72' }
         },
         legend: {
-            x: 0,
-            y: 1,
-            bgcolor: 'rgba(255,255,255,0.8)'
+            x: 0.02,
+            y: 0.98,
+            bgcolor: 'rgba(255,255,255,0.6)',
+            bordercolor: 'rgba(0,0,0,0.1)',
+            borderwidth: 1,
+            font: { size: 10 },
+            itemsizing: 'constant',
+            itemwidth: 30
         },
-        margin: { l: 60, r: 60, t: 50, b: 50 },
+        margin: { l: 70, r: 70, t: 60, b: 70 },
         plot_bgcolor: '#fafafa',
-        paper_bgcolor: 'white'
+        paper_bgcolor: 'white',
+        hovermode: 'closest',
+        // 禁用悬停时的加粗效果
+        hoverlabel: { 
+            bgcolor: 'rgba(44, 62, 80, 0.95)',
+            bordercolor: 'rgba(52, 152, 219, 1)',
+            font: { size: 13, color: 'white' },
+            borderwidth: 2
+        }
     };
     
     const config = {
         responsive: true,
         displayModeBar: true,
-        modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d']
+        modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d'],
+        toImageButtonOptions: {
+            format: 'png',
+            filename: 'v_contrast_analysis',
+            height: 500,
+            width: 800,
+            scale: 1
+        }
     };
     
-    Plotly.newPlot(container, [trace1, trace2, trace3], layout, config);
+    // 绘制图表（背景区域在底层）
+    const traces = [
+        stage1_trace, stage2_trace, stage3_trace, // 背景区域
+        boundary1_trace, boundary2_trace,         // 分界线
+        trace1, trace2,                           // 主数据曲线
+        currentTrace                              // 当前V值线
+    ];
+    
+    Plotly.newPlot(container, traces, layout, config);
+    
+    // 已删除交互动画效果，保持图表静态显示
+    
+    // 添加点击事件，显示详细信息
+    container.on('plotly_click', function(data) {
+        if (data.points && data.points.length > 0) {
+            const point = data.points[0];
+            if (point.data.name === '最大厚度' || point.data.name === '最大曝光剂量') {
+                const vValue = point.x;
+                const yValue = point.y;
+                
+                // 确定所在阶段
+                let stage, stageDesc;
+                if (vValue < 0.509) {
+                    stage = '第一阶段';
+                    stageDesc = '低对比度 - 平缓Sigmoid效应';
+                } else if (vValue <= 0.7) {
+                    stage = '第二阶段';
+                    stageDesc = '中等对比度 - 渐进Sigmoid效应';
+                } else {
+                    stage = '第三阶段';
+                    stageDesc = '高对比度 - 锐利Sigmoid效应';
+                }
+                
+                alert(`📊 V值分析详情
+V值: ${vValue.toFixed(3)}
+${point.data.name}: ${yValue.toFixed(3)}
+所属阶段: ${stage}
+特性: ${stageDesc}`);
+            }
+        }
+    });
 }
 
 // 更新DILL 1D V评估时间滑块
