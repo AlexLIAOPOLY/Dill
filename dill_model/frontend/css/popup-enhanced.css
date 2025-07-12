@@ -307,9 +307,10 @@
     color: #2c3e50 !important;
     border: 1px solid #dee2e6 !important;
     margin-bottom: 12px !important;
-    text-align: center !important;
+    text-align: left !important;
     font-weight: 500 !important;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+    line-height: 1.6 !important;
 }
 
 .formula-explanation {
@@ -321,6 +322,18 @@
 
 .formula-explanation div {
     margin-bottom: 4px !important;
+}
+
+.formula-math div {
+    margin-bottom: 4px !important;
+}
+
+.formula-separator {
+    height: 1px !important;
+    background: linear-gradient(90deg, transparent, #3498db, transparent) !important;
+    margin: 12px 0 !important;
+    border: none !important;
+    display: block !important;
 }
 
 /* 阈值详细信息覆盖层样式增强 */

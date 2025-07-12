@@ -94,6 +94,16 @@ def calculate():
             t_exp = float(data['t_exp'])
             C = float(data['C'])
             
+            # 提取理想曝光模型的新参数
+            angle_a = float(data.get('angle_a', 11.7))
+            exposure_threshold = float(data.get('exposure_threshold', 20))
+            wavelength = float(data.get('wavelength', 405))
+            contrast_ctr = float(data.get('contrast_ctr', 1))
+            
+            # 🔸 调试波长参数
+            print(f"🌈 波长参数调试: wavelength = {wavelength} nm (来源: {data.get('wavelength', '默认值')})")
+            add_progress_log('dill', f"波长参数设置: λ = {wavelength} nm", dimension=sine_type)
+            
             if sine_type == 'multi':
                 Kx = float(data.get('Kx', 0))
                 Ky = float(data.get('Ky', 0))
@@ -136,8 +146,26 @@ def calculate():
                                            y_range=y_range, z_range=z_range)
             else:
                 K = float(data['K'])
-                # 首先生成基于用户当前输入t_exp的静态数据（无论是否启用动画）
-                plots = model.generate_plots(I_avg, V, K, t_exp, C, sine_type=sine_type)
+                
+                # 检查是否启用曝光时间窗口
+                enable_exposure_time_window = data.get('enable_exposure_time_window', False)
+                custom_exposure_times = data.get('custom_exposure_times', None)
+                
+                # 根据曝光时间窗口开关状态选择计算模式
+                if enable_exposure_time_window and custom_exposure_times is not None and len(custom_exposure_times) > 0:
+                    # 启用曝光时间窗口：使用自定义曝光时间生成数据
+                    add_progress_log('dill', f"启用曝光时间窗口 (自定义时间: {custom_exposure_times})", dimension='1d')
+                    plots = model.generate_plots(I_avg, V, K, t_exp, C, sine_type=sine_type, 
+                                               angle_a=angle_a, exposure_threshold=exposure_threshold, 
+                                               contrast_ctr=contrast_ctr, wavelength=wavelength, custom_exposure_times=custom_exposure_times)
+                    add_success_log('dill', f"曝光时间窗口数据生成完成 ({len(custom_exposure_times)}组时间)", dimension='1d')
+                else:
+                    # 未启用曝光时间窗口：生成基于用户当前输入t_exp的单一时间数据
+                    add_progress_log('dill', f"使用单一曝光时间 (t_exp: {t_exp}s)", dimension='1d')
+                    plots = model.generate_plots(I_avg, V, K, t_exp, C, sine_type=sine_type, 
+                                               angle_a=angle_a, exposure_threshold=exposure_threshold, 
+                                               contrast_ctr=contrast_ctr, wavelength=wavelength)
+                    add_success_log('dill', f"单一曝光时间数据生成完成 (t_exp: {t_exp}s)", dimension='1d')
                 
                 # 检查是否启用1D动画
                 enable_1d_animation = data.get('enable_1d_animation', False)
@@ -150,7 +178,7 @@ def calculate():
                     add_progress_log('dill', f"启用1D时间动画 (曝光时间: {t_exp_start_1d}s - {t_exp_end_1d}s, {time_steps_1d}步)", dimension='1d')
                     
                     # 生成1D动画数据并合并到静态数据中
-                    animation_data = model.generate_1d_animation_data(I_avg, V, K, t_exp_start_1d, t_exp_end_1d, time_steps_1d, C)
+                    animation_data = model.generate_1d_animation_data(I_avg, V, K, t_exp_start_1d, t_exp_end_1d, time_steps_1d, C, angle_a, exposure_threshold, contrast_ctr, wavelength)
                     
                     # 直接合并动画数据（动画数据已不再包含会覆盖静态数据的字段）
                     plots.update(animation_data)
@@ -307,6 +335,16 @@ def calculate_data():
     try:
         data = request.get_json()
         print('收到前端参数:', data)  # 调试用
+        
+        # 强制调试曝光时间窗口参数
+        enable_exposure_time_window = data.get('enable_exposure_time_window', False) 
+        custom_exposure_times = data.get('custom_exposure_times', None)
+        print(f"🚨🚨🚨 强制调试: enable_exposure_time_window = {enable_exposure_time_window}")
+        print(f"🚨🚨🚨 强制调试: custom_exposure_times = {custom_exposure_times}")
+        print(f"🚨🚨🚨 强制调试: type(custom_exposure_times) = {type(custom_exposure_times)}")
+        if custom_exposure_times:
+            print(f"🚨🚨🚨 强制调试: len(custom_exposure_times) = {len(custom_exposure_times)}")
+        print(f"🚨🚨🚨 强制调试: 条件结果 = {enable_exposure_time_window and custom_exposure_times is not None and len(custom_exposure_times) > 0 if custom_exposure_times else False}")
         model_type = data.get('model_type', 'dill')
         model = get_model_by_name(model_type)
         sine_type = data.get('sine_type', '1d')
@@ -482,12 +520,39 @@ def calculate_data():
                 # 检查启用的功能
                 enable_1d_v_evaluation = data.get('enable_1d_v_evaluation', False)
                 
+                # ✅ 添加自定义曝光时间窗口逻辑 - 与calculate端点保持一致
+                angle_a = float(data.get('angle_a', 11.7))
+                exposure_threshold = float(data.get('exposure_threshold', 20))
+                contrast_ctr = float(data.get('contrast_ctr', 1))
+                wavelength = float(data.get('wavelength', 405))
+                
+                # 检查是否启用曝光时间窗口
+                enable_exposure_time_window = data.get('enable_exposure_time_window', False)
+                custom_exposure_times = data.get('custom_exposure_times', None)
+                
+                print(f"🔥 calculate_data端点: enable_exposure_time_window = {enable_exposure_time_window}")
+                print(f"🔥 calculate_data端点: custom_exposure_times = {custom_exposure_times}")
+                
                 # 首先生成基于用户当前参数的静态数据（这是所有模式的基础）
                 print(f"Dill模型参数: I_avg={I_avg}, V={V}, K={K}, t_exp={t_exp}, C={C}")
                 print(f"[Dill-1D] 生成静态数据作为基础")
                 
                 calc_start = time.time()
-                plot_data = model.generate_data(I_avg, V, K, t_exp, C, sine_type=sine_type)
+                
+                # 根据曝光时间窗口开关状态选择计算模式
+                if enable_exposure_time_window and custom_exposure_times is not None and len(custom_exposure_times) > 0:
+                    print(f"🎯 calculate_data端点: 启用曝光时间窗口，使用自定义曝光时间 {custom_exposure_times}")
+                    # 启用曝光时间窗口：使用自定义曝光时间生成数据
+                    plot_data = model.generate_data(I_avg, V, K, t_exp, C, sine_type=sine_type, 
+                                                   angle_a=angle_a, exposure_threshold=exposure_threshold, 
+                                                   contrast_ctr=contrast_ctr, wavelength=wavelength, custom_exposure_times=custom_exposure_times)
+                else:
+                    print(f"🎯 calculate_data端点: 未启用曝光时间窗口，使用单一曝光时间 {t_exp}s")
+                    # 未启用曝光时间窗口：使用单一曝光时间生成数据
+                    plot_data = model.generate_data(I_avg, V, K, t_exp, C, sine_type=sine_type,
+                                                   angle_a=angle_a, exposure_threshold=exposure_threshold, 
+                                                   contrast_ctr=contrast_ctr, wavelength=wavelength)
+                
                 static_calc_time = time.time() - calc_start
                 total_calc_time = static_calc_time
                 
@@ -504,7 +569,7 @@ def calculate_data():
                     # 生成动画数据
                     print(f"[Dill-1D-Animation] 生成动画数据 ({t_start}s - {t_end}s, {time_steps}帧)")
                     anim_calc_start = time.time()
-                    animation_data = model.generate_1d_animation_data(I_avg, V, K, t_start, t_end, time_steps, C)
+                    animation_data = model.generate_1d_animation_data(I_avg, V, K, t_start, t_end, time_steps, C, angle_a, exposure_threshold, contrast_ctr)
                     anim_calc_time = time.time() - anim_calc_start
                     total_calc_time += anim_calc_time
                     
@@ -517,9 +582,17 @@ def calculate_data():
                         for frame in animation_data['frames']:
                             frame_data = {
                                 'time': frame['t_exp'],
+                                't': frame['t_exp'],  # 添加t字段
                                 'x': frame['x_coords'],
-                                'exposure_dose': frame['exposure_data'],
-                                'thickness': frame['thickness_data']
+                                'x_coords': frame['x_coords'],  # 添加x_coords字段
+                                # 修复：正确访问exposure_data，支持新旧两种数据格式
+                                'exposure_dose': frame.get('exposure_dose', frame.get('exposure_data', {}).get('y', [])),
+                                # 修复：正确访问thickness_data，支持新旧两种数据格式
+                                'thickness': frame.get('thickness', frame.get('thickness_data', {}).get('y', [])),
+                                # 🔥 关键修复：传递多条曝光时间线数据
+                                'etch_depths_data': frame.get('etch_depths_data', []),
+                                'exposure_times': frame.get('exposure_times', []),
+                                'is_ideal_exposure_model': frame.get('is_ideal_exposure_model', False)
                             }
                             plot_data['animation_frames'].append(frame_data)
                     
@@ -537,14 +610,31 @@ def calculate_data():
                     print(f"[Dill-1D-V-Eval] 启用1D V（对比度）评估，V范围: {v_start} - {v_end}, {v_time_steps}步")
                     add_progress_log('dill', f"启用1D V（对比度）评估 (V范围: {v_start} - {v_end}, {v_time_steps}步)", dimension='1d')
                     
-                    # 生成V评估数据
-                    print(f"[Dill-1D-V-Eval] 生成V评估数据 (V: {v_start} - {v_end}, {v_time_steps}帧)")
+                    # 🔥 重要修复：保存当前的静态数据，防止被V评估数据覆盖
+                    static_data_backup = {
+                        'x': plot_data.get('x', []).copy() if plot_data.get('x') else [],
+                        'x_coords': plot_data.get('x_coords', []).copy() if plot_data.get('x_coords') else [],
+                        'exposure_dose': plot_data.get('exposure_dose', []).copy() if plot_data.get('exposure_dose') else [],
+                        'thickness': plot_data.get('thickness', []).copy() if plot_data.get('thickness') else [],
+                        'sine_type': plot_data.get('sine_type', '1d'),
+                        'is_ideal_exposure_model': plot_data.get('is_ideal_exposure_model', False),
+                        'intensity_distribution': plot_data.get('intensity_distribution', []).copy() if plot_data.get('intensity_distribution') else [],
+                        'etch_depths_data': plot_data.get('etch_depths_data', []).copy() if plot_data.get('etch_depths_data') else []
+                    }
+                    
+                    print(f"[Dill-1D-V-Eval] ✅ 已备份静态数据，确保V评估不影响静态图表")
+                    print(f"[Dill-1D-V-Eval] 静态数据备份：x长度={len(static_data_backup['x'])}, exposure长度={len(static_data_backup['exposure_dose'])}, thickness长度={len(static_data_backup['thickness'])}")
+                    
+                    # 生成V评估数据 - 使用理想曝光模型
+                    print(f"[Dill-1D-V-Eval] 使用理想曝光模型生成V评估数据 (V: {v_start} - {v_end}, {v_time_steps}帧)")
+                    print(f"[Dill-1D-V-Eval] 理想曝光模型参数: angle_a={angle_a}°, exposure_threshold={exposure_threshold}, wavelength={wavelength}nm")
                     v_calc_start = time.time()
-                    v_evaluation_data = model.generate_1d_v_animation_data(I_avg, v_start, v_end, v_time_steps, K, t_exp, C)
+                    v_evaluation_data = model.generate_1d_v_animation_data(I_avg, v_start, v_end, v_time_steps, K, t_exp, C, 
+                                                                          angle_a=angle_a, exposure_threshold=exposure_threshold, wavelength=wavelength)
                     v_calc_time = time.time() - v_calc_start
                     total_calc_time += v_calc_time
                     
-                    # 添加V评估数据到plot_data
+                    # 添加V评估数据到plot_data，但不覆盖静态数据
                     plot_data['enable_1d_v_evaluation'] = True
                     plot_data['v_evaluation_frames'] = []
                     
@@ -554,12 +644,19 @@ def calculate_data():
                             frame_data = {
                                 'v_value': frame['v_value'],
                                 'x': frame['x_coords'],
-                                'exposure_dose': frame['exposure_data'],
-                                'thickness': frame['thickness_data']
+                                # 修复：正确访问exposure_data，支持新旧两种数据格式
+                                'exposure_dose': frame.get('exposure_dose', frame.get('exposure_data', [])),
+                                # 修复：正确访问thickness_data，支持新旧两种数据格式
+                                'thickness': frame.get('thickness', frame.get('thickness_data', []))
                             }
                             plot_data['v_evaluation_frames'].append(frame_data)
                     
+                    # 🔥 关键修复：恢复静态数据，确保前端能同时获得静态数据和V评估数据
+                    plot_data.update(static_data_backup)
+                    
                     print(f"[Dill-1D-V-Eval] ✅ V评估数据生成完成: {len(plot_data.get('v_evaluation_frames', []))}帧，用时{v_calc_time:.3f}s")
+                    print(f"[Dill-1D-V-Eval] ✅ 静态数据已恢复，确保前端静态图表正常显示")
+                    print(f"[Dill-1D-V-Eval] 最终数据验证：静态数据x长度={len(plot_data.get('x', []))}, V评估帧数={len(plot_data.get('v_evaluation_frames', []))}")
                     add_log_entry('success', 'dill', f"✅ 1D V评估数据生成完成", dimension='1d')
                     add_success_log('dill', f"1D V评估数据生成完成 ({v_time_steps}帧), 用时{v_calc_time:.3f}s", dimension='1d')
                 

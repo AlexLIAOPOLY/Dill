@@ -463,7 +463,172 @@
     }
 }
 
+/* 多曲线控制器样式 */
+.multi-line-controller {
+    position: relative;
+    z-index: 10;
+}
+
+.multi-line-controller h4 {
+    user-select: none;
+}
+
+.multi-line-controller button {
+    outline: none;
+    border: none;
+}
+
+.multi-line-controller button:focus {
+    outline: 2px solid rgba(52, 152, 219, 0.5);
+    outline-offset: 2px;
+}
+
+.multi-line-controller label {
+    position: relative;
+    overflow: hidden;
+}
+
+.multi-line-controller label::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.5s ease;
+}
+
+.multi-line-controller label:hover::after {
+    left: 100%;
+}
+
+.multi-line-controller input[type="checkbox"] {
+    cursor: pointer;
+}
+
+/* 滚动条样式 */
+.multi-line-controller > div:last-child {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(52, 152, 219, 0.3) transparent;
+}
+
+.multi-line-controller > div:last-child::-webkit-scrollbar {
+    width: 6px;
+}
+
+.multi-line-controller > div:last-child::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.multi-line-controller > div:last-child::-webkit-scrollbar-thumb {
+    background: rgba(52, 152, 219, 0.3);
+    border-radius: 3px;
+}
+
+.multi-line-controller > div:last-child::-webkit-scrollbar-thumb:hover {
+    background: rgba(52, 152, 219, 0.5);
+}
+
+/* 多曲线控制器响应式设计 */
+@media (max-width: 1200px) {
+    .multi-line-controller label {
+        min-width: 55px;
+        font-size: 12px;
+        padding: 6px 8px;
+    }
+    
+    .multi-line-controller h4 {
+        font-size: 15px;
+    }
+    
+    .multi-line-controller button {
+        padding: 5px 12px;
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 768px) {
+    .multi-line-controller {
+        padding: 15px;
+        margin: 15px 0;
+    }
+    
+    .multi-line-controller > div:first-child {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+    }
+    
+    .multi-line-controller h4 {
+        font-size: 14px;
+    }
+    
+    .multi-line-controller label {
+        min-width: 50px;
+        font-size: 11px;
+        padding: 5px 6px;
+        margin: 0 6px 6px 0;
+    }
+    
+    .multi-line-controller button {
+        padding: 4px 10px;
+        font-size: 11px;
+    }
+    
+    .multi-line-controller > div:last-child {
+        max-height: 150px;
+        gap: 6px;
+    }
+}
+
 @media (max-width: 480px) {
+    .multi-line-controller {
+        padding: 12px;
+        margin: 12px 0;
+    }
+    
+    .multi-line-controller h4 {
+        font-size: 13px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+    
+    .multi-line-controller h4 span:last-child {
+        font-size: 11px;
+        padding: 1px 6px;
+    }
+    
+    .multi-line-controller label {
+        min-width: 45px;
+        font-size: 10px;
+        padding: 3px 5px;
+        margin: 0 4px 4px 0;
+    }
+    
+    .multi-line-controller label span:first-of-type {
+        font-size: 14px;
+        margin-right: 4px;
+    }
+    
+    .multi-line-controller input[type="checkbox"] {
+        transform: scale(1);
+        margin-right: 4px;
+    }
+    
+    .multi-line-controller > div:first-child > div {
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+    }
+    
+    .multi-line-controller button {
+        width: 100%;
+        padding: 6px 8px;
+        font-size: 12px;
+    }
+    
     #dill-1d-animation-section {
         padding: 10px;
         width: 100%;
@@ -483,10 +648,6 @@
         max-width: none;
         padding: 8px;
     }
-}
-
-#dill-4d-animation-section .time-slider {
-    background: linear-gradient(to right, rgba(52, 152, 219, 0.3), rgba(224, 224, 224, 0.8));
 }
 
 /* Enhanced Dill模型特定样式 */

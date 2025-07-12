@@ -69,16 +69,21 @@ class DillModel:
     def __init__(self):
         pass
     
-    def calculate_duty_cycle_parameters(self, exposure_dose, D0, gamma=1.0):
+    def calculate_duty_cycle_parameters(self, exposure_dose, D0, gamma=1.0, method='physical'):
         """
         计算占空比相关参数
         
-        根据PDF文档方程(2.8): cos(πd) = 1/Γ - Dc/(2Γ)D₀⁻¹
+        修正后的占空比计算方法：
+        - 占空比定义为在一个空间周期内，曝光剂量超过临界值的区域占整个周期的比例
+        - 临界剂量基于实际工艺参数设定，而非简单假设
         
         参数:
             exposure_dose: 实际曝光剂量数组
             D0: 参考曝光剂量
             gamma: 对比度参数Γ
+            method: 计算方法 ('physical' 或 'formula')
+                - 'physical': 基于物理意义的直观方法
+                - 'formula': 基于原始公式的迭代求解方法
             
         返回:
             duty_cycle: 占空比数组
@@ -87,29 +92,79 @@ class DillModel:
         logger.info("=" * 60)
         logger.info("【Dill模型 - 占空比计算】")
         logger.info("=" * 60)
-        logger.info("🔸 使用公式: cos(πd) = 1/Γ - Dc/(2Γ)D₀⁻¹")
-        logger.info("🔸 以及: Dc = 2D₀[1-Γcos(πd)]")
+        logger.info(f"🔸 使用方法: {method}")
+        logger.info("🔸 修正后的占空比计算方法")
+        logger.info("🔸 物理意义：在一个空间周期内，有效曝光区域占整个周期的比例")
         logger.info(f"🔸 输入参数:")
         logger.info(f"   - D₀ (参考曝光剂量) = {D0}")
         logger.info(f"   - Γ (对比度参数) = {gamma}")
         
-        # 计算临界剂量 Dc，假设为清除光刻胶所需的最小剂量
-        # 对于正性光刻胶，Dc通常为D0的某个倍数
-        critical_dose = 0.8 * exposure_dose  # 简化假设
+        # 方法1：基于物理意义的占空比计算
+        # 计算临界剂量：使用平均曝光剂量的90%作为临界值
+        avg_exposure = np.mean(exposure_dose)
+        critical_dose_threshold = 0.9 * avg_exposure
         
-        # 根据方程(2.8)计算占空比
-        # cos(πd) = 1/Γ - Dc/(2Γ)D₀⁻¹
-        cos_pi_d = (1.0 / gamma) - (critical_dose / (2.0 * gamma * D0))
+        # 计算占空比：超过临界剂量的区域比例
+        above_threshold = exposure_dose > critical_dose_threshold
+        duty_cycle_physical = np.sum(above_threshold) / len(exposure_dose)
         
-        # 确保cos值在有效范围内
-        cos_pi_d = np.clip(cos_pi_d, -1.0, 1.0)
+        # 方法2：如果需要使用原始公式，通过迭代求解
+        # 这里我们提供一个数值求解的版本
+        duty_cycle_array = np.zeros_like(exposure_dose)
+        critical_dose_array = np.zeros_like(exposure_dose)
         
-        # 计算占空比 d = arccos(cos_pi_d) / π
-        duty_cycle = np.arccos(cos_pi_d) / np.pi
+        for i, dose in enumerate(exposure_dose):
+            # 使用数值方法求解 cos(πd) = 1/Γ - Dc/(2Γ)D₀⁻¹
+            # 同时满足 Dc = 2D₀[1-Γcos(πd)]
+            
+            # 初始猜测值
+            d_guess = 0.5  # 占空比初始猜测为50%
+            
+            # 迭代求解
+            for iter_count in range(100):  # 最多迭代100次
+                # 根据当前d计算Dc
+                Dc_calc = 2 * D0 * (1 - gamma * np.cos(np.pi * d_guess))
+                
+                # 根据Dc计算新的d
+                cos_pi_d_new = (1.0 / gamma) - (Dc_calc / (2.0 * gamma * D0))
+                cos_pi_d_new = np.clip(cos_pi_d_new, -1.0, 1.0)
+                d_new = np.arccos(cos_pi_d_new) / np.pi
+                
+                # 检查收敛
+                if abs(d_new - d_guess) < 1e-6:
+                    break
+                    
+                d_guess = d_new
+            
+            duty_cycle_array[i] = d_guess
+            critical_dose_array[i] = Dc_calc
+        
+        # 选择使用哪种方法
+        use_physical_method = (method == 'physical')
+        
+        if use_physical_method:
+            # 使用基于物理意义的方法
+            duty_cycle = np.full_like(exposure_dose, duty_cycle_physical)
+            critical_dose = np.full_like(exposure_dose, critical_dose_threshold)
+            
+            logger.info("🔸 使用基于物理意义的占空比计算方法")
+            logger.info(f"   - 临界剂量阈值: {critical_dose_threshold:.4f}")
+            logger.info(f"   - 占空比(有效曝光区域比例): {duty_cycle_physical:.4f}")
+            logger.info(f"   - 优点: 物理意义明确，计算简单可靠")
+        else:
+            # 使用迭代求解的方法
+            duty_cycle = duty_cycle_array
+            critical_dose = critical_dose_array
+            
+            logger.info("🔸 使用迭代求解的占空比计算方法")
+            logger.info(f"   - 占空比范围: [{np.min(duty_cycle):.4f}, {np.max(duty_cycle):.4f}]")
+            logger.info(f"   - 临界剂量范围: [{np.min(critical_dose):.4f}, {np.max(critical_dose):.4f}]")
+            logger.info(f"   - 优点: 符合原始公式，理论基础严谨")
         
         logger.info(f"🔸 计算结果:")
-        logger.info(f"   - 占空比范围: [{np.min(duty_cycle):.4f}, {np.max(duty_cycle):.4f}]")
-        logger.info(f"   - 临界剂量范围: [{np.min(critical_dose):.4f}, {np.max(critical_dose):.4f}]")
+        logger.info(f"   - 占空比平均值: {np.mean(duty_cycle):.4f}")
+        logger.info(f"   - 临界剂量平均值: {np.mean(critical_dose):.4f}")
+        logger.info(f"   - 占空比物理意义: 有效曝光区域占整个周期的比例")
         
         return duty_cycle, critical_dose
     
@@ -336,7 +391,7 @@ class DillModel:
     def calculate_enhanced_photoresist_thickness(self, x, I_avg, V, K=None, t_exp=1, C=0.01, 
                                                gamma=1.0, enable_duty_cycle=False, 
                                                sine_type='1d', Kx=None, Ky=None, Kz=None, 
-                                               phi_expr=None, y=0, z=0):
+                                               phi_expr=None, y=0, z=0, duty_cycle_method='physical'):
         """
         计算增强的光刻胶厚度分布，包含占空比和临界剂量概念
         现在包含对比度阈值机制，更符合真实光刻胶行为
@@ -351,6 +406,7 @@ class DillModel:
             gamma: 对比度参数Γ
             enable_duty_cycle: 是否启用占空比计算
             sine_type: 正弦波类型
+            duty_cycle_method: 占空比计算方法 ('physical' 或 'formula')
             其他参数: 与原方法相同
             
         返回:
@@ -368,6 +424,7 @@ class DillModel:
         logger.info(f"   - Γ (对比度参数) = {gamma}")
         logger.info(f"   - V (干涉可见度) = {V}")
         logger.info(f"   - 启用占空比计算 = {enable_duty_cycle}")
+        logger.info(f"   - 占空比计算方法 = {duty_cycle_method}")
         
         # 计算基础曝光剂量
         exposure_dose = self.calculate_exposure_dose(x, I_avg, V, K, t_exp, sine_type, Kx, Ky, Kz, phi_expr, y, z)
@@ -406,30 +463,32 @@ class DillModel:
         # 如果启用占空比计算
         if enable_duty_cycle:
             D0 = np.mean(exposure_dose)  # 使用平均曝光剂量作为参考
-            duty_cycle, critical_dose = self.calculate_duty_cycle_parameters(exposure_dose, D0, gamma)
+            duty_cycle, critical_dose = self.calculate_duty_cycle_parameters(exposure_dose, D0, gamma, duty_cycle_method)
             
             result.update({
                 'duty_cycle': duty_cycle,
                 'critical_dose': critical_dose,
                 'D0': D0,
-                'enable_duty_cycle': True
+                'enable_duty_cycle': True,
+                'duty_cycle_method': duty_cycle_method
             })
             
             logger.info("🔸 占空比分析:")
             logger.info(f"   - 参考剂量D₀ = {D0:.4f}")
             logger.info(f"   - 平均占空比 = {np.mean(duty_cycle):.4f}")
             logger.info(f"   - 平均临界剂量 = {np.mean(critical_dose):.4f}")
+            logger.info(f"   - 计算方法 = {duty_cycle_method}")
         else:
             result['enable_duty_cycle'] = False
         
-        logger.info(f"🔸 最终计算结果:")
-        logger.info(f"   - 光刻胶厚度范围: [{np.min(thickness):.6f}, {np.max(thickness):.6f}]")
-        logger.info(f"   - 光刻胶厚度平均值: {np.mean(thickness):.6f}")
+        logger.info(f"🔸 计算结果:")
+        logger.info(f"   - 厚度范围: [{np.min(thickness):.6f}, {np.max(thickness):.6f}]")
+        logger.info(f"   - 厚度平均值: {np.mean(thickness):.6f}")
         logger.info("   注: 厚度值为归一化值，1.0表示未曝光区域，0.0表示完全曝光区域")
         
         return result
 
-    def generate_data(self, I_avg, V, K, t_exp, C, sine_type='1d', Kx=None, Ky=None, Kz=None, phi_expr=None, y_range=None, z_range=None, enable_4d_animation=False, t_start=0, t_end=5, time_steps=20, x_min=0, x_max=10):
+    def generate_data(self, I_avg, V, K, t_exp, C, sine_type='1d', Kx=None, Ky=None, Kz=None, phi_expr=None, y_range=None, z_range=None, enable_4d_animation=False, t_start=0, t_end=5, time_steps=20, x_min=0, x_max=10, angle_a=11.7, exposure_threshold=20, contrast_ctr=1, wavelength=405, custom_exposure_times=None):
         """
         生成数据，支持一维、二维、三维正弦波和4D动画
         
@@ -450,6 +509,12 @@ class DillModel:
             t_start: 动画开始时间
             t_end: 动画结束时间
             time_steps: 时间步数
+            x_min: x范围最小值
+            x_max: x范围最大值
+            angle_a: 理想曝光模型角度参数
+            exposure_threshold: 理想曝光模型曝光阈值
+            contrast_ctr: 理想曝光模型对比度参数
+            custom_exposure_times: 自定义曝光时间列表（用于曝光时间窗口功能）
             
         返回:
             包含曝光剂量和厚度数据的字典
@@ -464,6 +529,10 @@ class DillModel:
         logger.info(f"   - K (1D空间频率) = {K}")
         logger.info(f"   - t_exp (曝光时间) = {t_exp}")
         logger.info(f"   - C (光敏速率常数) = {C}")
+        logger.info(f"   - angle_a (角度参数) = {angle_a}°")
+        logger.info(f"   - exposure_threshold (曝光阈值) = {exposure_threshold}")
+        logger.info(f"   - wavelength (光波长) = {wavelength} nm")
+        logger.info(f"   - contrast_ctr (对比度参数) = {contrast_ctr}")
         logger.info(f"   - Kx (x方向空间频率) = {Kx}")
         logger.info(f"   - Ky (y方向空间频率) = {Ky}")
         logger.info(f"   - Kz (z方向空间频率) = {Kz}")
@@ -471,6 +540,42 @@ class DillModel:
         logger.info(f"   - y_range = {y_range}")
         logger.info(f"   - z_range = {z_range}")
         logger.info(f"   - enable_4d_animation = {enable_4d_animation}")
+        logger.info(f"   - custom_exposure_times = {custom_exposure_times}")
+        
+        # 检查是否启用自定义曝光时间窗口
+        logger.info(f"🔍 调试自定义曝光时间条件:")
+        logger.info(f"   - custom_exposure_times = {custom_exposure_times} (类型: {type(custom_exposure_times)})")
+        logger.info(f"   - sine_type = '{sine_type}' (类型: {type(sine_type)})")
+        logger.info(f"   - 条件1 (custom_exposure_times is not None): {custom_exposure_times is not None}")
+        logger.info(f"   - 条件2 (sine_type in ['1d', 'single']): {sine_type in ['1d', 'single']}")
+        logger.info(f"   - 总条件结果: {custom_exposure_times is not None and sine_type in ['1d', 'single']}")
+        
+        if custom_exposure_times is not None and sine_type in ['1d', 'single']:
+            logger.info("🔸 启用自定义曝光时间窗口模式")
+            logger.info(f"   - 自定义曝光时间数量: {len(custom_exposure_times)}")
+            logger.info(f"   - 曝光时间列表: {custom_exposure_times}")
+            
+            # 使用理想曝光模型计算多个曝光时间的结果
+            ideal_data = self.calculate_ideal_exposure_model(
+                I_avg=I_avg,  # 🔧 修复：传递实际的I_avg参数而不是硬编码0.5
+                exposure_constant_C=C,
+                angle_a_deg=angle_a,
+                exposure_threshold_cd=exposure_threshold,
+                contrast_ctr=contrast_ctr,
+                wavelength_nm=wavelength,
+                exposure_times=custom_exposure_times,
+                x_min=-1000,
+                x_max=1000,
+                num_points=2001,
+                V=V  # 🔧 修复：正确传递V参数
+            )
+            
+            # 添加自定义曝光时间窗口的标识
+            ideal_data['enable_exposure_time_window'] = True
+            ideal_data['custom_exposure_times'] = custom_exposure_times
+            
+            logger.info(f"🔸 自定义曝光时间窗口计算完成")
+            return ideal_data
         
         x_axis_points = np.linspace(0, 10, 1000)
         
@@ -721,25 +826,104 @@ class DillModel:
                 return animation_data
             
             else:
-                # 静态1D数据生成
-                logger.info(f"🔸 正在计算一维曝光剂量分布...")
-                exposure_dose = self.calculate_exposure_dose(x_axis_points, I_avg, V, K, t_exp, sine_type, Kx, Ky, Kz, phi_expr)
+                # 静态1D数据生成 - 使用理想曝光模型
+                logger.info(f"🔸 正在使用理想曝光模型计算一维分布...")
                 
-                logger.info(f"🔸 正在计算一维光刻胶厚度分布...")
-                thickness = self.calculate_photoresist_thickness(x_axis_points, I_avg, V, K, t_exp, C, sine_type, Kx, Ky, Kz, phi_expr)
+                # 确定要使用的曝光时间序列
+                if custom_exposure_times is not None and len(custom_exposure_times) > 0:
+                    # 使用自定义曝光时间（启用曝光时间窗口模式）
+                    exposure_times_to_use = custom_exposure_times
+                    logger.info(f"🔸 使用自定义曝光时间序列: {exposure_times_to_use}")
+                else:
+                    # 使用单一曝光时间（未启用曝光时间窗口模式）
+                    exposure_times_to_use = [t_exp]
+                    logger.info(f"🔸 使用单一曝光时间: {exposure_times_to_use}")
                 
-                logger.info(f"🔸 一维数据生成完成")
-                logger.info(f"   - X坐标点数: {len(x_axis_points)}")
-                logger.info(f"   - 曝光剂量范围: [{np.min(exposure_dose):.6f}, {np.max(exposure_dose):.6f}]")
-                logger.info(f"   - 光刻胶厚度范围: [{np.min(thickness):.6f}, {np.max(thickness):.6f}]")
+                # 使用理想曝光模型参数
+                ideal_data = self.calculate_ideal_exposure_model(
+                    I_avg=I_avg,  # 🔧 修复：传递实际的I_avg参数而不是硬编码0.5
+                    exposure_constant_C=C,  # 使用传入的C参数
+                    angle_a_deg=angle_a,   # 使用传入的角度参数
+                    exposure_threshold_cd=exposure_threshold,  # 使用传入的阈值参数
+                    contrast_ctr=contrast_ctr,  # 使用传入的对比度参数
+                    wavelength_nm=wavelength,  # 传递波长参数
+                    exposure_times=exposure_times_to_use,  # 使用确定的曝光时间序列
+                    x_min=-1000,
+                    x_max=1000,
+                    num_points=2001,
+                    V=V  # 🔥 重要修复：传递V参数给理想曝光模型
+                )
                 
-                return {
-                    'x': x_axis_points.tolist(),
-                    'exposure_dose': exposure_dose.tolist(),
-                    'thickness': thickness.tolist()
-                }
+                logger.info(f"🔸 理想曝光模型一维数据生成完成")
+                logger.info(f"   - X坐标点数: {len(ideal_data['x'])}")
+                logger.info(f"   - 强度分布范围: [{np.min(ideal_data['intensity_distribution']):.6f}, {np.max(ideal_data['intensity_distribution']):.6f}]")
+                logger.info(f"   - 蚀刻深度曲线数: {len(ideal_data['etch_depths_data'])}")
+                
+                # 🔥 关键修复：为V评估模式和前端静态图表兼容性，添加exposure_dose和thickness字段
+                # 基于强度分布计算1D曝光剂量和厚度（用于静态图表显示）
+                x_coords_mm = np.array(ideal_data['x'])  # 位置坐标（mm）
+                x_coords_um = x_coords_mm * 1000  # 转换为微米
+                intensity_distribution = np.array(ideal_data['intensity_distribution'])
+                
+                # 🔥 修复：计算曝光剂量并应用阈值逻辑（基于理想曝光模型）
+                exposure_dose_static = intensity_distribution * t_exp
+                
+                # 🔥 修复：计算光刻胶厚度时应用正确的阈值逻辑（与理想曝光模型一致）
+                # 按照理想曝光模型的逻辑：当D0 < exposure_threshold时M=1，否则M=exp(-C*(D0-threshold))
+                M_static = np.zeros_like(exposure_dose_static)
+                for i in range(len(exposure_dose_static)):
+                    if exposure_dose_static[i] < exposure_threshold:
+                        M_static[i] = 1.0  # 未达到阈值，完全抗蚀
+                    else:
+                        M_static[i] = np.exp(-C * (exposure_dose_static[i] - exposure_threshold))
+                
+                # 厚度 = 1 - 蚀刻深度，其中蚀刻深度 = 1 - M
+                thickness_static = M_static
+                
+                # 🔥 重要：扩展理想曝光模型数据，添加前端静态图表所需的字段
+                enhanced_ideal_data = ideal_data.copy()
+                enhanced_ideal_data.update({
+                    # 前端静态图表必需字段
+                    'x_coords': x_coords_mm.tolist(),  # 位置坐标（mm）
+                    'exposure_dose': exposure_dose_static.tolist(),  # 曝光剂量数组
+                    'thickness': thickness_static.tolist(),  # 厚度数组
+                    
+                    # 兼容性字段
+                    'exposure_data': {
+                        'x': x_coords_mm.tolist(),
+                        'y': exposure_dose_static.tolist()
+                    },
+                    'thickness_data': {
+                        'x': x_coords_mm.tolist(),
+                        'y': thickness_static.tolist()
+                    },
+                    
+                    # 🔥 修复：添加用户输入的原始参数（前端弹窗需要）
+                    'V': V,  # 干涉条纹可见度
+                    'C': C,  # 光敏速率常数
+                    'angle_a': angle_a,  # 角度参数
+                    'exposure_threshold': exposure_threshold,  # 曝光阈值
+                    't_exp': t_exp,  # 曝光时间
+                    
+                    # 兼容性参数名
+                    'exposure_threshold_cd': exposure_threshold,
+                    'cd': exposure_threshold,
+                    'exposure_constant_C': C,
+                    
+                    # 元数据
+                    'is_1d': True,
+                    'model_type': 'dill',
+                    'sine_type': '1d',
+                    'computation_method': 'ideal_exposure_model_with_1d_extension'
+                })
+                
+                logger.info(f"🔸 为前端兼容性添加了1D静态数据字段")
+                logger.info(f"   - exposure_dose范围: [{np.min(exposure_dose_static):.6f}, {np.max(exposure_dose_static):.6f}]")
+                logger.info(f"   - thickness范围: [{np.min(thickness_static):.6f}, {np.max(thickness_static):.6f}]")
+                
+                return enhanced_ideal_data
 
-    def generate_plots(self, I_avg, V, K, t_exp, C, sine_type='1d', Kx=None, Ky=None, Kz=None, phi_expr=None, y_range=None, z_range=None, enable_4d_animation=False, t_start=0, t_end=5, time_steps=20, x_min=0, x_max=10):
+    def generate_plots(self, I_avg, V, K, t_exp, C, sine_type='1d', Kx=None, Ky=None, Kz=None, phi_expr=None, y_range=None, z_range=None, enable_4d_animation=False, t_start=0, t_end=5, time_steps=20, x_min=0, x_max=10, angle_a=11.7, exposure_threshold=20, contrast_ctr=1, wavelength=405, custom_exposure_times=None):
         """
         生成图表数据的包装器方法
         
@@ -757,16 +941,21 @@ class DillModel:
             t_start, t_end: 时间范围
             time_steps: 时间步数
             x_min, x_max: x轴范围
+            angle_a: 理想曝光模型角度参数
+            exposure_threshold: 理想曝光模型曝光阈值
+            contrast_ctr: 理想曝光模型对比度参数
+            custom_exposure_times: 自定义曝光时间列表
             
         返回:
             包含图表数据的字典
         """
         logger.info("🎯 调用DillModel.generate_plots方法")
-        return self.generate_data(I_avg, V, K, t_exp, C, sine_type, Kx, Ky, Kz, phi_expr, y_range, z_range, enable_4d_animation, t_start, t_end, time_steps, x_min, x_max)
+        logger.info(f"🎯 generate_plots收到的custom_exposure_times = {custom_exposure_times}")
+        return self.generate_data(I_avg, V, K, t_exp, C, sine_type=sine_type, Kx=Kx, Ky=Ky, Kz=Kz, phi_expr=phi_expr, y_range=y_range, z_range=z_range, enable_4d_animation=enable_4d_animation, t_start=t_start, t_end=t_end, time_steps=time_steps, x_min=x_min, x_max=x_max, angle_a=angle_a, exposure_threshold=exposure_threshold, contrast_ctr=contrast_ctr, wavelength=wavelength, custom_exposure_times=custom_exposure_times)
 
-    def generate_1d_animation_data(self, I_avg, V, K, t_exp_start, t_exp_end, time_steps, C):
+    def generate_1d_animation_data(self, I_avg, V, K, t_exp_start, t_exp_end, time_steps, C, angle_a=11.7, exposure_threshold=20, contrast_ctr=1, wavelength=405):
         """
-        生成1D时间动画数据
+        生成1D时间动画数据 - 使用理想曝光模型
         
         参数:
             I_avg: 平均入射光强度
@@ -781,37 +970,79 @@ class DillModel:
             包含动画数据的字典
         """
         logger.info("=" * 60)
-        logger.info("【Dill模型 - 1D时间动画数据生成】")
+        logger.info("【理想曝光模型 - 1D时间动画数据生成】")
         logger.info("=" * 60)
         logger.info(f"🔸 曝光时间范围: {t_exp_start}s - {t_exp_end}s")
         logger.info(f"🔸 时间步数: {time_steps}")
         logger.info(f"🔸 其他参数: I_avg={I_avg}, V={V}, K={K}, C={C}")
         
-        # 生成x坐标
-        x = np.linspace(0, 10, 100)
-        
         # 生成时间序列
         time_values = np.linspace(t_exp_start, t_exp_end, time_steps)
         
-        # 为每个时间点生成数据
+        # 为每个时间点生成理想曝光模型数据
         animation_frames = []
         for i, t_exp in enumerate(time_values):
-            # 计算当前时间点的曝光剂量和厚度分布
-            exposure_dose = self.calculate_exposure_dose(x, I_avg, V, K, t_exp, sine_type='1d')
-            thickness = self.calculate_photoresist_thickness(x, I_avg, V, K, t_exp, C, sine_type='1d')
+            # 使用理想曝光模型计算当前时间点的数据
+            ideal_data = self.calculate_ideal_exposure_model(
+                I_avg=I_avg,  # 🔧 修复：传递实际的I_avg参数而不是硬编码0.5
+                exposure_constant_C=C,
+                angle_a_deg=angle_a,
+                exposure_threshold_cd=exposure_threshold,
+                contrast_ctr=contrast_ctr,
+                wavelength_nm=wavelength,  # 传递波长参数
+                exposure_times=[t_exp * 30, t_exp * 60, t_exp * 250, t_exp * 1000, t_exp * 2000],
+                x_min=-1000,
+                x_max=1000,
+                num_points=1001,  # 减少点数以提高动画性能
+                V=V  # 🔧 修复：正确传递V参数
+            )
+            
+            # 生成标准的1D数据结构 - 添加exposure_data字段以符合前端期望
+            x_coords = ideal_data['x']
+            intensity_distribution = ideal_data['intensity_distribution']
+            
+            # 🔥 修复：计算基于强度的曝光剂量并应用阈值逻辑（动画版本）
+            exposure_dose = np.array(intensity_distribution) * t_exp
+            
+            # 🔥 修复：计算光刻胶厚度变化时应用正确的阈值逻辑
+            # 按照理想曝光模型的逻辑：当D0 < exposure_threshold时M=1，否则M=exp(-C*(D0-threshold))
+            M_values = np.zeros_like(exposure_dose)
+            for i in range(len(exposure_dose)):
+                if exposure_dose[i] < exposure_threshold:
+                    M_values[i] = 1.0  # 未达到阈值，完全抗蚀
+                else:
+                    M_values[i] = np.exp(-C * (exposure_dose[i] - exposure_threshold))
+            
+            # 厚度 = M值（光敏剂浓度，直接代表剩余厚度）
+            thickness = M_values
             
             frame_data = {
                 't_exp': float(t_exp),
-                'x_coords': x.tolist(),
-                'exposure_data': exposure_dose.tolist(),
-                'thickness_data': thickness.tolist(),
-                'frame_index': i
+                'time': float(t_exp),  # 添加time字段供前端使用
+                't': float(t_exp),     # 添加t字段供前端使用
+                'x_coords': x_coords,
+                'x': x_coords,         # 添加x字段供前端使用
+                'intensity_distribution': intensity_distribution,
+                'etch_depths_data': ideal_data['etch_depths_data'],
+                'exposure_times': ideal_data['exposure_times'],
+                'exposure_data': {      # 添加exposure_data字段以符合前端期望
+                    'x': x_coords,
+                    'y': exposure_dose.tolist()
+                },
+                'exposure_dose': exposure_dose.tolist(),  # 直接提供exposure_dose数组
+                'thickness_data': {     # 添加thickness_data字段
+                    'x': x_coords,
+                    'y': thickness.tolist()
+                },
+                'thickness': thickness.tolist(),    # 直接提供thickness数组
+                'frame_index': i,
+                'is_ideal_exposure_model': True
             }
             animation_frames.append(frame_data)
             
             logger.info(f"✅ 生成第 {i+1}/{time_steps} 帧 (t_exp={t_exp:.2f}s)")
         
-        # 返回动画数据结构（移除会覆盖静态数据的兼容性字段）
+        # 返回动画数据结构
         result = {
             'model_type': 'dill',
             'sine_type': '1d',
@@ -820,60 +1051,101 @@ class DillModel:
             'time_steps': time_steps,
             'time_values': time_values.tolist(),
             'frames': animation_frames,
-            'x_coords': x.tolist()
-            # 注意：移除了exposure_data, thickness_data, exposure_dose, thickness字段
-            # 这些字段应该来自基于用户当前t_exp的静态数据，而不是动画数据
+            'animation_frames': animation_frames,  # 添加animation_frames字段供前端使用
+            'is_ideal_exposure_model': True
         }
         
-        logger.info(f"🎬 1D时间动画数据生成完成，共{time_steps}帧")
+        logger.info(f"🎬 理想曝光模型1D时间动画数据生成完成，共{time_steps}帧")
         return result
 
-    def generate_1d_v_animation_data(self, I_avg, V_start, V_end, time_steps, K, t_exp, C):
+    def generate_1d_v_animation_data(self, I_avg, V_start, V_end, time_steps, K, t_exp, C, 
+                                     angle_a=11.7, exposure_threshold=20, wavelength=405):
         """
-        生成1D V（对比度）评估动画数据
+        生成1D V（对比度）评估动画数据 - 使用理想曝光模型
         
         参数:
             I_avg: 平均入射光强度
             V_start: 开始V值（对比度）
             V_end: 结束V值（对比度）
             time_steps: V值步数
-            K: 干涉条纹的空间频率
+            K: 干涉条纹的空间频率（此参数在理想曝光模型中由angle_a和wavelength确定）
             t_exp: 曝光时间
             C: 光刻胶光敏速率常数
+            angle_a: 入射角度（度），用于理想曝光模型
+            exposure_threshold: 曝光阈值，用于理想曝光模型
+            wavelength: 光波长（nm），用于理想曝光模型
             
         返回:
             包含V评估动画数据的字典
         """
         logger.info("=" * 60)
-        logger.info("【Dill模型 - 1D V（对比度）评估数据生成】")
+        logger.info("【理想曝光模型 - 1D V（对比度）评估数据生成】")
         logger.info("=" * 60)
         logger.info(f"🔸 V值范围: {V_start} - {V_end}")
         logger.info(f"🔸 V值步数: {time_steps}")
-        logger.info(f"🔸 其他参数: I_avg={I_avg}, K={K}, t_exp={t_exp}, C={C}")
+        logger.info(f"🔸 使用理想曝光模型公式")
+        logger.info(f"🔸 参数: I_avg={I_avg}, t_exp={t_exp}, C={C}")
+        logger.info(f"🔸 理想曝光模型参数: angle_a={angle_a}°, exposure_threshold={exposure_threshold}, wavelength={wavelength}nm")
         
-        # 生成x坐标
-        x = np.linspace(0, 10, 100)
+        # 生成x坐标（使用理想曝光模型的标准范围）
+        x_um = np.linspace(-1000, 1000, 1001)  # 微米单位，-1000到1000微米
+        x_mm = x_um / 1000.0  # 转换为毫米单位（理想曝光模型输出格式）
         
         # 生成V值序列
         v_values = np.linspace(V_start, V_end, time_steps)
         
+        # 理想曝光模型的固定参数
+        angle_a_rad = angle_a * np.pi / 180  # 角度转弧度
+        spatial_freq_coeff = 4 * np.pi * np.sin(angle_a_rad) / wavelength  # 空间频率系数
+        
+        logger.info(f"🔸 理想曝光模型计算参数:")
+        logger.info(f"   - 空间频率系数: 4π×sin(a)/λ = {spatial_freq_coeff:.6f} rad/μm")
+        logger.info(f"   - x坐标范围: [{np.min(x_um):.1f}, {np.max(x_um):.1f}] μm")
+        
         # 为每个V值生成数据
         animation_frames = []
         for i, v_val in enumerate(v_values):
-            # 计算当前V值的曝光剂量和厚度分布
-            exposure_dose = self.calculate_exposure_dose(x, I_avg, v_val, K, t_exp, sine_type='1d')
-            thickness = self.calculate_photoresist_thickness(x, I_avg, v_val, K, t_exp, C, sine_type='1d')
+            logger.info(f"🔸 计算第 {i+1}/{time_steps} 帧 (V={v_val:.3f})")
+            
+            # 使用理想曝光模型的强度分布公式
+            # I0 = I_avg * (1 + V * cos((4 * π * sin(a) / λ) * X))
+            intensity_distribution = I_avg * (1 + v_val * np.cos(spatial_freq_coeff * x_um))
+            
+            # 计算曝光剂量 D0 = I0 * t_exp
+            exposure_dose = intensity_distribution * t_exp
+            
+            # 使用理想曝光模型的厚度计算逻辑（M值计算）
+            M_values = np.zeros_like(exposure_dose)
+            for j in range(len(exposure_dose)):
+                if exposure_dose[j] < exposure_threshold:
+                    M_values[j] = 1.0  # 未达到阈值，完全抗蚀
+                else:
+                    # 超过阈值，按指数衰减
+                    M_values[j] = np.exp(-C * (exposure_dose[j] - exposure_threshold))
+            
+            # 厚度 = M值（光敏剂浓度，直接代表剩余厚度）
+            thickness = M_values
             
             frame_data = {
                 'v_value': float(v_val),
-                'x_coords': x.tolist(),
-                'exposure_data': exposure_dose.tolist(),
-                'thickness_data': thickness.tolist(),
-                'frame_index': i
+                'x_coords': x_mm.tolist(),  # 输出毫米单位坐标
+                'x': x_mm.tolist(),  # 兼容性字段
+                'exposure_dose': exposure_dose.tolist(),
+                'exposure_data': exposure_dose.tolist(),  # 保持向后兼容
+                'thickness': thickness.tolist(),
+                'thickness_data': thickness.tolist(),  # 保持向后兼容
+                'frame_index': i,
+                # 添加理想曝光模型的特定信息
+                'intensity_distribution': intensity_distribution.tolist(),
+                'M_values': M_values.tolist(),
+                'model_type': 'ideal_exposure',
+                'spatial_freq_coeff': spatial_freq_coeff
             }
             animation_frames.append(frame_data)
             
-            logger.info(f"✅ 生成第 {i+1}/{time_steps} 帧 (V={v_val:.3f})")
+            logger.info(f"   - 强度范围: [{np.min(intensity_distribution):.3f}, {np.max(intensity_distribution):.3f}]")
+            logger.info(f"   - 曝光剂量范围: [{np.min(exposure_dose):.3f}, {np.max(exposure_dose):.3f}]")
+            logger.info(f"   - 厚度范围: [{np.min(thickness):.4f}, {np.max(thickness):.4f}]")
         
         # 返回V评估动画数据结构
         result = {
@@ -884,10 +1156,144 @@ class DillModel:
             'time_steps': time_steps,
             'v_values': v_values.tolist(),
             'frames': animation_frames,
-            'x_coords': x.tolist()
+            'x_coords': x_mm.tolist(),
+            # 理想曝光模型参数信息
+            'ideal_exposure_model': True,
+            'parameters': {
+                'I_avg': I_avg,
+                't_exp': t_exp,
+                'C': C,
+                'angle_a_deg': angle_a,
+                'exposure_threshold': exposure_threshold,
+                'wavelength_nm': wavelength,
+                'spatial_freq_coeff': spatial_freq_coeff
+            }
         }
         
-        logger.info(f"🎬 1D V（对比度）评估动画数据生成完成，共{time_steps}帧")
+        logger.info(f"🎬 理想曝光模型1D V（对比度）评估动画数据生成完成，共{time_steps}帧")
+        logger.info(f"🔸 确认使用理想曝光模型公式:")
+        logger.info(f"   - 强度分布: I0 = I_avg * (1 + V * cos((4π×sin(a)/λ) * X))")
+        logger.info(f"   - 阈值逻辑: M = 1 (if D0 < threshold), M = exp(-C*(D0-threshold)) (if D0 >= threshold)")
+        
+        return result
+
+    def calculate_ideal_exposure_model(self, I_avg=1.0, exposure_constant_C=0.022, angle_a_deg=11.7, 
+                                     exposure_threshold_cd=20, contrast_ctr=1, wavelength_nm=405,
+                                     exposure_times=[30, 60, 250, 1000, 2000], 
+                                     x_min=-1000, x_max=1000, num_points=2001, V=None):
+        """
+        理想曝光模型计算 - 完全按照Python代码逻辑实现
+        
+        参数:
+            I_avg: 平均入射光强度，默认 1.0
+            exposure_constant_C: 曝光常数 C，默认 0.022
+            angle_a_deg: 角度参数 a（度），默认 11.7
+            exposure_threshold_cd: 曝光阈值 cd，默认 20
+            contrast_ctr: 对比度参数 ctr，默认 1（已废弃，使用V参数替代）
+            wavelength_nm: 光波长（纳米），默认 405
+            exposure_times: 曝光时间列表，默认 [30, 60, 250, 1000, 2000]
+            x_min: x范围最小值（微米），默认 -1000
+            x_max: x范围最大值（微米），默认 1000
+            num_points: 数据点数，默认 2001
+            V: 干涉条纹可见度参数，如果提供则优先使用，否则使用contrast_ctr
+            
+        返回:
+            包含强度分布和各时间蚀刻深度的字典
+        """
+        logger.info("=" * 60)
+        logger.info("【理想曝光模型 - 1D计算】")
+        logger.info("=" * 60)
+        logger.info("🔸 使用理想曝光模型公式（完全按照Python代码逻辑）")
+        
+        # 优先使用V参数，如果没有提供则使用contrast_ctr
+        visibility_param = V if V is not None else contrast_ctr
+        param_source = "V (干涉条纹可见度)" if V is not None else "contrast_ctr (对比度参数)"
+        
+        logger.info(f"🔸 输入参数:")
+        logger.info(f"   - I_avg (平均入射光强度) = {I_avg}")
+        logger.info(f"   - C (曝光常数) = {exposure_constant_C}")
+        logger.info(f"   - a (角度参数) = {angle_a_deg}°")
+        logger.info(f"   - cd (曝光阈值) = {exposure_threshold_cd}")
+        logger.info(f"   - λ (光波长) = {wavelength_nm} nm")
+        logger.info(f"   - {param_source} = {visibility_param}")
+        logger.info(f"   - 曝光时间 = {exposure_times}")
+        logger.info(f"   - x范围 = [{x_min}, {x_max}] 微米")
+        logger.info(f"   - 数据点数 = {num_points}")
+        
+        # 创建位置数组（按Python代码：X = np.arange(-1000, 1001, 1)）
+        X = np.linspace(x_min, x_max, num_points)
+        
+        # 角度转换为弧度
+        a = angle_a_deg * np.pi / 180
+        
+        # 计算强度分布 I0（修正：使用I_avg、V参数和动态波长）
+        # 原公式: I0 = 0.5 * (1 + ctr * cos((4 * π * sin(a) / 405) * X))
+        # 修正公式: I0 = I_avg * (1 + V * cos((4 * π * sin(a) / λ) * X))
+        I0 = I_avg * (1 + visibility_param * np.cos((4 * np.pi * np.sin(a) / wavelength_nm) * X))
+        
+        logger.info(f"🔸 强度分布计算完成:")
+        logger.info(f"   - I0 范围: [{np.min(I0):.6f}, {np.max(I0):.6f}]")
+        logger.info(f"   - I0 平均值: {np.mean(I0):.6f}")
+        logger.info(f"   - 空间频率系数: 4π×sin(a)/λ = {(4 * np.pi * np.sin(a) / wavelength_nm):.6f} rad/μm")
+        logger.info(f"   - 使用参数: {param_source}")
+        
+        # 计算各曝光时间的蚀刻深度
+        etch_depths_data = []
+        
+        for time_val in exposure_times:
+            logger.info(f"🔸 计算曝光时间 t={time_val} 的蚀刻深度")
+            
+            # 计算剂量分布 D0 = I0 * time
+            D0 = I0 * time_val
+            
+            # 初始化抗蚀效果 M 和蚀刻深度 H
+            M = np.zeros_like(X)
+            H = np.zeros_like(X)
+            
+            # 按Python代码的逻辑计算 M 和 H
+            for i in range(len(X)):
+                if D0[i] < exposure_threshold_cd:
+                    M[i] = 1
+                else:
+                    M[i] = np.exp(-exposure_constant_C * (D0[i] - exposure_threshold_cd))
+                H[i] = 1 - M[i]
+            
+            # 存储蚀刻深度（作为负值显示，如图片所示）
+            etch_depth_negative = -H
+            
+            etch_depths_data.append({
+                'time': time_val,
+                'etch_depth': etch_depth_negative.tolist(),
+                'M_values': M.tolist(),
+                'D0_values': D0.tolist()
+            })
+            
+            logger.info(f"   - 蚀刻深度范围: [{np.min(etch_depth_negative):.6f}, {np.max(etch_depth_negative):.6f}]")
+        
+        # 返回数据（位置转换为mm以匹配图片显示）
+        x_mm = X / 1000.0  # 转换为mm
+        
+        result = {
+            'x': x_mm.tolist(),
+            'intensity_distribution': I0.tolist(),
+            'etch_depths_data': etch_depths_data,
+            'exposure_times': exposure_times,
+            'parameters': {
+                'C': exposure_constant_C,
+                'a_deg': angle_a_deg,
+                'cd': exposure_threshold_cd,
+                'wavelength_nm': wavelength_nm,
+                'visibility_param': visibility_param,
+                'param_source': param_source
+            },
+            'is_ideal_exposure_model': True,
+            'sine_type': '1d'
+        }
+        
+        logger.info(f"🔸 理想曝光模型计算完成")
+        logger.info(f"   - 位置范围: [{np.min(x_mm):.3f}, {np.max(x_mm):.3f}] mm")
+        logger.info(f"   - 共生成 {len(etch_depths_data)} 条蚀刻深度曲线")
+        
         return result
 
 def get_model_by_name(model_name):

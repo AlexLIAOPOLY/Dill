@@ -452,21 +452,37 @@
                 <div id="dill-params" class="parameters-grid" style="display:block;">
                     <!-- Dill模型基本参数容器 -->
                     <div class="parameter-group-container" id="dill-basic-params-container" data-title="Dill模型基本参数" data-i18n-title="dill_basic_params">
-                        <!-- 参数1: I_avg -->
+                        <!-- 光强分布阶段参数 -->
+                        
+                        <!-- 参数1: angle_a -->
                         <div class="parameter-item slider-fill">
                             <div class="parameter-label">
-                                <span class="parameter-name">平均入射光强度 (I<sub>avg</sub>)</span>
+                                <span class="parameter-name">角度参数 (a)</span>
                                 
-                                <span class="parameter-value">10</span>
+                                <span class="parameter-value">11.7</span>
                             </div>
                             <div class="parameter-input">
-                                <input type="range" id="I_avg" class="slider" min="1" max="100" step="0.1" value="10" title="平均入射光强度滑块" aria-label="平均入射光强度">
-                                <input type="number" class="number-input" value="10" min="1" max="100" step="0.1" title="平均入射光强度数值输入" aria-label="平均入射光强度数值">
+                                <input type="range" id="angle_a" class="slider" min="1" max="45" step="0.1" value="11.7" title="角度参数滑块" aria-label="角度参数">
+                                <input type="number" class="number-input" value="11.7" min="1" max="45" step="0.1" title="角度参数数值输入" aria-label="角度参数数值">
                             </div>
-                            <div class="parameter-description" data-i18n="param_desc_I_avg">平均入射光强度，单位：mW/cm²</div>
+                            <div class="parameter-description" data-i18n="param_desc_angle_a">光强分布阶段：控制干涉条纹角度，角度大=条纹密度高=空间频率高，角度小=条纹稀疏</div>
                         </div>
                         
-                        <!-- 参数2: V -->
+                        <!-- 参数2: wavelength -->
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label">
+                                <span class="parameter-name">光波长 (λ)</span>
+                                
+                                <span class="parameter-value">405</span>
+                            </div>
+                            <div class="parameter-input">
+                                <input type="range" id="wavelength" class="slider" min="200" max="800" step="1" value="405" title="光波长滑块" aria-label="光波长">
+                                <input type="number" id="wavelength_number" class="number-input" value="405" min="200" max="800" step="1" title="光波长数值输入" aria-label="光波长数值">
+                            </div>
+                            <div class="parameter-description" data-i18n="param_desc_wavelength">光强分布阶段：入射光的波长，影响干涉条纹空间频率，常用值：365nm(i线)、405nm(h线)、436nm(g线)</div>
+                        </div>
+                        
+                        <!-- 参数3: V -->
                         <div class="parameter-item slider-fill">
                             <div class="parameter-label">
                                 <span class="parameter-name">干涉条纹可见度 (V)
@@ -479,7 +495,7 @@
                                 <input type="range" id="V" class="slider" min="0" max="1" step="0.01" value="0.8" title="干涉条纹可见度滑块" aria-label="干涉条纹可见度">
                                 <input type="number" class="number-input" value="0.8" min="0" max="1" step="0.01" title="干涉条纹可见度数值输入" aria-label="干涉条纹可见度数值">
                             </div>
-                            <div class="parameter-description" data-i18n="param_desc_V">干涉条纹的对比度，范围：0-1</div>
+                            <div class="parameter-description" data-i18n="param_desc_V">光强分布阶段：干涉条纹的对比度，范围：0-1</div>
                         </div>
 
                         <!-- V值对比度类型提示弹窗 -->
@@ -512,7 +528,7 @@
                             </div>
                         </div>
                         
-                        <!-- 参数3: K -->
+                        <!-- 参数4: K -->
                         <div class="parameter-item slider-fill">
                             <div class="parameter-label">
                                 <span class="parameter-name">空间频率 (K)</span>
@@ -523,36 +539,152 @@
                                 <input type="range" id="K" class="slider" min="0.1" max="10" step="0.1" value="2" title="空间频率滑块" aria-label="空间频率">
                                 <input type="number" class="number-input" value="2" min="0.1" max="10" step="0.1" title="空间频率数值输入" aria-label="空间频率数值">
                             </div>
-                            <div class="parameter-description" data-i18n="param_desc_K">干涉条纹的空间频率，单位：rad/μm</div>
+                            <div class="parameter-description" data-i18n="param_desc_K">光强分布阶段：干涉条纹的空间频率，单位：rad/μm</div>
                         </div>
                         
-                        <!-- 参数4: t_exp -->
+                        <!-- 参数5: I_avg -->
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label">
+                                <span class="parameter-name">平均入射光强度 (I<sub>avg</sub>)</span>
+                                
+                                <span class="parameter-value">10</span>
+                            </div>
+                            <div class="parameter-input">
+                                <input type="range" id="I_avg" class="slider" min="0.1" max="100" step="0.1" value="0.5" title="平均入射光强度滑块" aria-label="平均入射光强度">
+                                <input type="number" class="number-input" value="0.5" min="0.1" max="100" step="0.1" title="平均入射光强度数值输入" aria-label="平均入射光强度数值">
+                            </div>
+                            <div class="parameter-description" data-i18n="param_desc_I_avg">光强分布阶段：平均入射光强度，单位：mW/cm²</div>
+                        </div>
+                        
+                        <!-- 曝光反应阶段参数 -->
+                        
+                        <!-- 参数6: C -->
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label">
+                                <span class="parameter-name">曝光常数 (C)</span>
+                                
+                                <span class="parameter-value">0.022</span>
+                            </div>
+                            <div class="parameter-input">
+                                <input type="range" id="C" class="slider" min="0.001" max="0.1" step="0.001" value="0.022" title="曝光常数滑块" aria-label="曝光常数">
+                                <input type="number" class="number-input" value="0.022" min="0.001" max="0.1" step="0.001" title="曝光常数数值输入" aria-label="曝光常数数值">
+                            </div>
+                            <div class="parameter-description" data-i18n="param_desc_C">曝光反应阶段：控制光刻胶曝光反应速度，值大=反应快=溶解度高，值小=反应慢</div>
+                        </div>
+                        
+                        <!-- 参数7: exposure_threshold -->
+                        <div class="parameter-item slider-fill">
+                            <div class="parameter-label">
+                                <span class="parameter-name">曝光阈值 (cd)</span>
+                                
+                                <span class="parameter-value">20</span>
+                            </div>
+                            <div class="parameter-input">
+                                <input type="range" id="exposure_threshold" class="slider" min="1" max="100" step="1" value="20" title="曝光阈值滑块" aria-label="曝光阈值">
+                                <input type="number" class="number-input" value="20" min="1" max="100" step="1" title="曝光阈值数值输入" aria-label="曝光阈值数值">
+                            </div>
+                            <div class="parameter-description" data-i18n="param_desc_exposure_threshold">曝光反应阶段：控制曝光反应阈值，阈值高=需更强曝光才反应，阈值低=反应条件宽松</div>
+                        </div>
+                        
+                    </div>
+
+                    <!-- 曝光时间窗口参数容器 -->
+                    <div class="parameter-group-container" id="dill-exposure-time-params-container" data-title="曝光时间窗口参数" data-i18n-title="dill_exposure_time_params">
+                        <!-- 单一曝光时间参数 -->
                         <div class="parameter-item slider-fill">
                             <div class="parameter-label">
                                 <span class="parameter-name">曝光时间 (t<sub>exp</sub>)</span>
                                 
-                                <span class="parameter-value">5</span>
+                                <span class="parameter-value">100</span>
                             </div>
                             <div class="parameter-input">
-                                <input type="range" id="t_exp" class="slider" min="0.1" max="1000" step="0.1" value="5" title="曝光时间滑块" aria-label="曝光时间">
-                                <input type="number" class="number-input" value="5" min="0.1" max="1000" step="0.1" title="曝光时间数值输入" aria-label="曝光时间数值">
+                                <input type="range" id="t_exp" class="slider" min="0.1" max="1000" step="0.1" value="100" title="曝光时间滑块" aria-label="曝光时间">
+                                <input type="number" class="number-input" value="100" min="0.1" max="1000" step="0.1" title="曝光时间数值输入" aria-label="曝光时间数值">
                             </div>
                             <div class="parameter-description" data-i18n="param_desc_t_exp">决定曝光剂量，时间长=剂量大=反应充分，时间短=剂量小=反应不足</div>
                         </div>
                         
-                        <!-- 参数5: C -->
-                        <div class="parameter-item slider-fill">
+                        <!-- 曝光时间窗口控制 -->
+                        <div class="parameter-item">
                             <div class="parameter-label">
-                                <span class="parameter-name">光敏速率常数 (C)</span>
-                                
-                                <span class="parameter-value">0.02</span>
+                                <span class="parameter-name">
+                                    <i class="fas fa-clock"></i> 曝光时间窗口控制
+                                </span>
                             </div>
                             <div class="parameter-input">
-                                <input type="range" id="C" class="slider" min="0.001" max="0.1" step="0.001" value="0.02" title="光敏速率常数滑块" aria-label="光敏速率常数">
-                                <input type="number" class="number-input" value="0.02" min="0.001" max="0.1" step="0.001" title="光敏速率常数数值输入" aria-label="光敏速率常数数值">
+                                <label style="display: block; margin-bottom: 8px;">
+                                    <input type="checkbox" id="enable_exposure_time_window_dill" style="margin-right: 8px;">
+                                    启用曝光时间窗口（自定义多组曝光时间比较）
+                                </label>
                             </div>
-                            <div class="parameter-description" data-i18n="param_desc_C">光刻胶的Dill C参数，单位：cm²/mJ</div>
+                            <div class="parameter-description">勾选后可自定义选择多组曝光时间进行比较，未勾选时使用上方单一曝光时间值</div>
                         </div>
+                        
+                        <!-- 曝光时间窗口参数 -->
+                        <div id="dill_1d_exposure_time_params" style="display: none; margin-top: 10px; padding: 15px; background: rgba(76, 175, 80, 0.1); border-radius: 8px; border-left: 4px solid #4caf50;">
+                            <!-- 快速时间列表选择 -->
+                            <div class="parameter-item">
+                                <div class="parameter-label">
+                                    <span class="parameter-name">快速时间列表</span>
+                                </div>
+                                <div class="parameter-input" style="margin-top: 8px;">
+                                    <div class="quick-time-buttons" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;">
+                                        <button class="quick-time-btn" data-times="1, 5, 10, 50, 100" style="padding: 4px 8px; background: #e3f2fd; border: 1px solid #2196f3; border-radius: 4px; font-size: 12px; cursor: pointer;">
+                                            短时 (1-100s)
+                                        </button>
+                                        <button class="quick-time-btn" data-times="50, 100, 250, 500, 1000" style="padding: 4px 8px; background: #fff3e0; border: 1px solid #ff9800; border-radius: 4px; font-size: 12px; cursor: pointer;">
+                                            中时 (50-1000s)
+                                        </button>
+                                        <button class="quick-time-btn" data-times="500, 1000, 2500, 5000, 10000" style="padding: 4px 8px; background: #fce4ec; border: 1px solid #e91e63; border-radius: 4px; font-size: 12px; cursor: pointer;">
+                                            长时 (500-10000s)
+                                        </button>
+                                        <button class="quick-time-btn" data-times="30, 60, 250, 1000, 2000" style="padding: 4px 8px; background: #f3e5f5; border: 1px solid #9c27b0; border-radius: 4px; font-size: 12px; cursor: pointer;">
+                                            经典组合
+                                        </button>
+                                        <button class="quick-time-btn" data-times="10, 30, 100, 300, 1000, 3000" style="padding: 4px 8px; background: #e8f5e8; border: 1px solid #4caf50; border-radius: 4px; font-size: 12px; cursor: pointer;">
+                                            细分梯度
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="parameter-description" style="color: #666; font-size: 12px;">
+                                    点击快速选择常用的曝光时间组合
+                                </div>
+                            </div>
+                            
+                            <!-- 曝光时间输入 -->
+                            <div class="parameter-item">
+                                <div class="parameter-label">
+                                    <span class="parameter-name">自定义曝光时间列表 (秒)</span>
+                                    <button id="reset_exposure_times_btn" class="reset-btn" style="margin-left: 10px; padding: 2px 8px; font-size: 12px; background: #ff9800; color: white; border: none; border-radius: 3px; cursor: pointer;">
+                                        <i class="fas fa-undo"></i> 恢复默认
+                                    </button>
+                                </div>
+                                <div class="parameter-input" style="margin-top: 8px;">
+                                    <textarea id="exposure_times_input" class="exposure-time-input" placeholder="输入曝光时间，用逗号分隔，例如：30, 60, 250, 1000, 2000" style="width: 100%; height: 60px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 13px; resize: vertical;">30, 60, 250, 1000, 2000</textarea>
+                                </div>
+                                <div class="parameter-description" style="margin-top: 5px;">
+                                    <span style="color: #666;">输入格式：用逗号分隔的数字，例如：30, 60, 250, 1000, 2000</span>
+                                    <div id="exposure_times_status" style="margin-top: 5px; padding: 5px; border-radius: 3px; display: none;">
+                                        <span class="status-text"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 曝光时间预览 -->
+                            <div class="parameter-item">
+                                <div class="parameter-label">
+                                    <span class="parameter-name">当前曝光时间列表</span>
+                                    <span class="parameter-value" id="exposure_times_count">5组</span>
+                                </div>
+                                <div class="parameter-input">
+                                    <div id="exposure_times_preview" class="exposure-times-preview" style="padding: 8px; background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; min-height: 30px; font-family: monospace;">
+                                        <span class="preview-text" style="color: #666;">t = 30s, 60s, 250s, 1000s, 2000s</span>
+                                    </div>
+                                </div>
+                                <div class="parameter-description">实时预览解析后的曝光时间列表，确认无误后进行计算</div>
+                            </div>
+                        </div>
+
                     </div>
 
                     <!-- 修改Dill模型的正弦波类型选择框 -->
@@ -897,8 +1029,8 @@
                             <div class="parameter-description" data-i18n="param_desc_M0">影响光敏剂浓度，值大=敏感度高=易曝光，值小=敏感度低=需长时间</div>
                         </div>
                         <div class="parameter-item slider-fill">
-                            <div class="parameter-label"><span class="parameter-name">曝光时间 (t<sub>exp</sub>)</span><span class="parameter-value">5</span></div>
-                            <div class="parameter-input"><input type="range" id="enhanced_t_exp" class="slider" min="0.1" max="1000" step="0.1" value="5"><input type="number" class="number-input" value="5" min="0.1" max="1000" step="0.1"></div>
+                            <div class="parameter-label"><span class="parameter-name">曝光时间 (t<sub>exp</sub>)</span><span class="parameter-value">100</span></div>
+                            <div class="parameter-input"><input type="range" id="enhanced_t_exp" class="slider" min="0.1" max="1000" step="0.1" value="100"><input type="number" class="number-input" value="100" min="0.1" max="1000" step="0.1"></div>
                             <div class="parameter-description" data-i18n="param_desc_t_exp_enhanced">决定曝光剂量，时间长=剂量大=反应充分，时间短=剂量小=反应不足</div>
                         </div>
 
@@ -1184,8 +1316,8 @@
                                 <span class="parameter-value">5</span>
                             </div>
                             <div class="parameter-input">
-                                                <input type="range" id="car_t_exp" class="slider" min="0.1" max="1000" step="0.1" value="5">
-                <input type="number" class="number-input" value="5" min="0.1" max="1000" step="0.1">
+                                                                <input type="range" id="car_t_exp" class="slider" min="0.1" max="1000" step="0.1" value="100">
+                  <input type="number" class="number-input" value="100" min="0.1" max="1000" step="0.1">
                             </div>
                             <div class="parameter-description" data-i18n="param_desc_car_t_exp">控制曝光剂量，时间长=剂量大=光酸多，时间短=剂量小=光酸少</div>
                         </div>
@@ -1507,14 +1639,15 @@
                     <div class="plot-item">
                         <h3 class="plot-title" data-i18n="exposure_dist">曝光计量分布 (1D)</h3>
                         <div id="exposure-plot-container" class="plot-container"></div>
-                        <div class="individual-threshold-controls threshold-analysis-hint" id="exposure-thresholds-container">
+                        <!-- 阈值控制模块已注释掉 -->
+                        <!-- <div class="individual-threshold-controls threshold-analysis-hint" id="exposure-thresholds-container">
                           <div class="threshold-control" data-idx="0">
                             <span class="threshold-label-text">曝光剂量阈值:</span>
                             <input type="range" class="threshold-slider" min="10" max="200" step="1" value="80" title="曝光剂量阈值滑块" aria-label="曝光剂量阈值">
                             <span class="threshold-value-text">80 mJ/cm²</span>
                             <button class="toggle-threshold-visibility-btn">显示</button>
                           </div>
-                        </div>
+                        </div> -->
                         <!-- 坐标轴控制面板 -->
                         <div class="axis-control-panel">
                             <div class="axis-control-header">
@@ -1549,18 +1682,19 @@
                         <img id="exposure-plot" class="plot-image" style="display: none;" src="" alt="曝光剂量分布图">
                     </div>
                     
-                    <!-- 光刻胶厚度分布图 -->
+                    <!-- 刻蚀深度分布图 -->
                     <div class="plot-item">
-                        <h3 class="plot-title" data-i18n="thickness_dist">光刻胶厚度分布 (1D)</h3>
+                        <h3 class="plot-title" data-i18n="thickness_dist">刻蚀深度分布 (1D)</h3>
                         <div id="thickness-plot-container" class="plot-container"></div>
-                        <div class="individual-threshold-controls threshold-analysis-hint" id="thickness-thresholds-container">
+                        <!-- 阈值控制模块已注释掉 -->
+                        <!-- <div class="individual-threshold-controls threshold-analysis-hint" id="thickness-thresholds-container">
                           <div class="threshold-control" data-idx="0">
                             <span class="threshold-label-text">厚度阈值:</span>
                             <input type="range" class="threshold-slider" min="0" max="1" step="0.01" value="0.3" title="厚度阈值滑块" aria-label="厚度阈值">
                             <span class="threshold-value-text">0.3</span>
                             <button class="toggle-threshold-visibility-btn">显示</button>
                           </div>
-                        </div>
+                        </div> -->
                         <!-- 坐标轴控制面板 -->
                         <div class="axis-control-panel">
                             <div class="axis-control-header">
@@ -1592,7 +1726,7 @@
                             <button id="export-thickness-data" data-i18n="export_data">导出数据</button>
                         </div>
                         <!-- 保留原有图像作为后备 -->
-                        <img id="thickness-plot" class="plot-image" style="display: none;" src="" alt="光刻胶厚度分布图">
+                        <img id="thickness-plot" class="plot-image" style="display: none;" src="" alt="刻蚀深度分布图">
                     </div>
 
                     <!-- 结果区增加二维热力图展示区域 -->
@@ -1650,7 +1784,7 @@
                                 <div id="dill-thickness-1d-plot" class="plot-area" style="height: 400px; width: 100%; border: 1px solid #ddd; border-radius: 8px;">
                                     <div class="plot-placeholder">
                                         <i class="fas fa-chart-area" style="font-size: 48px; color: #ccc;"></i>
-                                        <p style="color: #999; margin-top: 10px;">光刻胶厚度分布将在这里显示</p>
+                                        <p style="color: #999; margin-top: 10px;">刻蚀深度分布将在这里显示</p>
                                     </div>
                                 </div>
                             </div>
@@ -1709,7 +1843,7 @@
                                 <div id="dill-v-thickness-1d-plot" class="plot-area" style="height: 400px; width: 100%; border: 1px solid #ddd; border-radius: 8px;">
                                     <div class="plot-placeholder">
                                         <i class="fas fa-chart-area" style="font-size: 48px; color: #ccc;"></i>
-                                        <p style="color: #999; margin-top: 10px;">V值变化的光刻胶厚度分布将在这里显示</p>
+                                        <p style="color: #999; margin-top: 10px;">V值变化的刻蚀深度分布将在这里显示</p>
                                     </div>
                                 </div>
                             </div>

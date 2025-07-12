@@ -59,18 +59,24 @@ def print_banner():
 def check_dependencies():
     """检查必要的依赖包"""
     required_packages = [
-        'flask', 'flask_cors', 'numpy', 'matplotlib', 'PIL'
+        'flask', 'flask_cors', 'numpy', 'matplotlib', 'requests'
     ]
     
     missing_packages = []
     for package in required_packages:
         try:
-            if package == 'PIL':
-                import PIL
+            if package == 'flask_cors':
+                import flask_cors
             else:
                 __import__(package)
         except ImportError:
             missing_packages.append(package)
+    
+    # 单独检查Pillow/PIL
+    try:
+        from PIL import Image
+    except ImportError:
+        missing_packages.append('pillow')
     
     if missing_packages:
         print(f"❌ 缺少必要的依赖包: {', '.join(missing_packages)}")

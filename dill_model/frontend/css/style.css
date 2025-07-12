@@ -4637,3 +4637,169 @@ input:checked + .toggle-slider:hover {
         font-size: 11px;
     }
 }
+
+/* 快速时间列表按钮样式 */
+.quick-time-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.quick-time-btn {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    outline: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.quick-time-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+}
+
+.quick-time-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+.quick-time-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.5s;
+}
+
+.quick-time-btn:hover::before {
+    left: 100%;
+}
+
+/* 曝光时间窗口控制样式优化 */
+#exposure-time-window-control {
+    border-left: 3px solid #4caf50;
+    padding-left: 12px;
+    margin: 8px 0;
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.05), rgba(76, 175, 80, 0.02));
+    border-radius: 4px;
+}
+
+#dill_1d_exposure_time_params {
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.1);
+    transition: all 0.3s ease;
+}
+
+#dill_1d_exposure_time_params:hover {
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.15);
+}
+
+/* 曝光时间输入框样式 */
+.exposure-time-input {
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.exposure-time-input:focus {
+    border-color: #4caf50 !important;
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.2) !important;
+    outline: none;
+}
+
+/* 曝光时间预览样式 */
+.exposure-times-preview {
+    transition: all 0.3s ease;
+}
+
+.exposure-times-preview:hover {
+    background: #e8f5e8 !important;
+    border-color: #4caf50 !important;
+}
+
+/* 状态显示样式 */
+#exposure_times_status {
+    transition: all 0.3s ease;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.status-success {
+    animation: fadeInSuccess 0.3s ease;
+}
+
+.status-error {
+    animation: fadeInError 0.3s ease;
+}
+
+@keyframes fadeInSuccess {
+    from { opacity: 0; transform: translateY(-10px); background: rgba(76, 175, 80, 0.1); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInError {
+    from { opacity: 0; transform: translateY(-10px); background: rgba(244, 67, 54, 0.1); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 自动计算K值的样式 */
+.number-input.auto-calculated {
+    background: linear-gradient(135deg, #e8f5e8, #c8e6c9);
+    border: 2px solid #4caf50;
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.3);
+    animation: autoCalculatedPulse 1s ease-in-out;
+}
+
+@keyframes autoCalculatedPulse {
+    0% { 
+        transform: scale(1);
+        box-shadow: 0 0 8px rgba(76, 175, 80, 0.3);
+    }
+    50% { 
+        transform: scale(1.02);
+        box-shadow: 0 0 15px rgba(76, 175, 80, 0.5);
+    }
+    100% { 
+        transform: scale(1);
+        box-shadow: 0 0 8px rgba(76, 175, 80, 0.3);
+    }
+}
+
+/* K值计算通知的额外样式 */
+.k-calculation-notice .notice-content {
+    position: relative;
+}
+
+.k-calculation-notice .calculation-details {
+    margin-top: 8px;
+    padding: 6px 10px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    border-left: 3px solid rgba(255, 255, 255, 0.5);
+}
+
+.k-calculation-notice .close-notice {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.k-calculation-notice .close-notice:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
